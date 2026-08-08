@@ -34,18 +34,19 @@ Time;
 > val it =
 >   {+=fn,-=fn,<=fn,<==fn,>=fn,>==fn,compare=fn,fmt=fn,fromMicroseconds=fn,
 >    fromMilliseconds=fn,fromNanoseconds=fn,fromReal=fn,fromSeconds=fn,
->    fromString=fn,now=fn,toMicroseconds=fn,toMilliseconds=fn,toNanoseconds=fn,
->    toReal=fn,toSeconds=fn,toString=fn,zeroTime=0}
+>    fromString=fn,now=fn,scan=fn,toMicroseconds=fn,toMilliseconds=fn,
+>    toNanoseconds=fn,toReal=fn,toSeconds=fn,toString=fn,zeroTime=0}
 >   : {+:time * time -> time, -:time * time -> time, <:time * time -> bool,
 >       <=:time * time -> bool, >:time * time -> bool, >=:time * time -> bool,
 >       compare:time * time -> order, fmt:int -> time -> string,
 >       fromMicroseconds:int -> time, fromMilliseconds:int -> time,
 >       fromNanoseconds:int -> time, fromReal:real -> time,
 >       fromSeconds:int -> time, fromString:string -> time option,
->       now:unit -> time, toMicroseconds:time -> int,
->       toMilliseconds:time -> int, toNanoseconds:time -> int,
->       toReal:time -> real, toSeconds:time -> int, toString:time -> string,
->       zeroTime:time}
+>       now:unit -> time,
+>       scan:('a -> (char * 'a) option) -> 'a -> (time * 'a) option,
+>       toMicroseconds:time -> int, toMilliseconds:time -> int,
+>       toNanoseconds:time -> int, toReal:time -> real, toSeconds:time -> int,
+>       toString:time -> string, zeroTime:time}
 
 Time.zeroTime;
 > val it = 0 : time
@@ -192,5 +193,101 @@ Time.fromReal (0.0/0.0);
 (*) Time.now uses the 'now' property (set to 2024-01-01T00:00:00Z above)
 Time.now ();
 > val it = 1704067200000000000 : time
+
+(* [scan getc strm] reads a decimal number of seconds from a prefix of a
+ * character stream, after skipping initial whitespace. The expected values
+ * are those of SML/NJ, except where noted; SML/NJ's time has microsecond
+ * resolution and unbounded range, whereas Morel's is a 64-bit count of
+ * nanoseconds. *)
+fun reader s i =
+  if i < String.size s then SOME (String.sub (s, i), i + 1) else NONE;
+> val reader = fn : string -> int -> (char * int) option
+Time.scan;
+> val it = fn : ('a -> (char * 'a) option) -> 'a -> (time * 'a) option
+Time.scan (reader "1.5") 0;
+> val it = SOME (1500000000,3) : (time * int) option
+Time.scan (reader "0") 0;
+> val it = SOME (0,1) : (time * int) option
+Time.scan (reader "123") 0;
+> val it = SOME (123000000000,3) : (time * int) option
+
+(* Leading whitespace is skipped, and scanning stops at the first character
+ * that cannot be part of the number. *)
+Time.scan (reader "  1.5xyz") 0;
+> val it = SOME (1500000000,5) : (time * int) option
+Time.scan (reader "\t\n 2.25") 0;
+> val it = SOME (2250000000,7) : (time * int) option
+Time.scan (reader "1.5 ") 0;
+> val it = SOME (1500000000,3) : (time * int) option
+
+(*) There is no exponent; scanning stops at the "e".
+Time.scan (reader "1.5e3") 0;
+> val it = SOME (1500000000,3) : (time * int) option
+Time.scan (reader "1e3") 0;
+> val it = SOME (1000000000,1) : (time * int) option
+
+(*) A second decimal point ends the number.
+Time.scan (reader "1.5.6") 0;
+> val it = SOME (1500000000,3) : (time * int) option
+
+(*) The number may be signed with "~", "-" or "+".
+Time.scan (reader "~1.5") 0;
+> val it = SOME (-1500000000,4) : (time * int) option
+Time.scan (reader "-1.5") 0;
+> val it = SOME (-1500000000,4) : (time * int) option
+Time.scan (reader "+1.5") 0;
+> val it = SOME (1500000000,4) : (time * int) option
+Time.scan (reader "~0.5") 0;
+> val it = SOME (-500000000,4) : (time * int) option
+
+(*) The integer part may be omitted, and may have leading zeros.
+Time.scan (reader ".5") 0;
+> val it = SOME (500000000,2) : (time * int) option
+Time.scan (reader "~.5") 0;
+> val it = SOME (-500000000,3) : (time * int) option
+Time.scan (reader "  +.5") 0;
+> val it = SOME (500000000,5) : (time * int) option
+Time.scan (reader "007") 0;
+> val it = SOME (7000000000,3) : (time * int) option
+
+(* A decimal point must be followed by at least one digit; if it is not, the
+ * whole time is ill-formed, not merely finished. *)
+Time.scan (reader "1.") 0;
+> val it = NONE : (time * int) option
+Time.scan (reader "1.x") 0;
+> val it = NONE : (time * int) option
+Time.scan (reader ".") 0;
+> val it = NONE : (time * int) option
+
+(*) A sign must be followed immediately by the number.
+Time.scan (reader "+ 1.5") 0;
+> val it = NONE : (time * int) option
+Time.scan (reader "~~1") 0;
+> val it = NONE : (time * int) option
+Time.scan (reader "~") 0;
+> val it = NONE : (time * int) option
+
+(*) Nothing to scan.
+Time.scan (reader "") 0;
+> val it = NONE : (time * int) option
+Time.scan (reader "  ") 0;
+> val it = NONE : (time * int) option
+Time.scan (reader "abc") 0;
+> val it = NONE : (time * int) option
+
+(* Morel keeps nanoseconds, so it scans more fractional digits than SML/NJ,
+ * which keeps microseconds; digits beyond a nanosecond are discarded. *)
+Time.scan (reader "0.000000001") 0;
+> val it = SOME (1,11) : (time * int) option
+Time.scan (reader "0.123456789012") 0;
+> val it = SOME (123456789,14) : (time * int) option
+Time.scan (reader "1.999999999999") 0;
+> val it = SOME (1999999999,14) : (time * int) option
+
+(* Morel's time is a count of nanoseconds, so a number of seconds that SML/NJ
+ * can represent may be too large for Morel. *)
+Time.scan (reader "12345678901234567890") 0;
+> uncaught exception Time
+>   raised at: stdIn:1.1-1.44
 
 (*) End time.smli

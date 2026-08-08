@@ -131,8 +131,22 @@ sig
   val toString : time -> string [@@method] [@@prototype "toString t"]
 
   (**
-   * parses a time value from the string `s`, which should be a decimal number
-   * of seconds. Returns `SOME t` if successful, `NONE` otherwise.
+   * reads a time from a prefix of the character stream `strm`, after skipping
+   * initial whitespace. The time is a decimal number of seconds, optionally
+   * signed with `~`, `-` or `+`, and with an optional fractional part; the
+   * sign must be followed immediately by the number, and a decimal point
+   * must be followed by at least one digit. Returns `SOME (t, rest)`, or
+   * `NONE` if no time can be read. Digits beyond a nanosecond are discarded.
+   * Raises `Time` if the time is too large to be represented.
+   *)
+  val scan : (char, 'a) reader -> (time, 'a) reader
+      [@@prototype "scan getc strm"]
+
+  (**
+   * parses a time from a prefix of the string `s`, which should be a decimal
+   * number of seconds, after skipping initial whitespace. Returns `SOME t` if
+   * successful, `NONE` otherwise; characters after the number are ignored.
+   * Equivalent to `StringCvt.scanString scan`.
    *)
   val fromString : string -> time option [@@prototype "fromString s"]
 end

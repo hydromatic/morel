@@ -82,6 +82,7 @@ val <a id='round' href="#round-impl">round</a> : real -> int
 val <a id='fromInt' href="#fromInt-impl">fromInt</a> : int -> real
 val <a id='fmt' href="#fmt-impl">fmt</a> : realfmt -> real -> string
 val <a id='toString' href="#toString-impl">toString</a> : real -> string
+val <a id='scan' href="#scan-impl">scan</a> : (char, 'a) reader -> (real, 'a) reader
 val <a id='fromString' href="#fromString-impl">fromString</a> : string -> real option
 </pre>
 
@@ -378,6 +379,16 @@ precision (negative for `SCI` or `FIX`, less than 1 for `GEN`).
 
 `toString r` (or `r.toString ()`) converts a `real` into a `string`; equivalent to `(fmt
 (StringCvt.GEN NONE) r)`
+
+<a id="scan-impl"></a>
+<h3><code>scan</code></h3>
+
+`scan getc strm` scans a `real` value from character source. Reads
+from ARG/strm/ using reader `getc`, ignoring initial whitespace. It
+returns `SOME (r, rest)` if successful, where `r` is the scanned
+`real` value and `rest` is the unused portion of the character stream
+`strm`. Values of too large a magnitude are represented as infinities;
+values of too small a magnitude are represented as zeros.
 
 <a id="fromString-impl"></a>
 <h3><code>fromString</code></h3>

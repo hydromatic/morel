@@ -222,7 +222,6 @@ sig
    * `(fmt StringCvt.HEX i)`.
    *)
   val toString : word -> string [@@method] [@@prototype "toString i"]
-(* TODO
   (**
    * returns `SOME (w, rest)` if an unsigned number in the format denoted by
    * `radix` can be parsed from a prefix of the character stream `strm` using
@@ -231,10 +230,8 @@ sig
    * otherwise. This function raises `Overflow` when a number can be parsed,
    * but is too large to fit in type `word`.
    *)
-  val scan       : StringCvt.radix
-                     -> (char, 'a) StringCvt.reader
-                       -> (word, 'a) StringCvt.reader
-*) [@@prototype "scan radix getc strm"]
+  val scan       : radix -> (char, 'a) reader -> (word, 'a) reader
+      [@@prototype "scan radix getc strm"]
   (**
    * returns `SOME (w)` if an unsigned hexadecimal number can be parsed from a
    * prefix of string `s`, ignoring initial whitespace; otherwise it returns

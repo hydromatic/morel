@@ -68,11 +68,11 @@ val <a id='isSpace' href="#isSpace-impl">isSpace</a> : char -> bool
 val <a id='isPunct' href="#isPunct-impl">isPunct</a> : char -> bool
 val <a id='isUpper' href="#isUpper-impl">isUpper</a> : char -> bool
 val <a id='toString' href="#toString-impl">toString</a> : char -> string
+val <a id='scan' href="#scan-impl">scan</a> : (char, 'a) reader -> (char, 'a) reader
 val <a id='fromString' href="#fromString-impl">fromString</a> : string -> char option
 val <a id='fromInt' href="#fromInt-impl">fromInt</a> : int -> char option
 val <a id='toCString' href="#toCString-impl">toCString</a> : char -> string
 val <a id='fromCString' href="#fromCString-impl">fromCString</a> : string -> char option
-val <a id='scan' href="#scan-impl">scan</a> : (Char.char, 'a) StringCvt.reader -> (char, 'a) StringCvt.reader
 </pre>
 
 <a id="char-impl"></a>
@@ -271,10 +271,25 @@ graphical but not alphanumeric.
 
 `toString c` (or `c.toString ()`)
 
+<a id="scan-impl"></a>
+<h3><code>scan</code></h3>
+
+`scan getc strm` scans a character, or an SML escape sequence denoting a character,
+from a prefix of the character stream `strm`. It does not skip
+leading whitespace; a space is a character like any other. Returns
+`SOME (c, rest)`, where `c` is the character scanned and `rest` is
+the rest of the stream, or `NONE` if the stream does not start with
+a character or starts with an ill-formed escape sequence. An escaped
+formatting sequence (a backslash, whitespace, and a backslash) is
+skipped, and the character after it is scanned.
+
 <a id="fromString-impl"></a>
 <h3><code>fromString</code></h3>
 
-`fromString s`
+`fromString s` scans a character, or an SML escape sequence denoting a character, from
+a prefix of the string `s`. It does not skip leading whitespace, and
+characters after the first are ignored. Equivalent to
+`StringCvt.scanString scan`.
 
 <a id="fromInt-impl"></a>
 <h3><code>fromInt</code></h3>
@@ -285,18 +300,22 @@ the range `0` to `maxOrd`.
 <a id="toCString-impl"></a>
 <h3><code>toCString</code></h3>
 
-`toCString c` (or `c.toCString ()`)
+`toCString c` (or `c.toCString ()`) returns a string containing `c`, if `c` is printable, and otherwise a C
+escape sequence denoting it. Bell, backspace, tab, newline, vertical tab,
+form feed and carriage return become `"\\a"`, `"\\b"`, `"\\t"`,
+`"\\n"`, `"\\v"`, `"\\f"` and `"\\r"`; a double-quote, a single
+quote, a question mark and a backslash are escaped with a backslash; every
+other character becomes a backslash and three octal digits.
 
 <a id="fromCString-impl"></a>
 <h3><code>fromCString</code></h3>
 
-`fromCString s`
-
-<a id="scan-impl"></a>
-<h3><code>scan</code></h3>
-
-``
-
-*Not yet implemented.*
+`fromCString s` scans a character, or a C escape sequence denoting a character, from a
+prefix of the string `s`. It does not skip leading whitespace, and
+characters after the first are ignored. Unlike `fromString`, it accepts
+an unescaped double-quote, and has no escaped formatting sequence; its
+numeric escapes are one to three octal digits, or `x` and one or more
+hexadecimal digits. Returns `NONE` if no character can be scanned, or if
+the code is greater than `maxOrd`.
 
 [//]: # (end:lib/char)

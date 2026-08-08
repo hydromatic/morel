@@ -64,6 +64,7 @@ val <a id='isDst' href="#isDst-impl">isDst</a> : date -> bool option
 val <a id='localOffset' href="#localOffset-impl">localOffset</a> : unit -> time
 val <a id='minute' href="#minute-impl">minute</a> : date -> int
 val <a id='month' href="#month-impl">month</a> : date -> month
+val <a id='scan' href="#scan-impl">scan</a> : (char, 'a) reader -> (date, 'a) reader
 val <a id='second' href="#second-impl">second</a> : date -> int
 val <a id='toString' href="#toString-impl">toString</a> : date -> string
 val <a id='toTime' href="#toTime-impl">toTime</a> : date -> time
@@ -107,6 +108,11 @@ than, equal to, or greater than `d2` (comparing instants in time).
 is in local time; if `SOME t`, the date is in the timezone with offset `t`
 from UTC.
 
+A `day`, `hour`, `minute` or `second` outside its usual range carries
+into the field above it: day `32` of March is April 1, day `0` is the
+last day of February, and hour `25` is hour 1 of the next day. Raises
+`Date` if the year is so far out of range that there is no such date.
+
 <a id="day-impl"></a>
 <h3><code>day</code></h3>
 
@@ -123,9 +129,10 @@ format codes include `%Y` (4-digit year), `%m` (2-digit month),
 <a id="fromString-impl"></a>
 <h3><code>fromString</code></h3>
 
-`fromString s` parses a date from the string `s`, which should be in the format
-produced by `toString` (e.g., `"Thu Jan  1 00:00:00 1970"`).
-Returns `SOME d` if successful, `NONE` otherwise.
+`fromString s` parses a date from a prefix of the string `s`, which should be in the
+format produced by `toString` (e.g., `"Thu Jan 01 00:00:00 1970"`).
+Returns `SOME d` if successful, `NONE` otherwise; characters after the
+date are ignored. Equivalent to `StringCvt.scanString scan`.
 
 <a id="fromTimeLocal-impl"></a>
 <h3><code>fromTimeLocal</code></h3>
@@ -164,6 +171,18 @@ not, or `NONE` if the information is not available.
 
 `month d` (or `d.month ()`) returns the month of `d`.
 
+<a id="scan-impl"></a>
+<h3><code>scan</code></h3>
+
+`scan getc strm` reads a date from a prefix of the character stream `strm`, in the format
+`"Www Mmm DD HH:MM:SS YYYY"` produced by `toString`. It does not skip
+leading whitespace, the fields are separated by exactly one space, and
+the day may be written with a leading zero or a leading space. Returns
+`SOME (d, rest)`, or `NONE` if the stream does not begin with a date in
+that format. The weekday must be a valid name but is otherwise ignored;
+the weekday of the result is determined by the date. Fields that are out
+of range are normalized, as in `date`.
+
 <a id="second-impl"></a>
 <h3><code>second</code></h3>
 
@@ -173,7 +192,8 @@ not, or `NONE` if the information is not available.
 <h3><code>toString</code></h3>
 
 `toString d` (or `d.toString ()`) formats `d` as a string in the format `"Www Mmm DD HH:MM:SS YYYY"`,
-for example `"Thu Jan  1 00:00:00 1970"`.
+for example `"Thu Jan 01 00:00:00 1970"`. The day is padded with a zero;
+the `%c` format code of `fmt` pads it with a space.
 
 <a id="toTime-impl"></a>
 <h3><code>toTime</code></h3>

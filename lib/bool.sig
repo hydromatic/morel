@@ -31,8 +31,18 @@ sig
    *)
   val toString : bool -> string [@@method] [@@prototype "toString b"]
   (**
-   * scans a `bool` value from the string `s`. Returns `SOME (true)` if
-   * `s` is "true", `SOME (false)` if `s` is "false", and `NONE` otherwise.
+   * reads a `bool` value from a prefix of the character stream `strm`, after
+   * skipping initial whitespace. Returns `SOME (b, rest)` if `strm` starts
+   * with "true" or "false", `NONE` otherwise.
+   *)
+  val scan : (char, 'a) reader -> (bool, 'a) reader
+      [@@prototype "scan getc strm"]
+  (**
+   * scans a `bool` value from a prefix of the string `s`, after skipping
+   * initial whitespace. Returns `SOME (true)` if `s` starts with "true",
+   * `SOME (false)` if it starts with "false", and `NONE` otherwise;
+   * characters after the value are ignored. Equivalent to
+   * `StringCvt.scanString scan`.
    *)
   val fromString : string -> bool option [@@prototype "fromString s"]
   (** returns the logical conjunction of `b1` and `b2`. Unlike the `andalso`

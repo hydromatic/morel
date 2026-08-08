@@ -34,7 +34,7 @@ Date;
 > val it =
 >   {compare=fn,date=fn,day=fn,fmt=fn,fromString=fn,fromTimeLocal=fn,
 >    fromTimeUniv=fn,hour=fn,isDst=fn,localOffset=fn,minute=fn,month=fn,
->    second=fn,toString=fn,toTime=fn,weekDay=fn,year=fn,yearDay=fn}
+>    scan=fn,second=fn,toString=fn,toTime=fn,weekDay=fn,year=fn,yearDay=fn}
 >   : {compare:date * date -> order,
 >       date:{day:int, hour:int, minute:int, month:month, offset:time option,
 >              second:int, year:int}
@@ -42,6 +42,7 @@ Date;
 >       fromString:string -> date option, fromTimeLocal:time -> date,
 >       fromTimeUniv:time -> date, hour:date -> int, isDst:date -> bool option,
 >       localOffset:unit -> time, minute:date -> int, month:date -> month,
+>       scan:('a -> (char * 'a) option) -> 'a -> (date * 'a) option,
 >       second:date -> int, toString:date -> string, toTime:date -> time,
 >       weekDay:date -> weekday, year:date -> int, yearDay:date -> int}
 
@@ -76,15 +77,13 @@ Date.localOffset ();
 Date.date {year=1970, month=Jan, day=1, hour=0, minute=0, second=0, offset=NONE};
 > val it = 1970-01-01T00:00Z : date
 
-(*) Date exception: day out of range
+(*) A day outside its usual range carries into the month.
 Date.date {year=1970, month=Jan, day=32, hour=0, minute=0, second=0, offset=NONE};
-> uncaught exception Date
->   raised at: stdIn:1.1-1.82
+> val it = 1970-02-01T00:00Z : date
 
-(*) Date exception: hour out of range
+(*) An hour outside its usual range carries into the day.
 Date.date {year=1970, month=Jan, day=1, hour=25, minute=0, second=0, offset=NONE};
-> uncaught exception Date
->   raised at: stdIn:1.1-1.82
+> val it = 1970-01-02T01:00Z : date
 
 (*) Remaining Date functions, using epoch as a convenient date
 Date.year (Date.fromTimeUniv (Time.zeroTime));
@@ -146,5 +145,116 @@ Date.compare (Date.fromTimeUniv (Time.zeroTime), Date.fromTimeUniv (Time.fromSec
 
 Date.fmt "%Y-%m-%d" (Date.fromTimeUniv (Time.zeroTime));
 > val it = "1970-01-01" : string
+
+(* toString pads a single-digit day with a zero, and the "%c" format code
+ * pads it with a space; the two are otherwise the same. *)
+Date.toString (Date.fromTimeUniv (Time.zeroTime));
+> val it = "Thu Jan 01 00:00:00 1970" : string
+Date.fmt "%c" (Date.fromTimeUniv (Time.zeroTime));
+> val it = "Thu Jan  1 00:00:00 1970" : string
+Date.fmt "%d" (Date.fromTimeUniv (Time.zeroTime));
+> val it = "01" : string
+Date.fmt "%e" (Date.fromTimeUniv (Time.zeroTime));
+> val it = " 1" : string
+
+(*) A two-digit day is written the same way by both.
+Date.toString (Date.fromTimeUniv (Time.fromSeconds 1500000));
+> val it = "Sun Jan 18 08:40:00 1970" : string
+Date.fmt "%c" (Date.fromTimeUniv (Time.fromSeconds 1500000));
+> val it = "Sun Jan 18 08:40:00 1970" : string
+
+(* [scan getc strm] reads a date in the format "Www Mmm DD HH:MM:SS YYYY"
+ * produced by toString. The expected values are those of SML/NJ, except
+ * where noted. *)
+fun reader s i =
+  if i < String.size s then SOME (String.sub (s, i), i + 1) else NONE;
+> val reader = fn : string -> int -> (char * int) option
+Date.scan;
+> val it = fn : ('a -> (char * 'a) option) -> 'a -> (date * 'a) option
+Date.scan (reader "Wed Mar 08 19:06:45 2023") 0;
+> val it = SOME (2023-03-08T19:06:45Z,24) : (date * int) option
+
+(*) The day may be written with a leading zero or a leading space.
+Date.scan (reader "Wed Mar  8 19:06:45 2023") 0;
+> val it = SOME (2023-03-08T19:06:45Z,24) : (date * int) option
+
+(*) Scanning stops after the year, leaving the rest of the stream.
+Date.scan (reader "Wed Mar 08 19:06:45 2023xyz") 0;
+> val it = SOME (2023-03-08T19:06:45Z,24) : (date * int) option
+Date.scan (reader "Wed Mar 08 19:06:45 2023 ") 0;
+> val it = SOME (2023-03-08T19:06:45Z,24) : (date * int) option
+
+(* The weekday must be a valid name, but is otherwise ignored; the weekday of
+ * the result is determined by the date. *)
+Date.scan (reader "Sun Jan 01 00:00:00 1970") 0;
+> val it = SOME (1970-01-01T00:00Z,24) : (date * int) option
+Date.scan (reader "Thu Dec 31 23:59:59 1999") 0;
+> val it = SOME (1999-12-31T23:59:59Z,24) : (date * int) option
+Date.scan (reader "Mon Feb 29 12:00:00 2024") 0;
+> val it = SOME (2024-02-29T12:00Z,24) : (date * int) option
+
+(*) The input says "Sun", but 1 January 1970 was a Thursday.
+Date.weekDay (#1 (valOf (Date.scan (reader "Sun Jan 01 00:00:00 1970") 0)));
+> val it = Thu : weekday
+
+(*) A year may have more than four digits.
+Date.scan (reader "Wed Mar 08 19:06:45 12023") 0;
+> val it = SOME (+12023-03-08T19:06:45Z,25) : (date * int) option
+
+(*) Leading whitespace is not skipped.
+Date.scan (reader " Wed Mar 08 19:06:45 2023") 0;
+> val it = NONE : (date * int) option
+
+(* The fields are separated by exactly one space, and the names are
+ * case-sensitive. *)
+Date.scan (reader "Wed  Mar 08 19:06:45 2023") 0;
+> val it = NONE : (date * int) option
+Date.scan (reader "WED MAR 08 19:06:45 2023") 0;
+> val it = NONE : (date * int) option
+Date.scan (reader "Xyz Mar 08 19:06:45 2023") 0;
+> val it = NONE : (date * int) option
+Date.scan (reader "Wed Xyz 08 19:06:45 2023") 0;
+> val it = NONE : (date * int) option
+
+(*) The day occupies exactly two characters, and the time fields two digits.
+Date.scan (reader "Wed Mar 8 19:06:45 2023") 0;
+> val it = NONE : (date * int) option
+Date.scan (reader "Wed Mar 108 19:06:45 2023") 0;
+> val it = NONE : (date * int) option
+Date.scan (reader "Wed Mar 08 1:06:45 2023") 0;
+> val it = NONE : (date * int) option
+Date.scan (reader "Wed Mar 08 19-06-45 2023") 0;
+> val it = NONE : (date * int) option
+
+(*) The year is required, and may not be signed.
+Date.scan (reader "Wed Mar 08 19:06:45") 0;
+> val it = NONE : (date * int) option
+Date.scan (reader "Wed Mar 08 19:06:45 ~500") 0;
+> val it = NONE : (date * int) option
+Date.scan (reader "") 0;
+> val it = NONE : (date * int) option
+Date.scan (reader "abc") 0;
+> val it = NONE : (date * int) option
+
+(* Fields that are out of range are normalized, as in Date.date: "Mar 32" is
+ * April 1, "Mar 00" is the last day of February, and "25:06:45" is 01:06:45
+ * the next day. *)
+Date.scan (reader "Wed Mar 32 19:06:45 2023") 0;
+> val it = SOME (2023-04-01T19:06:45Z,24) : (date * int) option
+Date.scan (reader "Wed Mar 00 19:06:45 2023") 0;
+> val it = SOME (2023-02-28T19:06:45Z,24) : (date * int) option
+Date.scan (reader "Fri Feb 30 12:00:00 2023") 0;
+> val it = SOME (2023-03-02T12:00Z,24) : (date * int) option
+Date.scan (reader "Wed Mar 08 25:06:45 2023") 0;
+> val it = SOME (2023-03-09T01:06:45Z,24) : (date * int) option
+Date.scan (reader "Wed Mar 08 19:06:75 2023") 0;
+> val it = SOME (2023-03-08T19:07:15Z,24) : (date * int) option
+
+(* Morel accepts any year that forms a date, whereas SML/NJ returns NONE for
+ * "0000" and raises Date for "20". *)
+Date.scan (reader "Wed Mar 08 19:06:45 0000") 0;
+> val it = SOME (0000-03-08T19:06:45Z,24) : (date * int) option
+Date.scan (reader "Wed Mar 08 19:06:45 20") 0;
+> val it = SOME (0020-03-08T19:06:45Z,22) : (date * int) option
 
 (*) End date.smli

@@ -187,23 +187,51 @@ sig
 
   (* Returns a printable string representation of the character. *)
   val toString : char -> (*String.*)string [@@method] [@@prototype "toString c"]
-(* TODO
-  val scan       : (Char.char, 'a) StringCvt.reader
-                   -> (char, 'a) StringCvt.reader
-*)
-  (* Scans a character from a string, returning SOME c or NONE. *)
+  (**
+   * scans a character, or an SML escape sequence denoting a character,
+   * from a prefix of the character stream `strm`. It does not skip
+   * leading whitespace; a space is a character like any other. Returns
+   * `SOME (c, rest)`, where `c` is the character scanned and `rest` is
+   * the rest of the stream, or `NONE` if the stream does not start with
+   * a character or starts with an ill-formed escape sequence. An escaped
+   * formatting sequence (a backslash, whitespace, and a backslash) is
+   * skipped, and the character after it is scanned.
+   *)
+  val scan : (char, 'a) reader -> (char, 'a) reader
+      [@@prototype "scan getc strm"]
+
+  (**
+   * scans a character, or an SML escape sequence denoting a character, from
+   * a prefix of the string `s`. It does not skip leading whitespace, and
+   * characters after the first are ignored. Equivalent to
+   * `StringCvt.scanString scan`.
+   *)
   val fromString : (*String.*)string -> char option [@@prototype "fromString s"]
 
   (** returns `SOME c`, the character with code `i`, or `NONE` if `i` is not in
    * the range `0` to `maxOrd`. *)
   val fromInt : int -> char option [@@prototype "fromInt i"]
 
-  (* Returns a string corresponding to the C-language representation of
-   * the character. *)
+  (**
+   * returns a string containing `c`, if `c` is printable, and otherwise a C
+   * escape sequence denoting it. Bell, backspace, tab, newline, vertical tab,
+   * form feed and carriage return become `"\\a"`, `"\\b"`, `"\\t"`,
+   * `"\\n"`, `"\\v"`, `"\\f"` and `"\\r"`; a double-quote, a single
+   * quote, a question mark and a backslash are escaped with a backslash; every
+   * other character becomes a backslash and three octal digits.
+   *)
   val toCString : char -> (*String.*)string
       [@@method] [@@prototype "toCString c"]
 
-  (* Scans a C-language character escape sequence from a string. *)
+  (**
+   * scans a character, or a C escape sequence denoting a character, from a
+   * prefix of the string `s`. It does not skip leading whitespace, and
+   * characters after the first are ignored. Unlike `fromString`, it accepts
+   * an unescaped double-quote, and has no escaped formatting sequence; its
+   * numeric escapes are one to three octal digits, or `x` and one or more
+   * hexadecimal digits. Returns `NONE` if no character can be scanned, or if
+   * the code is greater than `maxOrd`.
+   *)
   val fromCString : (*String.*)string -> char option
       [@@prototype "fromCString s"]
 end

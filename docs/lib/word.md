@@ -74,6 +74,7 @@ val <a id='min' href="#min-impl">min</a> : word * word -> word
 val <a id='max' href="#max-impl">max</a> : word * word -> word
 val <a id='fmt' href="#fmt-impl">fmt</a> : radix -> word -> string
 val <a id='toString' href="#toString-impl">toString</a> : word -> string
+val <a id='scan' href="#scan-impl">scan</a> : radix -> (char, 'a) reader -> (word, 'a) reader
 val <a id='fromString' href="#fromString-impl">fromString</a> : string -> word option
 </pre>
 
@@ -298,6 +299,16 @@ The hexadecimal digits 10 through 15 are represented as #"A" through
 
 `toString i` (or `i.toString ()`) converts a `word` into a `string`; equivalent to
 `(fmt StringCvt.HEX i)`.
+
+<a id="scan-impl"></a>
+<h3><code>scan</code></h3>
+
+`scan radix getc strm` returns `SOME (w, rest)` if an unsigned number in the format denoted by
+`radix` can be parsed from a prefix of the character stream `strm` using
+the character input function `getc`, where `w` is the value parsed and
+`rest` is the remainder of the character stream. `NONE` is returned
+otherwise. This function raises `Overflow` when a number can be parsed,
+but is too large to fit in type `word`.
 
 <a id="fromString-impl"></a>
 <h3><code>fromString</code></h3>

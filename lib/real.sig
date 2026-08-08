@@ -372,7 +372,6 @@ sig
   (* Parse real numbers from character sources, accepting formats like
    * [+~-]?(digits.digits | .digits)(e|E)[+~-]?digits and non-finite
    * representations like inf, infinity, nan (case-insensitive). *)
-(* TODO
   (**
    * scans a `real` value from character source. Reads
    * from ARG/strm/ using reader `getc`, ignoring initial whitespace. It
@@ -381,8 +380,8 @@ sig
    * `strm`. Values of too large a magnitude are represented as infinities;
    * values of too small a magnitude are represented as zeros.
    *)
-  val scan : (char, 'a) StringCvt.reader -> (real, 'a) StringCvt.reader
-*) [@@prototype "scan getc strm"]
+  val scan : (char, 'a) reader -> (real, 'a) reader
+      [@@prototype "scan getc strm"]
   (**
    * scans a `real` value from a string. Returns `SOME (r)`
    * if a `real` value can be scanned from a prefix of `s`, ignoring any

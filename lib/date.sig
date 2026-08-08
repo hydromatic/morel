@@ -56,6 +56,11 @@ sig
    * constructs a date from the given fields. If `offset` is `NONE`, the date
    * is in local time; if `SOME t`, the date is in the timezone with offset `t`
    * from UTC.
+   *
+   * A `day`, `hour`, `minute` or `second` outside its usual range carries
+   * into the field above it: day `32` of March is April 1, day `0` is the
+   * last day of February, and hour `25` is hour 1 of the next day. Raises
+   * `Date` if the year is so far out of range that there is no such date.
    *)
   val date : {day:int, hour:int, minute:int, month:month,
               offset:time option, second:int, year:int}
@@ -74,9 +79,10 @@ sig
   val fmt : string -> date -> string [@@prototype "fmt s d"]
 
   (**
-   * parses a date from the string `s`, which should be in the format
-   * produced by `toString` (e.g., `"Thu Jan  1 00:00:00 1970"`).
-   * Returns `SOME d` if successful, `NONE` otherwise.
+   * parses a date from a prefix of the string `s`, which should be in the
+   * format produced by `toString` (e.g., `"Thu Jan 01 00:00:00 1970"`).
+   * Returns `SOME d` if successful, `NONE` otherwise; characters after the
+   * date are ignored. Equivalent to `StringCvt.scanString scan`.
    *)
   val fromString : string -> date option [@@prototype "fromString s"]
 
@@ -107,12 +113,26 @@ sig
   (** returns the month of `d`. *)
   val month : date -> month [@@method] [@@prototype "month d"]
 
+  (**
+   * reads a date from a prefix of the character stream `strm`, in the format
+   * `"Www Mmm DD HH:MM:SS YYYY"` produced by `toString`. It does not skip
+   * leading whitespace, the fields are separated by exactly one space, and
+   * the day may be written with a leading zero or a leading space. Returns
+   * `SOME (d, rest)`, or `NONE` if the stream does not begin with a date in
+   * that format. The weekday must be a valid name but is otherwise ignored;
+   * the weekday of the result is determined by the date. Fields that are out
+   * of range are normalized, as in `date`.
+   *)
+  val scan : (char, 'a) reader -> (date, 'a) reader
+      [@@prototype "scan getc strm"]
+
   (** returns the second of `d`, in the range `[0, 59]`. *)
   val second : date -> int [@@method] [@@prototype "second d"]
 
   (**
    * formats `d` as a string in the format `"Www Mmm DD HH:MM:SS YYYY"`,
-   * for example `"Thu Jan  1 00:00:00 1970"`.
+   * for example `"Thu Jan 01 00:00:00 1970"`. The day is padded with a zero;
+   * the `%c` format code of `fmt` pads it with a space.
    *)
   val toString : date -> string [@@method] [@@prototype "toString d"]
 

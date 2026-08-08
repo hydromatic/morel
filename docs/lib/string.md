@@ -62,6 +62,11 @@ val <a id='>' href="#>-impl">></a> : string * string -> bool
 val <a id='>=' href="#>=-impl">>=</a> : string * string -> bool
 val <a id='=' href="#=-impl">=</a> : string * string -> bool
 val <a id='<>' href="#<>-impl"><></a> : string * string -> bool
+val <a id='toString' href="#toString-impl">toString</a> : string -> string
+val <a id='scan' href="#scan-impl">scan</a> : (char, 'a) reader -> (string, 'a) reader
+val <a id='fromString' href="#fromString-impl">fromString</a> : string -> string option
+val <a id='toCString' href="#toCString-impl">toCString</a> : string -> string
+val <a id='fromCString' href="#fromCString-impl">fromCString</a> : string -> string option
 </pre>
 
 <a id="string-impl"></a>
@@ -254,5 +259,63 @@ ordering.
 <h3><code><></code></h3>
 
 `s <> t` returns true if `s` and `t` are not equal.
+
+<a id="toString-impl"></a>
+<h3><code>toString</code></h3>
+
+`toString s` (or `s.toString ()`) returns a string corresponding to `s`, with non-printable
+characters replaced by SML escape sequences. This is equivalent to
+
+<pre>translate Char.toString s</pre>
+
+<a id="scan-impl"></a>
+<h3><code>scan</code></h3>
+
+`scan getc strm` scans its character source as a sequence of printable
+characters, converting SML escape sequences into the appropriate
+characters. It does not skip leading whitespace. It returns as many
+characters as can successfully be scanned, stopping when it reaches
+the end of the string or a non-printing character (i.e., one not
+satisfying `isPrint`), or if it encounters an improper escape
+sequence. It returns the remaining characters as the rest of the
+stream. It returns `NONE` if it can scan no characters at all and
+the stream has not ended.
+
+<a id="fromString-impl"></a>
+<h3><code>fromString</code></h3>
+
+`fromString s` scans the string `s` as a sequence of printable characters, converting
+SML escape sequences into the characters they denote. It does not skip
+leading whitespace. It returns as many characters as can successfully be
+scanned, stopping when it reaches the end of the string, a non-printing
+character, or an improper escape sequence, and it ignores the remaining
+characters.
+
+It returns `NONE` if it can scan no characters at all and the string has
+not ended; `fromString ""` returns `SOME ""`. Equivalent to
+`StringCvt.scanString scan`.
+
+For the escape sequences it accepts, see `Char.fromString`. An escaped
+formatting sequence - a backslash, whitespace, and a backslash - stands
+for nothing, and is consumed even if what follows it cannot be scanned.
+
+<a id="toCString-impl"></a>
+<h3><code>toCString</code></h3>
+
+`toCString s` (or `s.toCString ()`) returns a string corresponding to `s`, with non-printable
+characters replaced by C escape sequences. This is equivalent to
+
+<pre>translate Char.toCString s</pre>
+
+<a id="fromCString-impl"></a>
+<h3><code>fromCString</code></h3>
+
+`fromCString s` scans the string `s` as a string in the C language, converting C escape
+sequences into the characters they denote. Returns `NONE` unless the
+whole of `s` is scanned; unlike `fromString`, it does not stop early and
+ignore the rest. `fromCString ""` returns `SOME ""`.
+
+For the escape sequences it accepts, see `Char.fromCString`. Note that it
+accepts an unescaped double-quote and an unescaped single quote.
 
 [//]: # (end:lib/string)

@@ -35,6 +35,7 @@ datatype <a id='bool' href="#bool-impl">bool</a> = false | true
 
 val <a id='not' href="#not-impl">not</a> : bool -> bool
 val <a id='toString' href="#toString-impl">toString</a> : bool -> string
+val <a id='scan' href="#scan-impl">scan</a> : (char, 'a) reader -> (bool, 'a) reader
 val <a id='fromString' href="#fromString-impl">fromString</a> : string -> bool option
 val <a id='andalso' href="#andalso-impl">andalso</a> : bool * bool -> bool
 val <a id='orelse' href="#orelse-impl">orelse</a> : bool * bool -> bool
@@ -60,11 +61,21 @@ is the type of boolean values `true` and `false`.
 
 `toString b` (or `b.toString ()`) returns the string representation of `b`, either "true" or "false".
 
+<a id="scan-impl"></a>
+<h3><code>scan</code></h3>
+
+`scan getc strm` reads a `bool` value from a prefix of the character stream `strm`, after
+skipping initial whitespace. Returns `SOME (b, rest)` if `strm` starts
+with "true" or "false", `NONE` otherwise.
+
 <a id="fromString-impl"></a>
 <h3><code>fromString</code></h3>
 
-`fromString s` scans a `bool` value from the string `s`. Returns `SOME (true)` if
-`s` is "true", `SOME (false)` if `s` is "false", and `NONE` otherwise.
+`fromString s` scans a `bool` value from a prefix of the string `s`, after skipping
+initial whitespace. Returns `SOME (true)` if `s` starts with "true",
+`SOME (false)` if it starts with "false", and `NONE` otherwise;
+characters after the value are ignored. Equivalent to
+`StringCvt.scanString scan`.
 
 <a id="andalso-impl"></a>
 <h3><code>andalso</code></h3>

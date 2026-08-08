@@ -29,9 +29,10 @@ Sys.set ("stringDepth", ~1);
 String;
 > val it =
 >   {<=fn,<==fn,<>=fn,==fn,>=fn,>==fn,^=fn,collate=fn,compare=fn,concat=fn,
->    concatWith=fn,explode=fn,extract=fn,fields=fn,implode=fn,isPrefix=fn,
->    isSubstring=fn,isSuffix=fn,map=fn,maxSize=2147483647,size=fn,str=fn,
->    sub=fn,substring=fn,tokens=fn,translate=fn}
+>    concatWith=fn,explode=fn,extract=fn,fields=fn,fromCString=fn,
+>    fromString=fn,implode=fn,isPrefix=fn,isSubstring=fn,isSuffix=fn,map=fn,
+>    maxSize=2147483647,scan=fn,size=fn,str=fn,sub=fn,substring=fn,
+>    toCString=fn,toString=fn,tokens=fn,translate=fn}
 >   : {<:string * string -> bool, <=:string * string -> bool,
 >       <>:string * string -> bool, =:string * string -> bool,
 >       >:string * string -> bool, >=:string * string -> bool,
@@ -42,12 +43,16 @@ String;
 >       explode:string -> char list,
 >       extract:string * int * int option -> string,
 >       fields:(char -> bool) -> string -> string list,
->       implode:char list -> string, isPrefix:string -> string -> bool,
+>       fromCString:string -> string option,
+>       fromString:string -> string option, implode:char list -> string,
+>       isPrefix:string -> string -> bool,
 >       isSubstring:string -> string -> bool,
 >       isSuffix:string -> string -> bool,
 >       map:(char -> char) -> string -> string, maxSize:int,
+>       scan:('a -> (char * 'a) option) -> 'a -> (string * 'a) option,
 >       size:string -> int, str:char -> string, sub:string * int -> char,
->       substring:string * int * int -> string,
+>       substring:string * int * int -> string, toCString:string -> string,
+>       toString:string -> string,
 >       tokens:(char -> bool) -> string -> string list,
 >       translate:(char -> string) -> string -> string}
 
@@ -409,11 +414,211 @@ String.`<>` ("a", "b");
 String.`<>` ("a", "a");
 > val it = false : bool
 
-(* val toString : string -> String.string
- * val scan       : (char, 'a) StringCvt.reader
- *                    -> (string, 'a) StringCvt.reader
- * val fromString : String.string -> string option
- * val toCString : string -> String.string
- * val fromCString : String.string -> string option *)
+(* [toString s] returns s with non-printable characters replaced by SML escape
+ * sequences; it is equivalent to translate Char.toString. *)
+String.toString;
+> val it = fn : string -> string
+String.toString "abc";
+> val it = "abc" : string
+String.toString "a\nb";
+> val it = "a\\nb" : string
+String.toString "a\"b";
+> val it = "a\\\"b" : string
+String.toString "a\\b";
+> val it = "a\\\\b" : string
+String.toString (str (chr 0) ^ "x");
+> val it = "\\^@x" : string
+String.toString ("a" ^ str (chr 200));
+> val it = "a\\200" : string
+String.toString "";
+> val it = "" : string
+"a\nb".toString ();
+> val it = "a\\nb" : string
+
+(* [scan getc strm] scans a sequence of printable characters, converting SML
+ * escape sequences into the characters they denote. Like Char.scan, it does
+ * not skip leading whitespace; unlike Char.scan, it stops rather than fails
+ * when it meets something it cannot scan. The expected values are those of
+ * SML/NJ. *)
+fun reader s i =
+  if i < String.size s then SOME (String.sub (s, i), i + 1) else NONE;
+> val reader = fn : string -> int -> (char * int) option
+String.scan;
+> val it = fn : ('a -> (char * 'a) option) -> 'a -> (string * 'a) option
+String.scan (reader "abc") 0;
+> val it = SOME ("abc",3) : (string * int) option
+String.scan (reader "hello world") 0;
+> val it = SOME ("hello world",11) : (string * int) option
+
+(*) Leading whitespace is scanned, not skipped.
+String.scan (reader " ab") 0;
+> val it = SOME (" ab",3) : (string * int) option
+
+(*) The empty stream yields the empty string.
+String.scan (reader "") 0;
+> val it = SOME ("",0) : (string * int) option
+
+(*) Escape sequences are converted, as in Char.scan.
+String.scan (reader "a\\nb") 0;
+> val it = SOME ("a\nb",4) : (string * int) option
+String.scan (reader "a\\065b") 0;
+> val it = SOME ("aAb",6) : (string * int) option
+String.scan (reader "a\\^Ab") 0;
+> val it = SOME ("a\^Ab",5) : (string * int) option
+String.scan (reader "a\\u0042c") 0;
+> val it = SOME ("aBc",8) : (string * int) option
+String.scan (reader "a\\\\b") 0;
+> val it = SOME ("a\\b",4) : (string * int) option
+
+(*) Unlike Char.scan, an unescaped double-quote is a character.
+String.scan (reader "a\"b") 0;
+> val it = SOME ("a\"b",3) : (string * int) option
+String.scan (reader "\"abc") 0;
+> val it = SOME ("\"abc",4) : (string * int) option
+
+(* Scanning stops at a non-printable character, or at an escape sequence that
+ * is ill-formed, has too few digits, or is out of range; what is scanned so
+ * far is returned, and the rest of the stream begins at the character that
+ * stopped it. *)
+String.scan (reader "abc\ndef") 0;
+> val it = SOME ("abc",3) : (string * int) option
+String.scan (reader "a\\q") 0;
+> val it = SOME ("a",1) : (string * int) option
+String.scan (reader "a\\256b") 0;
+> val it = SOME ("a",1) : (string * int) option
+String.scan (reader "a\\12b") 0;
+> val it = SOME ("a",1) : (string * int) option
+String.scan (reader "a\\uD800c") 0;
+> val it = SOME ("a",1) : (string * int) option
+String.scan (reader "a\\") 0;
+> val it = SOME ("a",1) : (string * int) option
+
+(*) A character that came from an escape sequence need not be printable.
+String.scan (reader "\\255") 0;
+> val it = SOME ("\255",4) : (string * int) option
+String.scan (reader "\\127x") 0;
+> val it = SOME ("\127x",5) : (string * int) option
+
+(* An escaped formatting sequence stands for nothing, and is consumed even if
+ * what follows it cannot be scanned. *)
+String.scan (reader "a\\ \\b") 0;
+> val it = SOME ("ab",5) : (string * int) option
+String.scan (reader "a\\ \\") 0;
+> val it = SOME ("a",4) : (string * int) option
+String.scan (reader "a\\ \\\\qz") 0;
+> val it = SOME ("a",4) : (string * int) option
+
+(* If nothing at all can be scanned, the result is the empty string if the
+ * stream has ended, and NONE if it has not. *)
+String.scan (reader "\\ \\") 0;
+> val it = SOME ("",3) : (string * int) option
+String.scan (reader "\\ \\\\ \\") 0;
+> val it = SOME ("",6) : (string * int) option
+String.scan (reader "\\ \\a") 0;
+> val it = SOME ("a",4) : (string * int) option
+String.scan (reader "\\q") 0;
+> val it = NONE : (string * int) option
+String.scan (reader "\n") 0;
+> val it = NONE : (string * int) option
+String.scan (reader "\\ a") 0;
+> val it = NONE : (string * int) option
+
+(* [fromString s] scans s as a sequence of printable characters, converting
+ * SML escape sequences. It is StringCvt.scanString of scan, so it returns as
+ * many characters as it can and ignores the rest, and gives NONE only if it
+ * can scan nothing at all and the string has not ended. *)
+String.fromString;
+> val it = fn : string -> string option
+String.fromString "abc";
+> val it = SOME "abc" : string option
+String.fromString "a\\nb";
+> val it = SOME "a\nb" : string option
+String.fromString "";
+> val it = SOME "" : string option
+String.fromString "a\\q";
+> val it = SOME "a" : string option
+String.fromString "\\q";
+> val it = NONE : string option
+String.fromString "abc\ndef";
+> val it = SOME "abc" : string option
+String.fromString "\\ \\";
+> val it = SOME "" : string option
+String.fromString "\\ \\a";
+> val it = SOME "a" : string option
+String.fromString "a\"b";
+> val it = SOME "a\"b" : string option
+
+(*) toString and fromString are inverses on a string of printable characters.
+String.fromString (String.toString "a\nb\"c");
+> val it = SOME "a\nb\"c" : string option
+
+(* [toCString s] returns s with non-printable characters replaced by C escape
+ * sequences; it is equivalent to translate Char.toCString. *)
+String.toCString;
+> val it = fn : string -> string
+String.toCString "abc";
+> val it = "abc" : string
+String.toCString "a\nb";
+> val it = "a\\nb" : string
+String.toCString "a\"b";
+> val it = "a\\\"b" : string
+String.toCString "a\\b";
+> val it = "a\\\\b" : string
+String.toCString "a'b";
+> val it = "a\\'b" : string
+String.toCString "a?b";
+> val it = "a\\?b" : string
+String.toCString (str (chr 0) ^ "x");
+> val it = "\\000x" : string
+String.toCString ("a" ^ str (chr 200));
+> val it = "a\\310" : string
+String.toCString "";
+> val it = "" : string
+"a\nb".toCString ();
+> val it = "a\\nb" : string
+
+(* [fromCString s] scans s as a string in the C language. Unlike fromString,
+ * it returns NONE unless the whole of s is scanned. *)
+String.fromCString;
+> val it = fn : string -> string option
+String.fromCString "abc";
+> val it = SOME "abc" : string option
+String.fromCString "";
+> val it = SOME "" : string option
+String.fromCString "a\\nb";
+> val it = SOME "a\nb" : string option
+String.fromCString "\\x41\\x42";
+> val it = SOME "AB" : string option
+String.fromCString "\\1\\2";
+> val it = SOME "\^A\^B" : string option
+String.fromCString "a\\?b";
+> val it = SOME "a?b" : string option
+
+(*) C allows an unescaped double-quote and single quote.
+String.fromCString "a\"b";
+> val it = SOME "a\"b" : string option
+String.fromCString "a'b";
+> val it = SOME "a'b" : string option
+
+(* Anything that cannot be scanned makes the whole string fail, even at the
+ * end, where fromString would stop and return what it had. *)
+String.fromCString "a\\qb";
+> val it = NONE : string option
+String.fromCString "abc\ndef";
+> val it = NONE : string option
+String.fromCString "ab\n";
+> val it = NONE : string option
+String.fromCString "a\\";
+> val it = NONE : string option
+
+(*) The numeric escapes are greedy, then range-checked.
+String.fromCString "a\\x41b";
+> val it = NONE : string option
+String.fromCString "\\778";
+> val it = SOME "?8" : string option
+
+(*) toCString and fromCString are inverses.
+String.fromCString (String.toCString ("a\nb\"c'd?e" ^ str (chr 200)));
+> val it = SOME "a\nb\"c'd?e\200" : string option
 
 (*) End string.smli

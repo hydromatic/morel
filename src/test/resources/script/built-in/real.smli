@@ -37,8 +37,9 @@ Real;
 >    fromManExp=fn,fromString=fn,isFinite=fn,isNan=fn,isNormal=fn,max=fn,
 >    maxFinite=3.4028235E38,min=fn,minNormalPos=1.1754944E~38,minPos=1.4E~45,
 >    negInf=~inf,posInf=inf,precision=24,radix=2,realCeil=fn,realFloor=fn,
->    realMod=fn,realRound=fn,realTrunc=fn,rem=fn,round=fn,sameSign=fn,sign=fn,
->    signBit=fn,split=fn,toManExp=fn,toString=fn,trunc=fn,unordered=fn,~=fn}
+>    realMod=fn,realRound=fn,realTrunc=fn,rem=fn,round=fn,sameSign=fn,scan=fn,
+>    sign=fn,signBit=fn,split=fn,toManExp=fn,toString=fn,trunc=fn,unordered=fn,
+>    ~=fn}
 >   : {*:real * real -> real, +:real * real -> real, -:real * real -> real,
 >       /:real * real -> real, <:real * real -> bool, <=:real * real -> bool,
 >       <>:real * real -> bool, =:real * real -> bool, >:real * real -> bool,
@@ -54,7 +55,9 @@ Real;
 >       realCeil:real -> real, realFloor:real -> real, realMod:real -> real,
 >       realRound:real -> real, realTrunc:real -> real,
 >       rem:real * real -> real, round:real -> int,
->       sameSign:real * real -> bool, sign:real -> int, signBit:real -> bool,
+>       sameSign:real * real -> bool,
+>       scan:('a -> (char * 'a) option) -> 'a -> (real * 'a) option,
+>       sign:real -> int, signBit:real -> bool,
 >       split:real -> {frac:real, whole:real},
 >       toManExp:real -> {exp:int, man:real}, toString:real -> string,
 >       trunc:real -> int, unordered:real * real -> bool, ~:real -> real}
@@ -996,13 +999,13 @@ Real.fromString "2.x";
 > val it = SOME 2 : real option
 (*) fromString cannot parse "inf", "nan" etc.
 Real.fromString "inf";
-> val it = NONE : real option
+> val it = SOME inf : real option
 Real.fromString "~inf";
-> val it = NONE : real option
+> val it = SOME ~inf : real option
 Real.fromString "-inf";
-> val it = NONE : real option
+> val it = SOME ~inf : real option
 Real.fromString "nan";
-> val it = NONE : real option
+> val it = SOME nan : real option
 
 (* Side-by-side comparison of how each format handles a range of values.
  * To run in SML, prepend `open StringCvt;` (Morel exposes the constructors
@@ -1342,5 +1345,26 @@ List.map (fn x => (x, Real.toString x))
  * between binary and decimal real representations are readily available, e.g.,
  * see the technical report by Gay[CITE]. *)
 (*) TODO
+
+(* "scan" reads a value from a prefix of a character stream, after
+ * skipping whitespace. The expected values are those of SML/NJ. *)
+fun reader s i =
+  if i < String.size s then SOME (String.sub (s, i), i + 1) else NONE;
+> val reader = fn : string -> int -> (char * int) option
+Real.scan;
+> val it = fn : ('a -> (char * 'a) option) -> 'a -> (real * 'a) option
+Real.scan (reader "1.5e2x") 0;
+> val it = SOME (150,5) : (real * int) option
+Real.scan (reader "  ~3.25!") 0;
+> val it = SOME (~3.25,7) : (real * int) option
+Real.scan (reader "42") 0;
+> val it = SOME (42,2) : (real * int) option
+Real.scan (reader "abc") 0;
+> val it = NONE : (real * int) option
+(*) "inf", "infinity" and "nan" are read in any case.
+Real.scan (reader "inf!") 0;
+> val it = SOME (inf,3) : (real * int) option
+Real.scan (reader "nan!") 0;
+> val it = SOME (nan,3) : (real * int) option
 
 (*) End real.smli

@@ -694,6 +694,23 @@ public enum BuiltIn {
    * <p>"toString b" returns the string representation of <em>b</em>, either
    * "true" or "false".
    */
+  /**
+   * Function "Bool.scan", of type "(char, &alpha;) reader &rarr; (bool,
+   * &alpha;) reader".
+   *
+   * <p>"scan getc strm" returns "SOME (b, rest)" if "strm" starts, after any
+   * whitespace, with "true" or "false"; "NONE" otherwise.
+   */
+  BOOL_SCAN(
+      "Bool",
+      "scan",
+      ts ->
+          ts.forallType(
+              1,
+              h ->
+                  ts.fnType(
+                      ts.reader(CHAR, h.get(0)), ts.reader(BOOL, h.get(0))))),
+
   BOOL_TO_STRING("Bool", "toString", true, ts -> ts.fnType(BOOL, STRING)),
 
   /**
@@ -947,6 +964,28 @@ public enum BuiltIn {
   CHAR_PRED("Char", "pred", true, ts -> ts.fnType(CHAR, CHAR)),
 
   /**
+   * Function "Char.scan" of type "(char, 'a) reader &rarr; (char, 'a) reader".
+   *
+   * <p>"scan getc strm" scans a character, or an SML escape sequence denoting a
+   * character, from a prefix of the character stream {@code strm}. It does not
+   * skip leading whitespace; a space is a character like any other. It returns
+   * {@code SOME (c, rest)}, where {@code c} is the character scanned and {@code
+   * rest} is the rest of the stream, or {@code NONE} if the stream does not
+   * start with a character or starts with an ill-formed escape sequence. An
+   * escaped formatting sequence (a backslash, whitespace, and a backslash) is
+   * skipped, and the character after it is scanned.
+   */
+  CHAR_SCAN(
+      "Char",
+      "scan",
+      ts ->
+          ts.forallType(
+              1,
+              h ->
+                  ts.fnType(
+                      ts.reader(CHAR, h.get(0)), ts.reader(CHAR, h.get(0))))),
+
+  /**
    * Function "Char.succ" of type "char &rarr; char".
    *
    * <p>"succ c" returns the character immediately following {@code c} in the
@@ -1079,6 +1118,12 @@ public enum BuiltIn {
   /**
    * Function "Date.date", of type "{day:int, hour:int, minute:int, month:month,
    * offset:time option, second:int, year:int} &rarr; date".
+   *
+   * <p>A day, hour, minute or second outside its usual range carries into the
+   * field above it, as it does in C's {@code mktime}: day 32 of March is April
+   * 1, day 0 is the last day of February, and hour 25 is hour 1 of the next
+   * day. It raises {@link BuiltInExn#DATE Date} if the year is so far out of
+   * range that there is no such date.
    */
   DATE_DATE(
       "Date",
@@ -1159,11 +1204,39 @@ public enum BuiltIn {
       true,
       ts -> ts.fnType(ts.lookup(Eqtype.DATE), ts.lookup(Datatype.DATE_MONTH))),
 
+  /**
+   * Function "Date.scan" of type "(char, 'a) reader &rarr; (date, 'a) reader".
+   *
+   * <p>"scan getc strm" reads a date from a prefix of the character stream
+   * {@code strm}, in the format "Www Mmm DD HH:MM:SS YYYY" produced by {@link
+   * #DATE_TO_STRING toString}. It does not skip leading whitespace, the fields
+   * are separated by exactly one space, and the day may be written with a
+   * leading zero or a leading space. The weekday must be a valid name but is
+   * otherwise ignored; the weekday of the result is determined by the date.
+   * Fields that are out of range are normalized, as in {@link #DATE_DATE date}.
+   */
+  DATE_SCAN(
+      "Date",
+      "scan",
+      ts ->
+          ts.forallType(
+              1,
+              h ->
+                  ts.fnType(
+                      ts.reader(CHAR, h.get(0)),
+                      ts.reader(ts.lookup(Eqtype.DATE), h.get(0))))),
+
   /** Function "Date.second", of type "date &rarr; int". */
   DATE_SECOND(
       "Date", "second", true, ts -> ts.fnType(ts.lookup(Eqtype.DATE), INT)),
 
-  /** Function "Date.toString", of type "date &rarr; string". */
+  /**
+   * Function "Date.toString", of type "date &rarr; string".
+   *
+   * <p>Formats a date as "Www Mmm DD HH:MM:SS YYYY", for example "Thu Jan 01
+   * 00:00:00 1970". The day is padded with a zero; the "%c" format code of
+   * {@link #DATE_FMT fmt} pads it with a space.
+   */
   DATE_TO_STRING(
       "Date",
       "toString",
@@ -1707,6 +1780,27 @@ public enum BuiltIn {
    */
   INT_SAME_SIGN(
       "Int", "sameSign", true, ts -> ts.fnType(ts.tupleType(INT, INT), BOOL)),
+
+  /**
+   * Function "Int.scan", of type "radix &rarr; (char, &alpha;) reader &rarr;
+   * (int, &alpha;) reader".
+   *
+   * <p>"scan radix getc strm" returns "SOME (i, rest)" if an integer in the
+   * format denoted by "radix" can be read from a prefix of "strm", after
+   * skipping initial whitespace; "NONE" otherwise. Raises "Overflow" if an
+   * integer can be read but is too large for type "int".
+   */
+  INT_SCAN(
+      "Int",
+      "scan",
+      ts ->
+          ts.forallType(
+              1,
+              h ->
+                  ts.fnType(
+                      ts.lookup(Datatype.STRING_CVT_RADIX),
+                      ts.reader(CHAR, h.get(0)),
+                      ts.reader(INT, h.get(0))))),
 
   /**
    * Function "Int.sign", of type "int &rarr; int".
@@ -3594,6 +3688,23 @@ public enum BuiltIn {
       ts -> ts.fnType(ts.tupleType(REAL, REAL), BOOL)),
 
   /**
+   * Function "Real.scan", of type "(char, &alpha;) reader &rarr; (real,
+   * &alpha;) reader".
+   *
+   * <p>"scan getc strm" reads a real from a prefix of "strm", after skipping
+   * initial whitespace. It accepts "inf", "infinity" and "nan", in any case.
+   */
+  REAL_SCAN(
+      "Real",
+      "scan",
+      ts ->
+          ts.forallType(
+              1,
+              h ->
+                  ts.fnType(
+                      ts.reader(CHAR, h.get(0)), ts.reader(REAL, h.get(0))))),
+
+  /**
    * Function "Real.sign", of type "real &rarr; int".
    *
    * <p>Returns ~1 if r is negative, 0 if r is zero, or 1 if r is positive. An
@@ -4074,6 +4185,30 @@ public enum BuiltIn {
       ts -> ts.fnType(ts.fnType(CHAR, BOOL), STRING, ts.listType(STRING))),
 
   /**
+   * Function "String.fromCString", of type "string &rarr; string option".
+   *
+   * <p>"fromCString s" scans {@code s} as a string in the C language,
+   * converting C escape sequences into the characters they denote. It returns
+   * {@code NONE} unless the whole of {@code s} is scanned; unlike {@link
+   * #STRING_FROM_STRING fromString}, it does not stop early and ignore the
+   * rest.
+   */
+  STRING_FROM_CSTRING(
+      "String", "fromCString", ts -> ts.fnType(STRING, ts.option(STRING))),
+
+  /**
+   * Function "String.fromString", of type "string &rarr; string option".
+   *
+   * <p>"fromString s" scans {@code s} as a sequence of printable characters,
+   * converting SML escape sequences into the characters they denote. It is
+   * {@code StringCvt.scanString} of {@link #STRING_SCAN scan}, so it returns as
+   * many characters as it can and ignores the rest, and returns {@code NONE}
+   * only if it can scan no characters at all and the string has not ended.
+   */
+  STRING_FROM_STRING(
+      "String", "fromString", ts -> ts.fnType(STRING, ts.option(STRING))),
+
+  /**
    * Function "String.implode", of type "char list &rarr; string".
    *
    * <p>"implode l" generates the string containing the characters in the list
@@ -4159,6 +4294,30 @@ public enum BuiltIn {
       "String", "<>", ts -> ts.fnType(ts.tupleType(STRING, STRING), BOOL)),
 
   /**
+   * Function "String.scan" of type "(char, 'a) reader &rarr; (string, 'a)
+   * reader".
+   *
+   * <p>"scan getc strm" scans its character source as a sequence of printable
+   * characters, converting SML escape sequences into the characters they
+   * denote. It does not skip leading whitespace. It returns as many characters
+   * as it can, stopping when it reaches the end of the stream, a non-printing
+   * character, or an improper escape sequence, and it returns the rest of the
+   * stream along with them. It returns {@code NONE} if it can scan no
+   * characters at all and the stream has not ended.
+   *
+   * <p>Unlike {@link #CHAR_SCAN}, it accepts an unescaped double-quote.
+   */
+  STRING_SCAN(
+      "String",
+      "scan",
+      ts ->
+          ts.forallType(
+              1,
+              h ->
+                  ts.fnType(
+                      ts.reader(CHAR, h.get(0)), ts.reader(STRING, h.get(0))))),
+
+  /**
    * Function "String.size", of type "string &rarr; int".
    *
    * <p>"size s" returns |s|, the number of characters in string s.
@@ -4194,6 +4353,23 @@ public enum BuiltIn {
       "substring",
       true,
       ts -> ts.fnType(ts.tupleType(STRING, INT, INT), STRING)),
+
+  /**
+   * Function "String.toCString", of type "string &rarr; string".
+   *
+   * <p>"toCString s" returns {@code s} with non-printable characters replaced
+   * by C escape sequences. Equivalent to {@code translate Char.toCString s}.
+   */
+  STRING_TO_CSTRING(
+      "String", "toCString", true, ts -> ts.fnType(STRING, STRING)),
+
+  /**
+   * Function "String.toString", of type "string &rarr; string".
+   *
+   * <p>"toString s" returns {@code s} with non-printable characters replaced by
+   * SML escape sequences. Equivalent to {@code translate Char.toString s}.
+   */
+  STRING_TO_STRING("String", "toString", true, ts -> ts.fnType(STRING, STRING)),
 
   /**
    * Function "String.tokens", of type "(char &rarr; bool) &rarr; string &rarr;
@@ -4478,6 +4654,28 @@ public enum BuiltIn {
 
   /** Function "Time.now", of type "unit &rarr; time". */
   TIME_NOW("Time", "now", ts -> ts.fnType(UNIT, ts.lookup(Eqtype.TIME))),
+
+  /**
+   * Function "Time.scan" of type "(char, 'a) reader &rarr; (time, 'a) reader".
+   *
+   * <p>"scan getc strm" reads a time from a prefix of the character stream
+   * {@code strm}, after skipping initial whitespace. The time is a decimal
+   * number of seconds, optionally signed with "~", "-" or "+", and with an
+   * optional fractional part; the sign must be followed immediately by the
+   * number, and a decimal point must be followed by at least one digit. Digits
+   * beyond a nanosecond are discarded. It raises {@link BuiltInExn#TIME Time}
+   * if the time is too large to be represented.
+   */
+  TIME_SCAN(
+      "Time",
+      "scan",
+      ts ->
+          ts.forallType(
+              1,
+              h ->
+                  ts.fnType(
+                      ts.reader(CHAR, h.get(0)),
+                      ts.reader(ts.lookup(Eqtype.TIME), h.get(0))))),
 
   /** Function "Time.-", of type "time * time &rarr; time". */
   TIME_SUBTRACT(
@@ -4985,6 +5183,26 @@ public enum BuiltIn {
   WORD_OP_TIMES("Word", "*", ts -> ts.fnType(ts.tupleType(WORD, WORD), WORD)),
   WORD_ORB(
       "Word", "orb", true, ts -> ts.fnType(ts.tupleType(WORD, WORD), WORD)),
+  /**
+   * Function "Word.scan", of type "radix &rarr; (char, &alpha;) reader &rarr;
+   * (word, &alpha;) reader".
+   *
+   * <p>"scan radix getc strm" reads an unsigned number in the format denoted by
+   * "radix" from a prefix of "strm", after skipping initial whitespace. The
+   * number may start "0w", and, if hexadecimal, "0x" or "0wx".
+   */
+  WORD_SCAN(
+      "Word",
+      "scan",
+      ts ->
+          ts.forallType(
+              1,
+              h ->
+                  ts.fnType(
+                      ts.lookup(Datatype.STRING_CVT_RADIX),
+                      ts.reader(CHAR, h.get(0)),
+                      ts.reader(WORD, h.get(0))))),
+
   WORD_TO_INT("Word", "toInt", ts -> ts.fnType(WORD, INT)),
   WORD_TO_INT_X("Word", "toIntX", ts -> ts.fnType(WORD, INT)),
   WORD_TO_LARGE("Word", "toLarge", ts -> ts.fnType(WORD, WORD)),

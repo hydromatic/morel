@@ -61,6 +61,7 @@ val <a id='sign' href="#sign-impl">sign</a> : int -> int
 val <a id='sameSign' href="#sameSign-impl">sameSign</a> : int * int -> bool
 val <a id='fmt' href="#fmt-impl">fmt</a> : radix -> int -> string
 val <a id='toString' href="#toString-impl">toString</a> : int -> string
+val <a id='scan' href="#scan-impl">scan</a> : radix -> (char, 'a) reader -> (int, 'a) reader
 val <a id='fromString' href="#fromString-impl">fromString</a> : string -> int option
 </pre>
 
@@ -235,6 +236,16 @@ generated for the hexadecimal representation.
 
 `toString i` (or `i.toString ()`) converts a `int` into a `string`; equivalent to `(fmt
 StringCvt.DEC r)`.
+
+<a id="scan-impl"></a>
+<h3><code>scan</code></h3>
+
+`scan radix getc strm` returns `SOME (i,rest)` if an integer in the format denoted by `radix`
+can be parsed from a prefix of the character stream `strm` after
+skipping initial whitespace, where `i` is the value of the integer
+parsed and `rest` is the rest of the character stream. `NONE` is
+returned otherwise. This function raises `Overflow` when an integer
+can be parsed, but is too large to be represented by type `int`.
 
 <a id="fromString-impl"></a>
 <h3><code>fromString</code></h3>

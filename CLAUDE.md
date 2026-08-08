@@ -265,9 +265,6 @@ When implementing a structure from the
    `docs/lib/index.md`, and `docs/reference.md`.
 
 Notes:
-- `scan` functions (those taking a `StringCvt.reader`) are not yet
-  implemented, but `StringCvt` now provides the `reader` type and
-  `scanString`, so they can be.
 - In Morel, `LargeReal.real` = `real` and `LargeInt.int` = `int`.
 - Enum constants in `BuiltIn.java` and `Codes.java` must be in alphabetical
   order within their sort region (checked by `LintTest.testLint`).

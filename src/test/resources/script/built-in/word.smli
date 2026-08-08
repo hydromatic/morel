@@ -26,9 +26,9 @@ Word;
 > val it =
 >   {*=fn,+=fn,-=fn,<=fn,<<=fn,<==fn,>=fn,>==fn,>>=fn,andb=fn,compare=fn,
 >    `div`=fn,fmt=fn,fromInt=fn,fromLarge=fn,fromLargeInt=fn,fromLargeWord=fn,
->    fromString=fn,max=fn,min=fn,`mod`=fn,notb=fn,orb=fn,toInt=fn,toIntX=fn,
->    toLarge=fn,toLargeInt=fn,toLargeIntX=fn,toLargeWord=fn,toLargeWordX=fn,
->    toLargeX=fn,toString=fn,wordSize=64,xorb=fn,~=fn,~>>=fn}
+>    fromString=fn,max=fn,min=fn,`mod`=fn,notb=fn,orb=fn,scan=fn,toInt=fn,
+>    toIntX=fn,toLarge=fn,toLargeInt=fn,toLargeIntX=fn,toLargeWord=fn,
+>    toLargeWordX=fn,toLargeX=fn,toString=fn,wordSize=64,xorb=fn,~=fn,~>>=fn}
 >   : {*:word * word -> word, +:word * word -> word, -:word * word -> word,
 >       <:word * word -> bool, <<:word * word -> word, <=:word * word -> bool,
 >       >:word * word -> bool, >=:word * word -> bool, >>:word * word -> word,
@@ -38,6 +38,7 @@ Word;
 >       fromLargeWord:word -> word, fromString:string -> word option,
 >       max:word * word -> word, min:word * word -> word,
 >       `mod`:word * word -> word, notb:word -> word, orb:word * word -> word,
+>       scan:radix -> ('a -> (char * 'a) option) -> 'a -> (word * 'a) option,
 >       toInt:word -> int, toIntX:word -> int, toLarge:word -> word,
 >       toLargeInt:word -> int, toLargeIntX:word -> int,
 >       toLargeWord:word -> word, toLargeWordX:word -> word,
@@ -173,5 +174,35 @@ Word.fromString "0xG";
 > val it = 0wx7 : word
 (0w255).toString ();
 > val it = "FF" : string
+
+(* "scan" reads a value from a prefix of a character stream, after
+ * skipping whitespace. The expected values are those of SML/NJ. *)
+fun reader s i =
+  if i < String.size s then SOME (String.sub (s, i), i + 1) else NONE;
+> val reader = fn : string -> int -> (char * int) option
+Word.scan;
+> val it = fn : radix -> ('a -> (char * 'a) option) -> 'a -> (word * 'a) option
+Word.scan DEC (reader "42x") 0;
+> val it = SOME (0wx2A,2) : (word * int) option
+(*) A word may be written "0w42", and a hexadecimal one "0x1f" or "0wx1f".
+Word.scan HEX (reader "0wx1F!") 0;
+> val it = SOME (0wx1F,5) : (word * int) option
+Word.scan HEX (reader "0x1F!") 0;
+> val it = SOME (0wx1F,4) : (word * int) option
+Word.scan DEC (reader "0w42!") 0;
+> val it = SOME (0wx2A,4) : (word * int) option
+(*) A word is unsigned, so a sign is not part of it.
+Word.scan DEC (reader "~5") 0;
+> val it = NONE : (word * int) option
+
+(*) Initial whitespace is skipped, but it is not a word on its own.
+Word.scan DEC (reader "  42x") 0;
+> val it = SOME (0wx2A,4) : (word * int) option
+Word.scan HEX (reader "  1F!") 0;
+> val it = SOME (0wx1F,4) : (word * int) option
+Word.scan DEC (reader "\t\n 7") 0;
+> val it = SOME (0wx7,4) : (word * int) option
+Word.scan DEC (reader "   ") 0;
+> val it = NONE : (word * int) option
 
 (*) End word.smli

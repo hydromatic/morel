@@ -32,7 +32,7 @@ Char;
 >    fromCString=fn,fromInt=fn,fromString=fn,isAlpha=fn,isAlphaNum=fn,
 >    isAscii=fn,isCntrl=fn,isDigit=fn,isGraph=fn,isHexDigit=fn,isLower=fn,
 >    isOctDigit=fn,isPrint=fn,isPunct=fn,isSpace=fn,isUpper=fn,maxChar=#"\255",
->    maxOrd=255,minChar=#"\^@",notContains=fn,ord=fn,pred=fn,succ=fn,
+>    maxOrd=255,minChar=#"\^@",notContains=fn,ord=fn,pred=fn,scan=fn,succ=fn,
 >    toCString=fn,toLower=fn,toString=fn,toUpper=fn}
 >   : {<:char * char -> bool, <=:char * char -> bool, <>:char * char -> bool,
 >       =:char * char -> bool, >:char * char -> bool, >=:char * char -> bool,
@@ -45,6 +45,7 @@ Char;
 >       isPrint:char -> bool, isPunct:char -> bool, isSpace:char -> bool,
 >       isUpper:char -> bool, maxChar:char, maxOrd:int, minChar:char,
 >       notContains:string -> char -> bool, ord:char -> int, pred:char -> char,
+>       scan:('a -> (char * 'a) option) -> 'a -> (char * 'a) option,
 >       succ:char -> char, toCString:char -> string, toLower:char -> char,
 >       toString:char -> string, toUpper:char -> char}
 
@@ -302,14 +303,18 @@ Char.fromString "\\065";
 > val it = SOME #"A" : char option
 Char.fromString "a";
 > val it = SOME #"a" : char option
+
+(* A non-printable character has to be written as an escape sequence; the
+ * character itself is not scanned, even though toString would print it as
+ * that escape sequence. *)
 Char.fromString "\^@";
-> val it = SOME #"\^@" : char option
+> val it = NONE : char option
 Char.fromString "\t";
-> val it = SOME #"\t" : char option
+> val it = NONE : char option
 Char.fromString "\\t";
 > val it = SOME #"\t" : char option
 Char.fromString "\009";
-> val it = SOME #"\t" : char option
+> val it = NONE : char option
 Char.fromString "\\009";
 > val it = SOME #"\t" : char option
 
@@ -422,10 +427,89 @@ chr 255;
 > val it = #"\255" : char
 
 (* [fromCString s] attempts to scan a character or C escape sequence
- * from the string s.  Does not skip leading whitespace.  For
- * instance, fromString "\\065" equals #"A". *)
-Char.fromString;
+ * from the string s.  Does not skip leading whitespace. *)
+Char.fromCString;
 > val it = fn : string -> char option
+Char.fromCString "a";
+> val it = SOME #"a" : char option
+
+(*) C allows an unescaped double-quote, where SML does not.
+Char.fromCString "\"";
+> val it = SOME #"\"" : char option
+Char.fromCString "'";
+> val it = SOME #"'" : char option
+
+(*) The letter escapes, and the four punctuation escapes.
+Char.fromCString "\\a";
+> val it = SOME #"\a" : char option
+Char.fromCString "\\n";
+> val it = SOME #"\n" : char option
+Char.fromCString "\\v\\f\\r\\b";
+> val it = SOME #"\v" : char option
+Char.fromCString "\\\\";
+> val it = SOME #"\\" : char option
+Char.fromCString "\\\"";
+> val it = SOME #"\"" : char option
+Char.fromCString "\\'";
+> val it = SOME #"'" : char option
+Char.fromCString "\\?";
+> val it = SOME #"?" : char option
+
+(* One to three octal digits, stopping at the first character that is not one;
+ * "\778" is "\77" followed by "8". *)
+Char.fromCString "\\0";
+> val it = SOME #"\^@" : char option
+Char.fromCString "\\12";
+> val it = SOME #"\n" : char option
+Char.fromCString "\\000";
+> val it = SOME #"\^@" : char option
+Char.fromCString "\\033";
+> val it = SOME #"\^[" : char option
+Char.fromCString "\\377";
+> val it = SOME #"\255" : char option
+Char.fromCString "\\778";
+> val it = SOME #"?" : char option
+
+(*) An octal code above maxOrd is not a character.
+Char.fromCString "\\400";
+> val it = NONE : char option
+Char.fromCString "\\777";
+> val it = NONE : char option
+
+(* "x" and as many hexadecimal digits as follow it - there must be at least
+ * one, and the code must be no greater than maxOrd. *)
+Char.fromCString "\\x41";
+> val it = SOME #"A" : char option
+Char.fromCString "\\x4";
+> val it = SOME #"\^D" : char option
+Char.fromCString "\\x0";
+> val it = SOME #"\^@" : char option
+Char.fromCString "\\xff";
+> val it = SOME #"\255" : char option
+Char.fromCString "\\x100";
+> val it = NONE : char option
+Char.fromCString "\\x";
+> val it = NONE : char option
+
+(*) Scanning stops after the first character, and does not skip whitespace.
+Char.fromCString "abc";
+> val it = SOME #"a" : char option
+Char.fromCString "  ab";
+> val it = SOME #" " : char option
+Char.fromCString "a\\nb";
+> val it = SOME #"a" : char option
+
+(*) An unknown escape, a raw non-printable character, and the empty string.
+Char.fromCString "\\q";
+> val it = NONE : char option
+Char.fromCString (str (chr 4));
+> val it = NONE : char option
+Char.fromCString "";
+> val it = NONE : char option
+
+(*) C has no escaped formatting sequence, unlike SML.
+Char.fromCString "\\ \\a";
+> val it = NONE : char option
 
 (* [toCString c] returns a string consisting of the character c, if c
  * is printable, else an C escape sequence corresponding to c.  A
@@ -454,6 +538,52 @@ Char.fromString;
  *           toString (chr 128) equals "\\200" *)
 Char.toCString;
 > val it = fn : char -> string
+Char.toCString #"A";
+> val it = "A" : string
+Char.toCString #"\\";
+> val it = "\\\\" : string
+Char.toCString #"\"";
+> val it = "\\\"" : string
+Char.toCString #"'";
+> val it = "\\'" : string
+Char.toCString #"?";
+> val it = "\\?" : string
+Char.toCString (chr 0);
+> val it = "\\000" : string
+Char.toCString (chr 7);
+> val it = "\\a" : string
+Char.toCString (chr 8);
+> val it = "\\b" : string
+Char.toCString (chr 9);
+> val it = "\\t" : string
+Char.toCString (chr 10);
+> val it = "\\n" : string
+Char.toCString (chr 11);
+> val it = "\\v" : string
+Char.toCString (chr 12);
+> val it = "\\f" : string
+Char.toCString (chr 13);
+> val it = "\\r" : string
+Char.toCString (chr 14);
+> val it = "\\016" : string
+Char.toCString (chr 27);
+> val it = "\\033" : string
+Char.toCString (chr 127);
+> val it = "\\177" : string
+Char.toCString (chr 128);
+> val it = "\\200" : string
+Char.toCString (chr 200);
+> val it = "\\310" : string
+Char.toCString (chr 255);
+> val it = "\\377" : string
+#"A".toCString ();
+> val it = "A" : string
+
+(*) toCString and fromCString are inverses.
+Char.fromCString (Char.toCString (chr 200));
+> val it = SOME #"\200" : char option
+Char.fromCString (Char.toCString #"?");
+> val it = SOME #"?" : char option
 
 (* [<]
  * [<=]
@@ -533,5 +663,98 @@ Char.isOctDigit #"a";
 > val it = false : bool
 #"7".isOctDigit ();
 > val it = true : bool
+
+(* [scan getc strm] scans a character, or an SML escape sequence denoting a
+ * character, from a prefix of a character stream. Unlike the other "scan"
+ * functions, it does not skip leading whitespace. The expected values are
+ * those of SML/NJ. *)
+fun reader s i =
+  if i < String.size s then SOME (String.sub (s, i), i + 1) else NONE;
+> val reader = fn : string -> int -> (char * int) option
+Char.scan;
+> val it = fn : ('a -> (char * 'a) option) -> 'a -> (char * 'a) option
+Char.scan (reader "abc") 0;
+> val it = SOME (#"a",1) : (char * int) option
+
+(*) A space is a character like any other; it is not skipped.
+Char.scan (reader " a") 0;
+> val it = SOME (#" ",1) : (char * int) option
+
+(*) The empty stream has no character in it.
+Char.scan (reader "") 0;
+> val it = NONE : (char * int) option
+
+(*) Escape sequences for the non-printable characters.
+Char.scan (reader "\\n!") 0;
+> val it = SOME (#"\n",2) : (char * int) option
+Char.scan (reader "\\t") 0;
+> val it = SOME (#"\t",2) : (char * int) option
+Char.scan (reader "\\a\\b") 0;
+> val it = SOME (#"\a",2) : (char * int) option
+
+(*) A double-quote and a backslash must be escaped, even as characters.
+Char.scan (reader "\\\"") 0;
+> val it = SOME (#"\"",2) : (char * int) option
+Char.scan (reader "\\\\") 0;
+> val it = SOME (#"\\",2) : (char * int) option
+Char.scan (reader "\"") 0;
+> val it = NONE : (char * int) option
+
+(*) A raw non-printable character is not a character constant.
+Char.scan (reader (str (chr 4))) 0;
+> val it = NONE : (char * int) option
+Char.scan (reader "\n") 0;
+> val it = NONE : (char * int) option
+
+(* "\ddd" is the character whose code is the three decimal digits "ddd";
+ * it must have exactly three digits, and be in range. *)
+Char.scan (reader "\\065z") 0;
+> val it = SOME (#"A",4) : (char * int) option
+Char.scan (reader "\\255") 0;
+> val it = SOME (#"\255",4) : (char * int) option
+Char.scan (reader "\\256") 0;
+> val it = NONE : (char * int) option
+Char.scan (reader "\\12") 0;
+> val it = NONE : (char * int) option
+
+(*) "\^" and a character in the range "@" to "_" is a control character.
+Char.scan (reader "\\^Az") 0;
+> val it = SOME (#"\^A",3) : (char * int) option
+Char.scan (reader "\\^@") 0;
+> val it = SOME (#"\^@",3) : (char * int) option
+Char.scan (reader "\\^`") 0;
+> val it = NONE : (char * int) option
+
+(* A "u" escape is the character whose code is the four hexadecimal digits
+ * that follow; the code must be no greater than maxOrd. *)
+Char.scan (reader "\\u0041") 0;
+> val it = SOME (#"A",6) : (char * int) option
+Char.scan (reader "\\u00e9") 0;
+> val it = SOME (#"\233",6) : (char * int) option
+Char.scan (reader "\\uD800") 0;
+> val it = NONE : (char * int) option
+Char.scan (reader "\\u041") 0;
+> val it = NONE : (char * int) option
+Char.scan (reader "\\U0041") 0;
+> val it = NONE : (char * int) option
+
+(* An escaped formatting sequence - a backslash, whitespace, and a backslash -
+ * stands for nothing; the character after it is scanned. *)
+Char.scan (reader "\\ \\a") 0;
+> val it = SOME (#"a",4) : (char * int) option
+Char.scan (reader "\\  \n \\b") 0;
+> val it = SOME (#"b",7) : (char * int) option
+Char.scan (reader "\\ \\\\ \\a") 0;
+> val it = SOME (#"a",7) : (char * int) option
+
+(*) A formatting sequence that is not closed, or has nothing after it.
+Char.scan (reader "\\ a") 0;
+> val it = NONE : (char * int) option
+Char.scan (reader "\\ \\") 0;
+> val it = NONE : (char * int) option
+
+(*) An escape that is not one of the above.
+Char.scan (reader "\\q") 0;
+> val it = NONE : (char * int) option
 
 (*) End char.smli

@@ -23,6 +23,7 @@ import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.eval.Slots.maxOf;
+import static net.hydromatic.morel.util.Characters.isPrint;
 import static net.hydromatic.morel.util.Ord.forEachIndexed;
 import static net.hydromatic.morel.util.Pair.forEach;
 import static net.hydromatic.morel.util.Static.SKIP;
@@ -33,6 +34,7 @@ import static net.hydromatic.morel.util.Static.transformEager;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Chars;
@@ -249,13 +251,7 @@ public abstract class Codes {
       new BaseApplicable1<List, String>(BuiltIn.BOOL_FROM_STRING) {
         @Override
         public List apply(String s) {
-          if ("true".equals(s)) {
-            return optionSome(true);
-          } else if ("false".equals(s)) {
-            return optionSome(false);
-          } else {
-            return OPTION_NONE;
-          }
+          return scanString(BOOL_SCAN, s);
         }
       };
 
@@ -321,6 +317,56 @@ public abstract class Codes {
           return a0 || a1;
         }
       };
+
+  /**
+   * Consumes {@code word} from {@code source} if it is next, and returns
+   * whether it was. If it was not, {@code source} is left where it was.
+   */
+  private static boolean consume(
+      CharSource[] source, Applicable1<List, Object> reader, String word) {
+    return consume(source, reader, word, false);
+  }
+
+  /** As {@link #consume}, optionally ignoring case. */
+  private static boolean consume(
+      CharSource[] source,
+      Applicable1<List, Object> reader,
+      String word,
+      boolean ignoreCase) {
+    final Object mark = source[0].stream();
+    for (int i = 0; i < word.length(); i++) {
+      final int c = source[0].peek();
+      final boolean match =
+          ignoreCase
+              ? c >= 0 && Character.toLowerCase(c) == word.charAt(i)
+              : c == word.charAt(i);
+      if (!match) {
+        source[0] = new CharSource(reader, mark);
+        return false;
+      }
+      source[0].advance();
+    }
+    return true;
+  }
+
+  /** @see BuiltIn#BOOL_SCAN */
+  private static final BaseApplicable2<List, Applicable1<List, Object>, Object>
+      BOOL_SCAN =
+          new BaseApplicable2<List, Applicable1<List, Object>, Object>(
+              BuiltIn.BOOL_SCAN) {
+            @Override
+            public List apply(Applicable1<List, Object> reader, Object stream) {
+              final CharSource[] source = {new CharSource(reader, stream)};
+              source[0].skipWhitespace();
+              if (consume(source, reader, "true")) {
+                return optionSome(ImmutableList.of(true, source[0].stream()));
+              }
+              if (consume(source, reader, "false")) {
+                return optionSome(ImmutableList.of(false, source[0].stream()));
+              }
+              return OPTION_NONE;
+            }
+          };
 
   /** @see BuiltIn#BOOL_TO_STRING */
   private static final Applicable BOOL_TO_STRING =
@@ -392,9 +438,125 @@ public abstract class Codes {
       new BaseApplicable1<List, String>(BuiltIn.CHAR_FROM_CSTRING) {
         @Override
         public List apply(String s) {
-          throw new UnsupportedOperationException("CHAR_FROM_CSTRING");
+          final Applicable1<List, Object> reader = stringReader(s);
+          final CharSource[] source = {new CharSource(reader, 0)};
+          final Character c = scanCChar(source, reader);
+          return c == null ? OPTION_NONE : optionSome(c);
         }
       };
+
+  /**
+   * Scans a character, or a C escape sequence denoting a character, from {@code
+   * source}, and returns null if {@code source} does not start with one.
+   *
+   * <p>A character stands for itself if it is printable and is not a backslash;
+   * unlike SML, C allows an unescaped double-quote here. The escape sequences
+   * are C's: a letter, a backslash, a quote or a question mark; one to three
+   * octal digits; or "x" and one or more hexadecimal digits. A code above
+   * {@link #CHAR_MAX_ORD} is not a character, and the source is left where it
+   * was.
+   *
+   * @see BuiltIn#CHAR_FROM_CSTRING
+   * @see BuiltIn#STRING_FROM_CSTRING
+   */
+  private static @Nullable Character scanCChar(
+      CharSource[] source, Applicable1<List, Object> reader) {
+    final Object mark = source[0].stream();
+    final int c = source[0].peek();
+    if (c < 0) {
+      return null;
+    }
+    if (c != '\\') {
+      if (!isPrint((char) c)) {
+        return null;
+      }
+      source[0].advance();
+      return (char) c;
+    }
+
+    source[0].advance();
+    final int c2 = source[0].peek();
+    final int escaped;
+    switch (c2) {
+      case 'a':
+        escaped = 7;
+        break;
+      case 'b':
+        escaped = '\b';
+        break;
+      case 't':
+        escaped = '\t';
+        break;
+      case 'n':
+        escaped = '\n';
+        break;
+      case 'v':
+        escaped = 11;
+        break;
+      case 'f':
+        escaped = '\f';
+        break;
+      case 'r':
+        escaped = '\r';
+        break;
+      case '"':
+      case '\'':
+      case '?':
+      case '\\':
+        escaped = c2;
+        break;
+
+      case 'x':
+        // "x" and as many hexadecimal digits as follow it; there must be at
+        // least one.
+        source[0].advance();
+        return scanCCode(source, reader, mark, 16, Integer.MAX_VALUE);
+
+      default:
+        if (c2 >= '0' && c2 <= '7') {
+          // Up to three octal digits, stopping at the first character that is
+          // not one.
+          return scanCCode(source, reader, mark, 8, 3);
+        }
+        source[0] = new CharSource(reader, mark);
+        return null;
+    }
+    source[0].advance();
+    return (char) escaped;
+  }
+
+  /**
+   * Scans up to {@code max} digits in the given base - at least one - and
+   * returns the character whose code they are.
+   *
+   * <p>Returns null, and rewinds {@code source} to {@code mark}, if there is no
+   * digit or the code is not that of a character.
+   */
+  private static @Nullable Character scanCCode(
+      CharSource[] source,
+      Applicable1<List, Object> reader,
+      Object mark,
+      int base,
+      int max) {
+    int code = 0;
+    int n = 0;
+    while (n < max && Character.digit(source[0].peek(), base) >= 0) {
+      code = code * base + Character.digit(source[0].peek(), base);
+      if (code > CHAR_MAX_ORD) {
+        // Keep going so that the whole numeral is consumed conceptually, but
+        // the value is out of range; stop before it overflows.
+        source[0] = new CharSource(reader, mark);
+        return null;
+      }
+      source[0].advance();
+      ++n;
+    }
+    if (n == 0) {
+      source[0] = new CharSource(reader, mark);
+      return null;
+    }
+    return (char) code;
+  }
 
   /** @see BuiltIn#CHAR_FROM_INT */
   private static final Applicable CHAR_FROM_INT =
@@ -413,8 +575,7 @@ public abstract class Codes {
       new BaseApplicable1<List, String>(BuiltIn.CHAR_FROM_STRING) {
         @Override
         public List apply(String s) {
-          Character c = Parsers.fromString(s);
-          return c == null ? OPTION_NONE : optionSome(c);
+          return scanString(CHAR_SCAN, s);
         }
       };
 
@@ -570,6 +731,170 @@ public abstract class Codes {
     }
   }
 
+  /** @see BuiltIn#CHAR_SCAN */
+  private static final BaseApplicable2<List, Applicable1<List, Object>, Object>
+      CHAR_SCAN =
+          new BaseApplicable2<List, Applicable1<List, Object>, Object>(
+              BuiltIn.CHAR_SCAN) {
+            @Override
+            public List apply(Applicable1<List, Object> reader, Object stream) {
+              final CharSource[] source = {new CharSource(reader, stream)};
+              skipGaps(source, reader);
+              final Character c = scanChar(source, reader, false);
+              return c == null
+                  ? OPTION_NONE
+                  : optionSome(ImmutableList.of(c, source[0].stream()));
+            }
+          };
+
+  /**
+   * Consumes any escaped formatting sequences that {@code source} starts with.
+   *
+   * <p>Such a sequence is a backslash, one or more whitespace characters, and a
+   * backslash; it stands for nothing. If a backslash is followed by whitespace
+   * but no closing backslash, nothing is consumed, and the caller will find the
+   * backslash and reject it as an ill-formed escape.
+   */
+  private static void skipGaps(
+      CharSource[] source, Applicable1<List, Object> reader) {
+    for (; ; ) {
+      final Object mark = source[0].stream();
+      if (source[0].peek() != '\\') {
+        return;
+      }
+      source[0].advance();
+      if (source[0].peek() < 0
+          || !Character.isWhitespace((char) source[0].peek())) {
+        source[0] = new CharSource(reader, mark);
+        return;
+      }
+      source[0].skipWhitespace();
+      if (source[0].peek() != '\\') {
+        source[0] = new CharSource(reader, mark);
+        return;
+      }
+      source[0].advance();
+    }
+  }
+
+  /**
+   * Scans a character, or an SML escape sequence denoting a character, from
+   * {@code source}, and returns null if {@code source} does not start with one.
+   *
+   * <p>A character stands for itself if it is printable and is not a backslash;
+   * a backslash, and the non-printable characters, have to be escaped. A
+   * double-quote stands for itself only if {@code quoteOk}; it does in a string
+   * but not in a character. If the result is null, {@code source} is left where
+   * it was.
+   *
+   * @see BuiltIn#CHAR_SCAN
+   * @see BuiltIn#STRING_SCAN
+   */
+  private static @Nullable Character scanChar(
+      CharSource[] source, Applicable1<List, Object> reader, boolean quoteOk) {
+    final Object mark = source[0].stream();
+    final int c = source[0].peek();
+    if (c < 0) {
+      return null;
+    }
+    if (c != '\\') {
+      if (!isPrint((char) c) || c == '"' && !quoteOk) {
+        return null;
+      }
+      source[0].advance();
+      return (char) c;
+    }
+
+    source[0].advance();
+    final int c2 = source[0].peek();
+    final int escaped;
+    switch (c2) {
+      case '"':
+      case '\\':
+        escaped = c2;
+        break;
+      case 'a':
+        escaped = 7;
+        break;
+      case 'b':
+        escaped = '\b';
+        break;
+      case 't':
+        escaped = '\t';
+        break;
+      case 'n':
+        escaped = '\n';
+        break;
+      case 'v':
+        escaped = 11;
+        break;
+      case 'f':
+        escaped = '\f';
+        break;
+      case 'r':
+        escaped = '\r';
+        break;
+
+      case '^':
+        // "\^@" is character 0, "\^A" is 1, ..., "\^_" is 31.
+        source[0].advance();
+        final int c3 = source[0].peek();
+        if (c3 < '@' || c3 > '_') {
+          source[0] = new CharSource(reader, mark);
+          return null;
+        }
+        source[0].advance();
+        return (char) (c3 - '@');
+
+      case 'u':
+        // A "u" escape is the character whose code is the four hexadecimal
+        // digits that follow.
+        source[0].advance();
+        return scanCode(source, reader, mark, 16, 4);
+
+      default:
+        if (c2 >= '0' && c2 <= '9') {
+          // "\ddd" is the character whose code is the three decimal digits
+          // "ddd".
+          return scanCode(source, reader, mark, 10, 3);
+        }
+        source[0] = new CharSource(reader, mark);
+        return null;
+    }
+    source[0].advance();
+    return (char) escaped;
+  }
+
+  /**
+   * Scans exactly {@code n} digits in the given base, and returns the character
+   * whose code they are.
+   *
+   * <p>Returns null, and rewinds {@code source} to {@code mark}, if there are
+   * too few digits or the code is not that of a character.
+   */
+  private static @Nullable Character scanCode(
+      CharSource[] source,
+      Applicable1<List, Object> reader,
+      Object mark,
+      int base,
+      int n) {
+    int code = 0;
+    for (int i = 0; i < n; i++) {
+      final int digit = Character.digit(source[0].peek(), base);
+      if (digit < 0) {
+        source[0] = new CharSource(reader, mark);
+        return null;
+      }
+      code = code * base + digit;
+      source[0].advance();
+    }
+    if (code > CHAR_MAX_ORD) {
+      source[0] = new CharSource(reader, mark);
+      return null;
+    }
+    return (char) code;
+  }
+
   /** @see BuiltIn#CHAR_SUCC */
   private static final Applicable CHAR_SUCC = new CharSucc(Pos.ZERO);
 
@@ -599,9 +924,45 @@ public abstract class Codes {
       new BaseApplicable1<String, Character>(BuiltIn.CHAR_TO_CSTRING) {
         @Override
         public String apply(Character character) {
-          throw new UnsupportedOperationException("CHAR_TO_CSTRING");
+          return charToCString(character);
         }
       };
+
+  /**
+   * Converts a character to how it appears in a C string literal.
+   *
+   * <p>A printable character stands for itself, except for the four that C
+   * requires to be escaped; every other character becomes a backslash and three
+   * octal digits. Inverse of {@link #scanCChar}.
+   */
+  private static String charToCString(char c) {
+    switch (c) {
+      case 7:
+        return "\\a";
+      case '\b':
+        return "\\b";
+      case '\t':
+        return "\\t";
+      case '\n':
+        return "\\n";
+      case 11:
+        return "\\v";
+      case '\f':
+        return "\\f";
+      case '\r':
+        return "\\r";
+      case '"':
+        return "\\\"";
+      case '\'':
+        return "\\'";
+      case '?':
+        return "\\?";
+      case '\\':
+        return "\\\\";
+      default:
+        return isPrint(c) ? String.valueOf(c) : format("\\%03o", (int) c);
+    }
+  }
 
   /** @see BuiltIn#CHAR_TO_LOWER */
   private static final Applicable CHAR_TO_LOWER =
@@ -708,8 +1069,7 @@ public abstract class Codes {
       final Month month = dateMonthFromName((String) monthVal.get(0));
       try {
         final LocalDateTime ldt =
-            LocalDateTime.of(
-                year, month.getValue(), day, hour, minute, second, 0);
+            dateOf(year, month, day, hour, minute, second);
         final ZoneOffset zone;
         if (offsetOpt.size() == 2) {
           final long offsetNanos = (Long) offsetOpt.get(1);
@@ -723,6 +1083,24 @@ public abstract class Codes {
         throw new MorelRuntimeException(BuiltInExn.DATE, pos);
       }
     }
+  }
+
+  /**
+   * Builds a date, normalizing fields that are out of range.
+   *
+   * <p>A day, hour, minute or second outside its usual range carries into the
+   * field above it, as it does in C's {@code mktime}: day 32 of March is April
+   * 1, day 0 is the last day of February, and hour 25 is hour 1 of the next
+   * day. Only the year can be so far out of range that there is no such date,
+   * and then {@link DateTimeException} is thrown.
+   */
+  private static LocalDateTime dateOf(
+      int year, Month month, int day, int hour, int minute, int second) {
+    return LocalDateTime.of(year, month.getValue(), 1, 0, 0, 0)
+        .plusDays(day - 1L)
+        .plusHours(hour)
+        .plusMinutes(minute)
+        .plusSeconds(second);
   }
 
   /** @see BuiltIn#DATE_DAY */
@@ -753,11 +1131,7 @@ public abstract class Codes {
       new BaseApplicable1<List, String>(BuiltIn.DATE_FROM_STRING) {
         @Override
         public List apply(String s) {
-          try {
-            return optionSome(parseAscTime(s));
-          } catch (Exception e) {
-            return OPTION_NONE;
-          }
+          return scanString(DATE_SCAN, s);
         }
       };
 
@@ -829,12 +1203,160 @@ public abstract class Codes {
       };
 
   /**
+   * Month names, as they appear in the format that {@link #DATE_SCAN} reads.
+   */
+  private static final Set<String> DATE_MONTH_NAMES =
+      BuiltIn.Datatype.DATE_MONTH.constructors().stream()
+          .map(c -> c.constructor)
+          .collect(ImmutableSet.toImmutableSet());
+
+  /**
    * Month values for {@link BuiltIn#DATE_MONTH_FN}, indexed Jan(0)..Dec(11).
    */
   private static final List<List<String>> DATE_MONTHS =
       transformEager(
           BuiltIn.Datatype.DATE_MONTH.constructors(),
           c -> ImmutableList.of(c.constructor));
+
+  /** @see BuiltIn#DATE_SCAN */
+  private static final DateScan DATE_SCAN = new DateScan(Pos.ZERO);
+
+  /** Implements {@link #DATE_SCAN}. */
+  private static class DateScan
+      extends BasePositionedApplicable2<
+          List, Applicable1<List, Object>, Object> {
+    DateScan(Pos pos) {
+      super(BuiltIn.DATE_SCAN, pos);
+    }
+
+    @Override
+    public DateScan withPos(Pos pos) {
+      return new DateScan(pos);
+    }
+
+    @Override
+    public List apply(Applicable1<List, Object> reader, Object stream) {
+      final CharSource[] source = {new CharSource(reader, stream)};
+
+      // The weekday has to be a valid name, but says nothing that the rest
+      // of the date does not; the weekday of the result comes from the date.
+      final String weekday = fixedWidth(source, 3);
+      if (weekday == null || !DATE_WEEKDAY_NAMES.contains(weekday)) {
+        return OPTION_NONE;
+      }
+      final String monthName = space(source) ? fixedWidth(source, 3) : null;
+      if (monthName == null || !DATE_MONTH_NAMES.contains(monthName)) {
+        return OPTION_NONE;
+      }
+
+      // The day occupies two characters, and may be written with a leading
+      // zero or a leading space: "Mar 08" and "Mar  8" are both allowed.
+      if (!space(source)) {
+        return OPTION_NONE;
+      }
+      int day = 0;
+      final int pad = source[0].peek();
+      if (pad != ' ') {
+        if (!isDigit(pad)) {
+          return OPTION_NONE;
+        }
+        day = pad - '0';
+      }
+      source[0].advance();
+      if (!isDigit(source[0].peek())) {
+        return OPTION_NONE;
+      }
+      day = day * 10 + (source[0].peek() - '0');
+      source[0].advance();
+
+      final int hour = space(source) ? twoDigits(source) : -1;
+      final int minute = colon(source) ? twoDigits(source) : -1;
+      final int second = colon(source) ? twoDigits(source) : -1;
+      if (hour < 0 || minute < 0 || second < 0 || !space(source)) {
+        return OPTION_NONE;
+      }
+
+      final StringBuilder yearDigits = new StringBuilder();
+      if (digits(source, yearDigits, 10) == 0) {
+        return OPTION_NONE;
+      }
+
+      final OffsetDateTime date;
+      try {
+        final int year = Integer.parseInt(yearDigits.toString());
+        date =
+            OffsetDateTime.of(
+                dateOf(
+                    year,
+                    dateMonthFromName(monthName),
+                    day,
+                    hour,
+                    minute,
+                    second),
+                ZoneOffset.UTC);
+      } catch (NumberFormatException | DateTimeException e) {
+        throw new MorelRuntimeException(BuiltInExn.DATE, pos);
+      }
+      return optionSome(ImmutableList.of(date, source[0].stream()));
+    }
+
+    /** Returns whether {@code c} is a decimal digit. */
+    private boolean isDigit(int c) {
+      return c >= '0' && c <= '9';
+    }
+
+    /** Consumes a space, and returns whether there was one. */
+    private boolean space(CharSource[] source) {
+      return literal(source, ' ');
+    }
+
+    /** Consumes a colon, and returns whether there was one. */
+    private boolean colon(CharSource[] source) {
+      return literal(source, ':');
+    }
+
+    /** Consumes {@code c}, and returns whether it was next. */
+    private boolean literal(CharSource[] source, char c) {
+      if (source[0].peek() != c) {
+        return false;
+      }
+      source[0].advance();
+      return true;
+    }
+
+    /**
+     * Consumes two digits and returns their value, or -1 if there are not two
+     * digits.
+     */
+    private int twoDigits(CharSource[] source) {
+      final int c0 = source[0].peek();
+      if (!isDigit(c0)) {
+        return -1;
+      }
+      source[0].advance();
+      final int c1 = source[0].peek();
+      if (!isDigit(c1)) {
+        return -1;
+      }
+      source[0].advance();
+      return (c0 - '0') * 10 + (c1 - '0');
+    }
+
+    /**
+     * Consumes {@code n} characters, or returns null if the stream ends first.
+     */
+    private @Nullable String fixedWidth(CharSource[] source, int n) {
+      final StringBuilder b = new StringBuilder();
+      for (int i = 0; i < n; i++) {
+        if (source[0].peek() < 0) {
+          return null;
+        }
+        b.append((char) source[0].peek());
+        source[0].advance();
+      }
+      return b.toString();
+    }
+  }
 
   /** @see BuiltIn#DATE_SECOND */
   private static final Applicable DATE_SECOND =
@@ -872,6 +1394,14 @@ public abstract class Codes {
           return DATE_WEEKDAYS.get(d.getDayOfWeek().getValue() - 1);
         }
       };
+
+  /**
+   * Weekday names, as they appear in the format that {@link #DATE_SCAN} reads.
+   */
+  private static final Set<String> DATE_WEEKDAY_NAMES =
+      BuiltIn.Datatype.DATE_WEEKDAY.constructors().stream()
+          .map(c -> c.constructor)
+          .collect(ImmutableSet.toImmutableSet());
 
   /**
    * Weekday values for {@link BuiltIn#DATE_WEEK_DAY}, indexed Mon(0)..Sun(6).
@@ -980,7 +1510,7 @@ public abstract class Codes {
             sb.append(d.format(Formatters.MMMM));
             break;
           case 'c':
-            sb.append(dateToString(d));
+            sb.append(dateToString(d, false));
             break;
           case 'd':
             sb.append(format("%02d", d.getDayOfMonth()));
@@ -1045,9 +1575,22 @@ public abstract class Codes {
    * used by SML's {@code Date.toString}.
    */
   private static String dateToString(OffsetDateTime d) {
+    return dateToString(d, true);
+  }
+
+  /**
+   * Formats an {@link OffsetDateTime} as "Www Mmm DD HH:MM:SS YYYY".
+   *
+   * <p>{@code Date.toString} pads the day with a zero, and the {@code %c}
+   * format code pads it with a space; the two are otherwise the same. The year
+   * is not padded, as {@code %Y} does not pad it.
+   */
+  private static String dateToString(OffsetDateTime d, boolean zeroPadDay) {
     return format(
         Locale.ROOT,
-        "%s %s %2d %02d:%02d:%02d %4d",
+        zeroPadDay
+            ? "%s %s %02d %02d:%02d:%02d %d"
+            : "%s %s %2d %02d:%02d:%02d %d",
         d.format(Formatters.EEE),
         d.format(Formatters.MMM),
         d.getDayOfMonth(),
@@ -1055,26 +1598,6 @@ public abstract class Codes {
         d.getMinute(),
         d.getSecond(),
         d.getYear());
-  }
-
-  /**
-   * Parses an asctime-format date string (e.g., "Thu Jan 1 00:00:00 1970") into
-   * an {@link OffsetDateTime} in UTC.
-   */
-  private static OffsetDateTime parseAscTime(String s) {
-    final String[] parts = s.trim().split("\\s+");
-    if (parts.length != 5) {
-      throw new IllegalArgumentException(s);
-    }
-    final Month month = dateMonthFromName(parts[1]);
-    final int day = Integer.parseInt(parts[2]);
-    final String[] timeParts = parts[3].split(":");
-    final int hour = Integer.parseInt(timeParts[0]);
-    final int minute = Integer.parseInt(timeParts[1]);
-    final int second = Integer.parseInt(timeParts[2]);
-    final int year = Integer.parseInt(parts[4]);
-    return OffsetDateTime.of(
-        year, month.getValue(), day, hour, minute, second, 0, ZoneOffset.UTC);
   }
 
   /** Returns whether an {@code either} value is a left value. */
@@ -1523,8 +2046,7 @@ public abstract class Codes {
       new BaseApplicable1<List, String>(BuiltIn.INT_FROM_STRING) {
         @Override
         public List apply(String s) {
-          final Ord<Integer> ord = parseInt(s);
-          return ord == null ? OPTION_NONE : optionSome(ord.e);
+          return scanString(INT_SCAN, Radix.DEC, s);
         }
       };
 
@@ -1691,6 +2213,63 @@ public abstract class Codes {
         }
       };
 
+  /**
+   * Pulls characters from a stream through a {@code StringCvt} reader, for the
+   * {@code scan} functions.
+   *
+   * <p>The stream is opaque - it belongs to whoever supplied the reader - so
+   * the only way along it is to call the reader. A stream is a value, though,
+   * so keeping one is enough to go back to it.
+   */
+  private static class CharSource {
+    private final Applicable1<List, Object> reader;
+    private Object stream;
+    /** Next character, or -1 at the end of the stream. */
+    private int c;
+    /** Stream that follows {@link #c}. */
+    private Object nextStream;
+
+    CharSource(Applicable1<List, Object> reader, Object stream) {
+      this.reader = reader;
+      this.stream = stream;
+      read();
+    }
+
+    private void read() {
+      final List option = reader.apply(stream);
+      if (option.size() < 2) {
+        c = -1;
+      } else {
+        final List pair = (List) option.get(1);
+        c = (Character) pair.get(0);
+        nextStream = pair.get(1);
+      }
+    }
+
+    /** Returns the next character without consuming it, or -1 at the end. */
+    int peek() {
+      return c;
+    }
+
+    /** Consumes the next character. */
+    void advance() {
+      stream = nextStream;
+      read();
+    }
+
+    /** Returns the stream, positioned before the next character. */
+    Object stream() {
+      return stream;
+    }
+
+    /** Consumes any whitespace. */
+    void skipWhitespace() {
+      while (c >= 0 && Character.isWhitespace((char) c)) {
+        advance();
+      }
+    }
+  }
+
   /** @see BuiltIn#INT_SAME_SIGN */
   private static final Applicable2 INT_SAME_SIGN =
       new BaseApplicable2<Boolean, Integer, Integer>(BuiltIn.INT_SAME_SIGN) {
@@ -1699,6 +2278,66 @@ public abstract class Codes {
           return a0 < 0 && a1 < 0 || a0 == 0 && a1 == 0 || a0 > 0 && a1 > 0;
         }
       };
+
+  /** @see BuiltIn#INT_SCAN */
+  private static final BaseApplicable3<
+          List, List, Applicable1<List, Object>, Object>
+      INT_SCAN =
+          new BaseApplicable3<List, List, Applicable1<List, Object>, Object>(
+              BuiltIn.INT_SCAN) {
+            @Override
+            public List apply(
+                List radix, Applicable1<List, Object> reader, Object stream) {
+              final int base = Radix.of(radix).base;
+              CharSource source = new CharSource(reader, stream);
+              source.skipWhitespace();
+
+              final boolean negative;
+              if (source.peek() == '~' || source.peek() == '-') {
+                negative = true;
+                source.advance();
+              } else {
+                negative = false;
+                if (source.peek() == '+') {
+                  source.advance();
+                }
+              }
+
+              // A hexadecimal integer may start "0x"; if what follows is not a
+              // hexadecimal digit, the "0" is a digit and the "x" is not ours.
+              if (base == 16 && source.peek() == '0') {
+                final Object mark = source.stream();
+                source.advance();
+                if (source.peek() == 'x' || source.peek() == 'X') {
+                  source.advance();
+                  if (Character.digit(source.peek(), 16) < 0) {
+                    source = new CharSource(reader, mark);
+                  }
+                } else {
+                  source = new CharSource(reader, mark);
+                }
+              }
+
+              final StringBuilder digits = new StringBuilder();
+              while (source.peek() >= 0
+                  && Character.digit(source.peek(), base) >= 0) {
+                digits.append((char) source.peek());
+                source.advance();
+              }
+              if (digits.length() == 0) {
+                return OPTION_NONE;
+              }
+              final int i;
+              try {
+                i =
+                    Integer.parseInt(
+                        negative ? "-" + digits : digits.toString(), base);
+              } catch (NumberFormatException e) {
+                throw new MorelRuntimeException(BuiltInExn.OVERFLOW, Pos.ZERO);
+              }
+              return optionSome(ImmutableList.of(i, source.stream()));
+            }
+          };
 
   /** @see BuiltIn#INT_SIGN */
   private static final Applicable1 INT_SIGN =
@@ -3690,8 +4329,7 @@ public abstract class Codes {
       new BaseApplicable1<List, String>(BuiltIn.REAL_FROM_STRING) {
         @Override
         public List<Float> apply(String s) {
-          final Ord<Float> ord = parseReal(s, false);
-          return ord == null ? OPTION_NONE : optionSome(ord.e);
+          return scanString(REAL_SCAN, s);
         }
       };
 
@@ -3941,6 +4579,90 @@ public abstract class Codes {
     // NaN look negative). The sign of a NaN produced by arithmetic is
     // unspecified, so callers must not assume it; 'abs' forces a definite sign.
     return (Float.floatToRawIntBits(f) & 0x8000_0000) == 0x8000_0000;
+  }
+
+  /** @see BuiltIn#REAL_SCAN */
+  private static final BaseApplicable2<List, Applicable1<List, Object>, Object>
+      REAL_SCAN =
+          new BaseApplicable2<List, Applicable1<List, Object>, Object>(
+              BuiltIn.REAL_SCAN) {
+            @Override
+            public List apply(Applicable1<List, Object> reader, Object stream) {
+              final CharSource[] source = {new CharSource(reader, stream)};
+              source[0].skipWhitespace();
+              final StringBuilder b = new StringBuilder();
+              if (source[0].peek() == '~' || source[0].peek() == '-') {
+                b.append('-');
+                source[0].advance();
+              } else if (source[0].peek() == '+') {
+                source[0].advance();
+              }
+
+              // "inf", "infinity" and "nan", in any case.
+              final boolean negative = b.length() > 0;
+              for (String word : new String[] {"infinity", "inf", "nan"}) {
+                if (consume(source, reader, word, true)) {
+                  final float d =
+                      word.equals("nan")
+                          ? Float.NaN
+                          : negative
+                              ? Float.NEGATIVE_INFINITY
+                              : Float.POSITIVE_INFINITY;
+                  return optionSome(ImmutableList.of(d, source[0].stream()));
+                }
+              }
+
+              int digits = digits(source, b, 10);
+              if (source[0].peek() == '.') {
+                final Object mark = source[0].stream();
+                source[0].advance();
+                final StringBuilder f = new StringBuilder(".");
+                final int fracDigits = digits(source, f, 10);
+                if (fracDigits == 0) {
+                  source[0] = new CharSource(reader, mark);
+                } else {
+                  b.append(f);
+                  digits += fracDigits;
+                }
+              }
+              if (digits == 0) {
+                return OPTION_NONE;
+              }
+              if (source[0].peek() == 'e' || source[0].peek() == 'E') {
+                final Object mark = source[0].stream();
+                source[0].advance();
+                final StringBuilder e = new StringBuilder("e");
+                if (source[0].peek() == '~' || source[0].peek() == '-') {
+                  e.append('-');
+                  source[0].advance();
+                } else if (source[0].peek() == '+') {
+                  source[0].advance();
+                }
+                if (digits(source, e, 10) == 0) {
+                  source[0] = new CharSource(reader, mark);
+                } else {
+                  b.append(e);
+                }
+              }
+              return optionSome(
+                  ImmutableList.of(
+                      Float.parseFloat(b.toString()), source[0].stream()));
+            }
+          };
+
+  /**
+   * Appends to {@code b} the digits that {@code source} starts with, and
+   * returns how many there were.
+   */
+  private static int digits(CharSource[] source, StringBuilder b, int base) {
+    int n = 0;
+    while (source[0].peek() >= 0
+        && Character.digit(source[0].peek(), base) >= 0) {
+      b.append((char) source[0].peek());
+      source[0].advance();
+      ++n;
+    }
+    return n;
   }
 
   /** @see BuiltIn#REAL_SIGN */
@@ -4409,26 +5131,59 @@ public abstract class Codes {
         public List apply(
             Applicable1<Applicable1<List, Object>, Applicable1<List, Object>> f,
             String s) {
-          // Give the scanner a reader over the characters of s. The stream is
-          // a position in s, but the scanner's type does not say so, and the
-          // reader is the only thing that can make sense of it.
-          final Applicable1<List, Object> reader =
-              new BaseApplicable1<List, Object>(
-                  BuiltIn.STRING_CVT_SCAN_STRING) {
-                @Override
-                public List apply(Object stream) {
-                  final int i = (Integer) stream;
-                  return i < s.length()
-                      ? optionSome(ImmutableList.of(s.charAt(i), i + 1))
-                      : OPTION_NONE;
-                }
-              };
-          final List option = f.apply(reader).apply(0);
-          return option.size() < 2
-              ? OPTION_NONE
-              : optionSome(((List) option.get(1)).get(0));
+          return value(f.apply(stringReader(s)).apply(0));
         }
       };
+
+  /**
+   * Returns a reader over the characters of {@code s}.
+   *
+   * <p>The stream is a position in {@code s}, but a scanner's type does not say
+   * so, and the reader is the only thing that can make sense of it.
+   */
+  private static Applicable1<List, Object> stringReader(String s) {
+    return new BaseApplicable1<List, Object>(BuiltIn.STRING_CVT_SCAN_STRING) {
+      @Override
+      public List apply(Object stream) {
+        final int i = (Integer) stream;
+        return i < s.length()
+            ? optionSome(ImmutableList.of(s.charAt(i), i + 1))
+            : OPTION_NONE;
+      }
+    };
+  }
+
+  /**
+   * Converts what a {@code scan} function returns - {@code SOME (value, rest)}
+   * or {@code NONE} - into {@code SOME value} or {@code NONE}, discarding the
+   * rest of the stream.
+   */
+  private static List value(List option) {
+    return option.size() < 2
+        ? OPTION_NONE
+        : optionSome(((List) option.get(1)).get(0));
+  }
+
+  /**
+   * Scans a value from the characters of a string, and returns it without the
+   * rest of the stream.
+   *
+   * <p>The Standard Basis defines each {@code fromString} this way, as {@code
+   * StringCvt.scanString scan}; characters after the value are ignored.
+   */
+  private static List scanString(
+      Applicable2<List, Applicable1<List, Object>, Object> scan, String s) {
+    return value(scan.apply(stringReader(s), 0));
+  }
+
+  /** As {@link #scanString}, for a {@code scan} that takes a radix. */
+  private static List scanString(
+      Applicable3<List, List, Applicable1<List, Object>, Object> scan,
+      Radix radix,
+      String s) {
+    final List radixValue = ImmutableList.of(radix.name());
+    return value(scan.apply(radixValue, stringReader(s), 0));
+  }
 
   /** @see BuiltIn#STRING_CVT_SKIP_WS */
   private static final Applicable STRING_CVT_SKIP_WS =
@@ -4519,6 +5274,36 @@ public abstract class Codes {
   /** @see BuiltIn#STRING_FIELDS */
   private static final Applicable2 STRING_FIELDS =
       new StringTokenize(BuiltIn.STRING_FIELDS);
+
+  /** @see BuiltIn#STRING_FROM_CSTRING */
+  private static final Applicable STRING_FROM_CSTRING =
+      new BaseApplicable1<List, String>(BuiltIn.STRING_FROM_CSTRING) {
+        @Override
+        public List apply(String s) {
+          final Applicable1<List, Object> reader = stringReader(s);
+          final CharSource[] source = {new CharSource(reader, 0)};
+          final StringBuilder b = new StringBuilder();
+          while (source[0].peek() >= 0) {
+            // Every character has to be scanned; there is no stopping early
+            // and ignoring the rest, as there is in fromString.
+            final Character c = scanCChar(source, reader);
+            if (c == null) {
+              return OPTION_NONE;
+            }
+            b.append((char) c);
+          }
+          return optionSome(b.toString());
+        }
+      };
+
+  /** @see BuiltIn#STRING_FROM_STRING */
+  private static final Applicable STRING_FROM_STRING =
+      new BaseApplicable1<List, String>(BuiltIn.STRING_FROM_STRING) {
+        @Override
+        public List apply(String s) {
+          return scanString(STRING_SCAN, s);
+        }
+      };
 
   /** @see BuiltIn#STRING_IMPLODE */
   private static final Applicable STRING_IMPLODE =
@@ -4642,6 +5427,34 @@ public abstract class Codes {
         }
       };
 
+  /** @see BuiltIn#STRING_SCAN */
+  private static final BaseApplicable2<List, Applicable1<List, Object>, Object>
+      STRING_SCAN =
+          new BaseApplicable2<List, Applicable1<List, Object>, Object>(
+              BuiltIn.STRING_SCAN) {
+            @Override
+            public List apply(Applicable1<List, Object> reader, Object stream) {
+              final CharSource[] source = {new CharSource(reader, stream)};
+              final StringBuilder b = new StringBuilder();
+              for (; ; ) {
+                // An escaped formatting sequence stands for nothing, and is
+                // consumed even if what follows it cannot be scanned.
+                skipGaps(source, reader);
+                final Character c = scanChar(source, reader, true);
+                if (c == null) {
+                  break;
+                }
+                b.append((char) c);
+              }
+              if (b.length() == 0 && source[0].peek() >= 0) {
+                // We scanned nothing, and it was not because the stream ended.
+                return OPTION_NONE;
+              }
+              return optionSome(
+                  ImmutableList.of(b.toString(), source[0].stream()));
+            }
+          };
+
   /** @see BuiltIn#STRING_SIZE */
   private static final Applicable1 STRING_SIZE =
       new BaseApplicable1<Integer, String>(BuiltIn.STRING_SIZE) {
@@ -4707,6 +5520,28 @@ public abstract class Codes {
       return s.substring(i, i + j);
     }
   }
+
+  /** @see BuiltIn#STRING_TO_CSTRING */
+  private static final Applicable STRING_TO_CSTRING =
+      new BaseApplicable1<String, String>(BuiltIn.STRING_TO_CSTRING) {
+        @Override
+        public String apply(String s) {
+          final StringBuilder b = new StringBuilder();
+          for (int i = 0; i < s.length(); i++) {
+            b.append(charToCString(s.charAt(i)));
+          }
+          return b.toString();
+        }
+      };
+
+  /** @see BuiltIn#STRING_TO_STRING */
+  private static final Applicable STRING_TO_STRING =
+      new BaseApplicable1<String, String>(BuiltIn.STRING_TO_STRING) {
+        @Override
+        public String apply(String s) {
+          return Parsers.stringToString(s);
+        }
+      };
 
   /** @see BuiltIn#STRING_TOKENS */
   private static final Applicable2 STRING_TOKENS =
@@ -5078,12 +5913,7 @@ public abstract class Codes {
       new BaseApplicable1<List, String>(BuiltIn.TIME_FROM_STRING) {
         @Override
         public List apply(String s) {
-          try {
-            double seconds = Double.parseDouble(s);
-            return optionSome((long) (seconds * 1_000_000_000d));
-          } catch (NumberFormatException e) {
-            return OPTION_NONE;
-          }
+          return scanString(TIME_SCAN, s);
         }
       };
 
@@ -5132,6 +5962,75 @@ public abstract class Codes {
           return now.getEpochSecond() * 1_000_000_000L + now.getNano();
         }
       };
+
+  /** @see BuiltIn#TIME_SCAN */
+  private static final TimeScan TIME_SCAN = new TimeScan(Pos.ZERO);
+
+  /** Implements {@link #TIME_SCAN}. */
+  private static class TimeScan
+      extends BasePositionedApplicable2<
+          List, Applicable1<List, Object>, Object> {
+    TimeScan(Pos pos) {
+      super(BuiltIn.TIME_SCAN, pos);
+    }
+
+    @Override
+    public TimeScan withPos(Pos pos) {
+      return new TimeScan(pos);
+    }
+
+    @Override
+    public List apply(Applicable1<List, Object> reader, Object stream) {
+      final CharSource[] source = {new CharSource(reader, stream)};
+      source[0].skipWhitespace();
+
+      final boolean negative;
+      if (source[0].peek() == '~' || source[0].peek() == '-') {
+        negative = true;
+        source[0].advance();
+      } else {
+        negative = false;
+        if (source[0].peek() == '+') {
+          source[0].advance();
+        }
+      }
+
+      final StringBuilder integer = new StringBuilder();
+      digits(source, integer, 10);
+      final StringBuilder fraction = new StringBuilder();
+      if (source[0].peek() == '.') {
+        // A decimal point must be followed by at least one digit; if it is
+        // not, the whole time is ill-formed, not merely finished.
+        source[0].advance();
+        if (digits(source, fraction, 10) == 0) {
+          return OPTION_NONE;
+        }
+      } else if (integer.length() == 0) {
+        return OPTION_NONE;
+      }
+
+      // Nanoseconds are the finest we can represent; discard the rest, and
+      // pad if there were fewer than nine fractional digits.
+      while (fraction.length() < 9) {
+        fraction.append('0');
+      }
+      fraction.setLength(9);
+
+      final long nanos;
+      try {
+        final long seconds =
+            integer.length() == 0 ? 0 : Long.parseLong(integer.toString());
+        nanos =
+            Math.addExact(
+                Math.multiplyExact(seconds, 1_000_000_000L),
+                Long.parseLong(fraction.toString()));
+      } catch (NumberFormatException | ArithmeticException e) {
+        throw new MorelRuntimeException(BuiltInExn.TIME, pos);
+      }
+      return optionSome(
+          ImmutableList.of(negative ? -nanos : nanos, source[0].stream()));
+    }
+  }
 
   /** @see BuiltIn#TIME_SUBTRACT */
   private static final Applicable2 TIME_SUBTRACT =
@@ -5532,15 +6431,6 @@ public abstract class Codes {
   private static final Applicable1 WORD_FROM_LARGE_WORD =
       identity(BuiltIn.WORD_FROM_LARGE_WORD);
 
-  /**
-   * Matches optional whitespace, an optional {@code 0x}/{@code 0X}/{@code
-   * 0wx}/{@code 0wX} prefix, then one or more hex digits. The prefix is only
-   * consumed when followed by a hex digit (regex backtracking), so {@code
-   * "0xG"} parses as just {@code "0"}.
-   */
-  static final Pattern WORD_HEX_PATTERN =
-      Pattern.compile("^\\s*(?:0[wW]?[xX])?([0-9a-fA-F]+)");
-
   /** @see BuiltIn#WORD_FROM_STRING */
   private static final Applicable WORD_FROM_STRING =
       new WordFromString(BuiltIn.WORD_FROM_STRING, Pos.ZERO);
@@ -5559,15 +6449,7 @@ public abstract class Codes {
 
     @Override
     public List apply(String s) {
-      final Matcher m = WORD_HEX_PATTERN.matcher(s);
-      if (!m.find()) {
-        return OPTION_NONE;
-      }
-      try {
-        return optionSome(Long.parseUnsignedLong(m.group(1), 16));
-      } catch (NumberFormatException e) {
-        throw new MorelRuntimeException(BuiltInExn.OVERFLOW, pos);
-      }
+      return scanString(WORD_SCAN, Radix.HEX, s);
     }
   }
 
@@ -5734,6 +6616,57 @@ public abstract class Codes {
           return a0 | a1;
         }
       };
+
+  /** @see BuiltIn#WORD_SCAN */
+  private static final BaseApplicable3<
+          List, List, Applicable1<List, Object>, Object>
+      WORD_SCAN =
+          new BaseApplicable3<List, List, Applicable1<List, Object>, Object>(
+              BuiltIn.WORD_SCAN) {
+            @Override
+            public List apply(
+                List radix, Applicable1<List, Object> reader, Object stream) {
+              final int base = Radix.of(radix).base;
+              final CharSource[] source = {new CharSource(reader, stream)};
+              source[0].skipWhitespace();
+
+              // A word may be written "0w42"; a hexadecimal word may also be
+              // written "0x1f" or "0wx1f". If what follows is not a digit, the
+              // "0" is a digit and the rest is not ours.
+              if (source[0].peek() == '0') {
+                final Object mark = source[0].stream();
+                source[0].advance();
+                boolean prefix = false;
+                if (source[0].peek() == 'w') {
+                  source[0].advance();
+                  if (base == 16
+                      && (source[0].peek() == 'x' || source[0].peek() == 'X')) {
+                    source[0].advance();
+                  }
+                  prefix = Character.digit(source[0].peek(), base) >= 0;
+                } else if (base == 16
+                    && (source[0].peek() == 'x' || source[0].peek() == 'X')) {
+                  source[0].advance();
+                  prefix = Character.digit(source[0].peek(), base) >= 0;
+                }
+                if (!prefix) {
+                  source[0] = new CharSource(reader, mark);
+                }
+              }
+
+              final StringBuilder b = new StringBuilder();
+              if (digits(source, b, base) == 0) {
+                return OPTION_NONE;
+              }
+              final long w;
+              try {
+                w = Long.parseUnsignedLong(b.toString(), base);
+              } catch (NumberFormatException e) {
+                throw new MorelRuntimeException(BuiltInExn.OVERFLOW, Pos.ZERO);
+              }
+              return optionSome(ImmutableList.of(w, source[0].stream()));
+            }
+          };
 
   /** @see BuiltIn#WORD_TO_INT */
   private static final Applicable WORD_TO_INT =
@@ -6384,6 +7317,7 @@ public abstract class Codes {
     b.add(BuiltIn.BOOL_OP_LT, BOOL_OP_LT);
     b.add(BuiltIn.BOOL_OP_NE, BOOL_OP_NE);
     b.add(BuiltIn.BOOL_ORELSE, BOOL_ORELSE);
+    b.add(BuiltIn.BOOL_SCAN, BOOL_SCAN);
     b.add(BuiltIn.BOOL_TO_STRING, BOOL_TO_STRING);
     b.add(BuiltIn.CHAR_CHR, CHAR_CHR);
     b.add(BuiltIn.CHAR_COMPARE, CHAR_COMPARE);
@@ -6416,6 +7350,7 @@ public abstract class Codes {
     b.add(BuiltIn.CHAR_OP_NE, CHAR_OP_NE);
     b.add(BuiltIn.CHAR_ORD, CHAR_ORD);
     b.add(BuiltIn.CHAR_PRED, CHAR_PRED);
+    b.add(BuiltIn.CHAR_SCAN, CHAR_SCAN);
     b.add(BuiltIn.CHAR_SUCC, CHAR_SUCC);
     b.add(BuiltIn.CHAR_TO_CSTRING, CHAR_TO_CSTRING);
     b.add(BuiltIn.CHAR_TO_LOWER, CHAR_TO_LOWER);
@@ -6436,6 +7371,7 @@ public abstract class Codes {
     b.add(BuiltIn.DATE_LOCAL_OFFSET, DATE_LOCAL_OFFSET);
     b.add(BuiltIn.DATE_MINUTE, DATE_MINUTE);
     b.add(BuiltIn.DATE_MONTH_FN, DATE_MONTH_FN);
+    b.add(BuiltIn.DATE_SCAN, DATE_SCAN);
     b.add(BuiltIn.DATE_SECOND, DATE_SECOND);
     b.add(BuiltIn.DATE_TO_STRING, DATE_TO_STRING);
     b.add(BuiltIn.DATE_TO_TIME, DATE_TO_TIME);
@@ -6494,6 +7430,7 @@ public abstract class Codes {
     b.add(BuiltIn.INT_QUOT, INT_QUOT);
     b.add(BuiltIn.INT_REM, INT_REM);
     b.add(BuiltIn.INT_SAME_SIGN, INT_SAME_SIGN);
+    b.add(BuiltIn.INT_SCAN, INT_SCAN);
     b.add(BuiltIn.INT_SIGN, INT_SIGN);
     b.add(BuiltIn.INT_TO_INT, INT_TO_INT);
     b.add(BuiltIn.INT_TO_LARGE, INT_TO_LARGE);
@@ -6668,6 +7605,7 @@ public abstract class Codes {
     b.add(BuiltIn.REAL_REM, REAL_REM);
     b.add(BuiltIn.REAL_ROUND, REAL_ROUND);
     b.add(BuiltIn.REAL_SAME_SIGN, REAL_SAME_SIGN);
+    b.add(BuiltIn.REAL_SCAN, REAL_SCAN);
     b.add(BuiltIn.REAL_SIGN, REAL_SIGN);
     b.add(BuiltIn.REAL_SIGN_BIT, REAL_SIGN_BIT);
     b.add(BuiltIn.REAL_SPLIT, REAL_SPLIT);
@@ -6698,6 +7636,8 @@ public abstract class Codes {
     b.add(BuiltIn.STRING_EXPLODE, STRING_EXPLODE);
     b.add(BuiltIn.STRING_EXTRACT, STRING_EXTRACT);
     b.add(BuiltIn.STRING_FIELDS, STRING_FIELDS);
+    b.add(BuiltIn.STRING_FROM_CSTRING, STRING_FROM_CSTRING);
+    b.add(BuiltIn.STRING_FROM_STRING, STRING_FROM_STRING);
     b.add(BuiltIn.STRING_IMPLODE, STRING_IMPLODE);
     b.add(BuiltIn.STRING_IS_PREFIX, STRING_IS_PREFIX);
     b.add(BuiltIn.STRING_IS_SUBSTRING, STRING_IS_SUBSTRING);
@@ -6711,10 +7651,13 @@ public abstract class Codes {
     b.add(BuiltIn.STRING_OP_LE, STRING_OP_LE);
     b.add(BuiltIn.STRING_OP_LT, STRING_OP_LT);
     b.add(BuiltIn.STRING_OP_NE, STRING_OP_NE);
+    b.add(BuiltIn.STRING_SCAN, STRING_SCAN);
     b.add(BuiltIn.STRING_SIZE, STRING_SIZE);
     b.add(BuiltIn.STRING_STR, STRING_STR);
     b.add(BuiltIn.STRING_SUB, STRING_SUB);
     b.add(BuiltIn.STRING_SUBSTRING, STRING_SUBSTRING);
+    b.add(BuiltIn.STRING_TO_CSTRING, STRING_TO_CSTRING);
+    b.add(BuiltIn.STRING_TO_STRING, STRING_TO_STRING);
     b.add(BuiltIn.STRING_TOKENS, STRING_TOKENS);
     b.add(BuiltIn.STRING_TRANSLATE, STRING_TRANSLATE);
     b.add(BuiltIn.SYS_CLEAR_ENV, SYS_CLEAR_ENV);
@@ -6751,6 +7694,7 @@ public abstract class Codes {
     b.add(BuiltIn.TIME_LE, TIME_LE);
     b.add(BuiltIn.TIME_LT, TIME_LT);
     b.add(BuiltIn.TIME_NOW, TIME_NOW);
+    b.add(BuiltIn.TIME_SCAN, TIME_SCAN);
     b.add(BuiltIn.TIME_SUBTRACT, TIME_SUBTRACT);
     b.add(BuiltIn.TIME_TO_MICROSECONDS, TIME_TO_MICROSECONDS);
     b.add(BuiltIn.TIME_TO_MILLISECONDS, TIME_TO_MILLISECONDS);
@@ -6807,6 +7751,7 @@ public abstract class Codes {
         BuiltIn.WORD_OP_SHIFT_RIGHT_ARITHMETIC, WORD_OP_SHIFT_RIGHT_ARITHMETIC);
     b.add(BuiltIn.WORD_OP_TIMES, WORD_OP_TIMES);
     b.add(BuiltIn.WORD_ORB, WORD_ORB);
+    b.add(BuiltIn.WORD_SCAN, WORD_SCAN);
     b.add(BuiltIn.WORD_TO_INT, WORD_TO_INT);
     b.add(BuiltIn.WORD_TO_INT_X, WORD_TO_INT_X);
     b.add(BuiltIn.WORD_TO_LARGE, WORD_TO_LARGE);

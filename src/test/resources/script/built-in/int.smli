@@ -31,7 +31,7 @@ Int;
 >   {*=fn,+=fn,-=fn,<=fn,<==fn,>=fn,>==fn,abs=fn,compare=fn,`div`=fn,fmt=fn,
 >    fromInt=fn,fromLarge=fn,fromString=fn,max=fn,maxInt=SOME 2147483647,
 >    min=fn,minInt=SOME ~2147483648,`mod`=fn,precision=SOME 32,quot=fn,rem=fn,
->    sameSign=fn,sign=fn,toInt=fn,toLarge=fn,toString=fn,~=fn}
+>    sameSign=fn,scan=fn,sign=fn,toInt=fn,toLarge=fn,toString=fn,~=fn}
 >   : {*:int * int -> int, +:int * int -> int, -:int * int -> int,
 >       <:int * int -> bool, <=:int * int -> bool, >:int * int -> bool,
 >       >=:int * int -> bool, abs:int -> int, compare:int * int -> order,
@@ -40,8 +40,10 @@ Int;
 >       max:int * int -> int, maxInt:int option, min:int * int -> int,
 >       minInt:int option, `mod`:int * int -> int, precision:int option,
 >       quot:int * int -> int, rem:int * int -> int,
->       sameSign:int * int -> bool, sign:int -> int, toInt:int -> int,
->       toLarge:int -> int, toString:int -> string, ~:int -> int}
+>       sameSign:int * int -> bool,
+>       scan:radix -> ('a -> (char * 'a) option) -> 'a -> (int * 'a) option,
+>       sign:int -> int, toInt:int -> int, toLarge:int -> int,
+>       toString:int -> string, ~:int -> int}
 
 (* The arithmetic and comparison operators are also available as members of
  * the Int structure. *)
@@ -255,5 +257,44 @@ List.map (fn (Name, X) =>
 > val it : {Name:string, X:int, bin:string, dec:string, hex:string, oct:string, toString:string} list
 Sys.unset "output";
 > val it = () : unit
+
+(* "scan radix getc strm" reads an integer in the given radix from a
+ * prefix of strm, after skipping whitespace. The expected values are those
+ * of SML/NJ. *)
+fun reader s i =
+  if i < String.size s then SOME (String.sub (s, i), i + 1) else NONE;
+> val reader = fn : string -> int -> (char * int) option
+Int.scan;
+> val it = fn : radix -> ('a -> (char * 'a) option) -> 'a -> (int * 'a) option
+Int.scan DEC (reader "123abc") 0;
+> val it = SOME (123,3) : (int * int) option
+Int.scan DEC (reader "  ~45x") 0;
+> val it = SOME (~45,5) : (int * int) option
+Int.scan DEC (reader "+7") 0;
+> val it = SOME (7,2) : (int * int) option
+Int.scan DEC (reader "abc") 0;
+> val it = NONE : (int * int) option
+Int.scan DEC (reader "") 0;
+> val it = NONE : (int * int) option
+
+(*) A hexadecimal integer may be written with an "0x" prefix, or without.
+Int.scan HEX (reader "0x1Fg") 0;
+> val it = SOME (31,4) : (int * int) option
+Int.scan HEX (reader "1F") 0;
+> val it = SOME (31,2) : (int * int) option
+
+(*) "0" is a hexadecimal digit, so "0xzz" reads as 0 and stops at the "x".
+Int.scan HEX (reader "0xzz") 0;
+> val it = SOME (0,1) : (int * int) option
+Int.scan BIN (reader "1012") 0;
+> val it = SOME (5,3) : (int * int) option
+Int.scan OCT (reader "778") 0;
+> val it = SOME (63,2) : (int * int) option
+
+(*) Scanning a string is scanString of a scanner.
+StringCvt.scanString (Int.scan DEC) "42";
+> val it = SOME 42 : int option
+StringCvt.scanString (Int.scan DEC) "abc";
+> val it = NONE : int option
 
 (*) End int.smli

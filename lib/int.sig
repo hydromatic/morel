@@ -157,7 +157,6 @@ sig
    * StringCvt.DEC r)`.
    *)
   val toString : int -> string [@@method] [@@prototype "toString i"]
-(* TODO
   (**
    * returns `SOME (i,rest)` if an integer in the format denoted by `radix`
    * can be parsed from a prefix of the character stream `strm` after
@@ -166,10 +165,8 @@ sig
    * returned otherwise. This function raises `Overflow` when an integer
    * can be parsed, but is too large to be represented by type `int`.
    *)
-  val scan       : StringCvt.radix
-                     -> (char, 'a) StringCvt.reader
-                       -> (int, 'a) StringCvt.reader
-*) [@@prototype "scan radix getc strm"]
+  val scan       : radix -> (char, 'a) reader -> (int, 'a) reader
+      [@@prototype "scan radix getc strm"]
   (**
    * scans a `int` value from a string. Returns `SOME (r)`
    * if a `int` value can be scanned from a prefix of `s`, ignoring any

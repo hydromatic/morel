@@ -29,11 +29,12 @@ Sys.set ("stringDepth", ~1);
 Bool;
 > val it =
 >   {<=fn,<>=fn,==fn,>=fn,`andalso`=fn,fromString=fn,`implies`=fn,not=fn,
->    `orelse`=fn,toString=fn}
+>    `orelse`=fn,scan=fn,toString=fn}
 >   : {<:bool * bool -> bool, <>:bool * bool -> bool, =:bool * bool -> bool,
 >       >:bool * bool -> bool, `andalso`:bool * bool -> bool,
 >       fromString:string -> bool option, `implies`:bool * bool -> bool,
 >       not:bool -> bool, `orelse`:bool * bool -> bool,
+>       scan:('a -> (char * 'a) option) -> 'a -> (bool * 'a) option,
 >       toString:bool -> string}
 Bool.fromString;
 > val it = fn : string -> bool option
@@ -103,5 +104,20 @@ Bool.`>` (false, false);
 > val it = false : bool
 Bool.`>` (false, true);
 > val it = false : bool
+
+(* "scan" reads a value from a prefix of a character stream, after
+ * skipping whitespace. The expected values are those of SML/NJ. *)
+fun reader s i =
+  if i < String.size s then SOME (String.sub (s, i), i + 1) else NONE;
+> val reader = fn : string -> int -> (char * int) option
+Bool.scan;
+> val it = fn : ('a -> (char * 'a) option) -> 'a -> (bool * 'a) option
+Bool.scan (reader "truex") 0;
+> val it = SOME (true,4) : (bool * int) option
+Bool.scan (reader "  falsey") 0;
+> val it = SOME (false,7) : (bool * int) option
+(*) Case matters: "TRUE" is not a bool.
+Bool.scan (reader "TRUE") 0;
+> val it = NONE : (bool * int) option
 
 (*) End bool.smli
