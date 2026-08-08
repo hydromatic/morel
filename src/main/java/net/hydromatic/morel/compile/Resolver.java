@@ -605,6 +605,46 @@ public class Resolver {
     return ordinals;
   }
 
+  /**
+   * Returns the pattern that an unbounded scan, "{@code from p}", should scan
+   * the extent of.
+   *
+   * <p>Such a scan yields the distinct values of the variables that {@code p}
+   * binds, so the shape of {@code p} does not matter; only its variables do.
+   * The extent to scan is therefore the product of their types, and the
+   * constructors, literals and wildcards in between fall away:
+   *
+   * <ul>
+   *   <li>"{@code from SOME (b: bool)}" scans the extent of {@code bool}
+   *   <li>"{@code from (b: bool, _)}" scans the extent of {@code bool}, since a
+   *       wildcard binds nothing and so must not multiply the rows
+   *   <li>"{@code from b1 :: b2 :: nil}" scans the extent of {@code bool *
+   *       bool}, one value per element of the list
+   *   <li>"{@code from SOME 1}" binds nothing, and scans the extent of {@code
+   *       unit}: exactly one row, which is what a 'from' with no scans means
+   * </ul>
+   *
+   * <p>An "as" pattern is left alone. Its variable names the whole value and is
+   * determined by the variables within it, so the two are not independent and
+   * their product would be wrong.
+   */
+  private static Core.Pat extentPat(TypeSystem typeSystem, Core.Pat pat) {
+    final List<Core.NamedPat> vars = pat.expand();
+    for (Core.NamedPat var : vars) {
+      if (var instanceof Core.AsPat) {
+        return pat;
+      }
+    }
+    switch (vars.size()) {
+      case 0:
+        return core.wildcardPat(PrimitiveType.UNIT);
+      case 1:
+        return vars.get(0);
+      default:
+        return core.tuplePat(typeSystem, vars);
+    }
+  }
+
   private static boolean disjoint(Set<Integer> a, Set<Integer> b) {
     for (Integer i : a) {
       if (b.contains(i)) {
@@ -1993,7 +2033,7 @@ public class Resolver {
       final Core.Exp coreExp;
       final Core.Pat corePat;
       if (scan.exp == null) {
-        corePat = r.toCore(scan.pat);
+        corePat = extentPat(typeMap.typeSystem, r.toCore(scan.pat));
         coreExp =
             core.extent(
                 scan.pat.pos,

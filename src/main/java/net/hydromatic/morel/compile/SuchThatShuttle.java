@@ -46,19 +46,44 @@ class SuchThatShuttle extends EnvShuttle {
   /** True if we're inside a recursive function definition. */
   private final boolean inRecursiveFunction;
 
+  /**
+   * True if the query being visited supplies only whether it has rows, not the
+   * rows themselves, because it is the argument of {@code Relational.nonEmpty}
+   * or {@code Relational.empty} - that is, it came from 'exists' or 'forall'.
+   * Such a query may discard a variable that it cannot enumerate, as 'y' is
+   * discarded in "exists x, y where x elem [1, 2, 3]".
+   */
+  private final boolean rowsUnused;
+
   SuchThatShuttle(TypeSystem typeSystem, Environment env) {
-    this(typeSystem, env, false);
+    this(typeSystem, env, false, false);
   }
 
   private SuchThatShuttle(
-      TypeSystem typeSystem, Environment env, boolean inRecursiveFunction) {
+      TypeSystem typeSystem,
+      Environment env,
+      boolean inRecursiveFunction,
+      boolean rowsUnused) {
     super(typeSystem, env);
     this.inRecursiveFunction = inRecursiveFunction;
+    this.rowsUnused = rowsUnused;
   }
 
   @Override
   protected EnvShuttle push(Environment env) {
-    return new SuchThatShuttle(typeSystem, env, inRecursiveFunction);
+    return new SuchThatShuttle(
+        typeSystem, env, inRecursiveFunction, rowsUnused);
+  }
+
+  @Override
+  protected Core.Exp visit(Core.Apply apply) {
+    if (apply.isCallTo(BuiltIn.RELATIONAL_NON_EMPTY)
+        || apply.isCallTo(BuiltIn.RELATIONAL_EMPTY)) {
+      final SuchThatShuttle inner =
+          new SuchThatShuttle(typeSystem, env, inRecursiveFunction, true);
+      return apply.copy(apply.fn.accept(inner), apply.arg.accept(inner));
+    }
+    return super.visit(apply);
   }
 
   @Override
@@ -69,7 +94,8 @@ class SuchThatShuttle extends EnvShuttle {
     final List<Binding> bindings = new ArrayList<>();
     Compiles.bindPattern(typeSystem, bindings, recValDecl);
     final SuchThatShuttle inner =
-        new SuchThatShuttle(typeSystem, env.bindAll(bindings), true);
+        new SuchThatShuttle(
+            typeSystem, env.bindAll(bindings), true, rowsUnused);
     return recValDecl.copy(inner.visitList(recValDecl.list));
   }
 
@@ -98,7 +124,8 @@ class SuchThatShuttle extends EnvShuttle {
       return super.visit(from);
     }
 
-    final Core.From from2 = Expander.expandFrom(typeSystem, env, from);
+    final Core.From from2 =
+        Expander.expandFrom(typeSystem, env, from, !rowsUnused);
 
     // Expand subqueries.
     return super.visit(from2);

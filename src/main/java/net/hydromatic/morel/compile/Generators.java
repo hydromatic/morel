@@ -41,6 +41,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.ast.CoreBuilder;
 import net.hydromatic.morel.ast.FromBuilder;
@@ -3279,9 +3280,85 @@ class Generators {
   public static boolean maybeExtent(Cache cache, Core.Pat pat, Core.Exp exp) {
     if (exp.isExtent()) {
       ExtentGenerator.create(cache, pat, exp);
+      addComponentExtents(cache, pat, exp);
       return true;
     }
     return false;
+  }
+
+  /**
+   * If {@code pat} is a tuple or record pattern, adds an extent generator for
+   * each of its components.
+   *
+   * <p>The extent of a product type is the cartesian product of the extents of
+   * its components, so "{@code from (b, i)}" means the same as "{@code from b,
+   * i}". Registering the components separately lets each be grounded by
+   * whichever strategy suits it: in "{@code from (b, i) where i elem [3, 5]}",
+   * {@code b} is materialized because {@code bool} is a finite type, while
+   * {@code i} is generated from the collection. Without component extents, both
+   * would have to share the single generator of the product type, which is
+   * infinite because {@code int} is.
+   *
+   * <p>Components are added after the generator for the whole pattern so that
+   * {@link Cache#bestGenerator} prefers them.
+   *
+   * <p>Does nothing if the extent is bounded (a range set has been pushed into
+   * it, and the bounds are expressed as paths within the product type that the
+   * component extents would discard) or if the pattern contains an "as" pattern
+   * (whose variable is the whole product, and cannot be recovered from
+   * independently generated components).
+   */
+  private static void addComponentExtents(
+      Cache cache, Core.Pat pat, Core.Exp exp) {
+    if (!exp.getRangeExtent().isUnbounded() || containsAsPat(pat)) {
+      return;
+    }
+    forEachComponent(
+        pat,
+        component ->
+            ExtentGenerator.create(
+                cache,
+                component,
+                core.extent(
+                    exp.pos,
+                    cache.typeSystem,
+                    component.type,
+                    ImmutableRangeSet.of(Range.all()))));
+  }
+
+  /**
+   * Calls {@code consumer} for each component of a tuple or record pattern,
+   * descending into components that are themselves tuple or record patterns.
+   * Does nothing if {@code pat} is not a tuple or record pattern.
+   */
+  private static void forEachComponent(
+      Core.Pat pat, Consumer<Core.Pat> consumer) {
+    final List<Core.Pat> args;
+    if (pat instanceof Core.TuplePat) {
+      args = ((Core.TuplePat) pat).args;
+    } else if (pat instanceof Core.RecordPat) {
+      args = ((Core.RecordPat) pat).args;
+    } else {
+      return;
+    }
+    for (Core.Pat arg : args) {
+      consumer.accept(arg);
+      forEachComponent(arg, consumer);
+    }
+  }
+
+  /** Returns whether a pattern contains an "as" pattern. */
+  private static boolean containsAsPat(Core.Pat pat) {
+    final AtomicBoolean found = new AtomicBoolean(false);
+    pat.accept(
+        new Visitor() {
+          @Override
+          protected void visit(Core.AsPat asPat) {
+            found.set(true);
+            super.visit(asPat);
+          }
+        });
+    return found.get();
   }
 
   /** If there is a predicate "pat = exp" or "exp = pat", returns "exp". */

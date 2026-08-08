@@ -232,7 +232,7 @@ In Standard ML but not in Morel:
 <i>matchItem</i> &rarr; <i>pat</i> <b>=&gt;</b> <i>exp</i>
 <i>scan</i> &rarr; <i>pat</i> <b>in</b> <i>exp</i> [ <b>on</b> <i>exp</i> ]    iteration
     | <i>pat</i> <b>=</b> <i>exp</i>                 single iteration
-    | <i>val</i>                       unbounded variable
+    | <i>pat</i>                       unbounded scan
 <i>step</i> &rarr; <b>distinct</b>                 distinct step
     | <b>except</b> [ <b>distinct</b> ] <i>exp<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>exp<sub>e</sub></i>
                                 except step (<i>e</i> &ge; 1)
@@ -332,7 +332,7 @@ identifiers everywhere else.
     | <i>id</i> <b>as</b> <i>pat</i>                 layered
 <i>patrow</i> &rarr; '<b>...</b>'                  wildcard
     | <i>lab</i> <b>=</b> <i>pat</i> [<b>,</b> <i>patrow</i>]      pattern
-    | <i>id</i> [<b>,</b> <i>patrow</i>]             label as variable
+    | <i>id</i> [ <b>:</b> <i>type</i> ] [<b>,</b> <i>patrow</i>]   label as variable
 </pre>
 
 ### Types

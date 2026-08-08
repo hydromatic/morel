@@ -98,7 +98,7 @@ The formal syntax of queries is as follows.
 
 <i>scan</i> &rarr; <i>pat</i> <b>in</b> <i>exp</i> [ <b>on</b> <i>exp</i> ]    iteration
     | <i>pat</i> <b>=</b> <i>exp</i> [ <b>on</b> <i>exp</i> ]      single iteration
-    | <i>val</i>                       unbounded variable
+    | <i>pat</i>                       unbounded scan
 
 <i>step</i> &rarr; <b>distinct</b>                 distinct step
     | <b>except</b> [ <b>distinct</b> ] <i>exp<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>exp<sub>e</sub></i>

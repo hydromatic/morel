@@ -2175,27 +2175,31 @@ public class MainTest {
             "fn f => from i in [1, 2, 3],"
                 + " j in [3, 4] on f (i, j) yield i + j");
 
-    // In "from p in exp" and "from p = exp", p can be any pattern
-    // but in "from v" v can only be an identifier.
+    // In "from p in exp", "from p = exp" and the unbounded "from p", p may be
+    // any pattern. Whether an unbounded scan's pattern can be enumerated is a
+    // question for the type resolver, not the parser; see the tests in
+    // script/such-that.smli.
     ml("from x, y in [1, 2], z").assertParseSame();
+    ml("from x: int").assertParse("from x : int");
+    ml("from x: int, y: bool list").assertParse("from x : int, y : bool list");
+    ml("from x in [1, 2], y: bool where y")
+        .assertParse("from x in [1, 2], y : bool where y");
+    ml("from x: int in [1, 2]").assertParse("from x : int in [1, 2]");
+    ml("exists x: int where x > 1").assertParse("exists x : int where x > 1");
+    ml("forall x: int require x > 1")
+        .assertParse("forall x : int require x > 1");
+    ml("from {x, y}: int, z").assertParse("from {x = x, y = y} : int, z");
+    ml("from (x, y): int where true")
+        .assertParse("from (x, y) : int where true");
     ml("from {x, y} in [{x=1, y=2}], z")
         .assertParse("from {x = x, y = y} in [{x = 1, y = 2}], z");
-    mlE("from {x, y}$,$ z")
-        .assertParseThrowsParseException("Encountered \" \",\" \", \"\"");
-    mlE("from {x, y} $group$")
-        .assertParseThrowsParseException(
-            "Encountered \" \"group\" \"group \"\"");
-    mlE("from {x, y} $where$ true")
-        .assertParseThrowsParseException(
-            "Encountered \" \"where\" \"where \"\"");
-    mlE("from (x, y) $where$ true")
-        .assertParseThrowsParseException(
-            "Encountered \" \"where\" \"where \"\"");
-    mlE("from w as (x, y) $order$ x")
-        .assertParseThrowsParseException(
-            "Encountered \" \"order\" \"order \"\"");
-    mlE("from (x, y$)$")
+    ml("from {x, y}, z").assertParse("from {x = x, y = y}, z");
+    ml("from {x, y} where true").assertParse("from {x = x, y = y} where true");
+    ml("from (x, y) where true").assertParseSame();
+    ml("from w as (x, y) order x").assertParseSame();
+    mlE("from {x, y} grou$p$")
         .assertParseThrowsParseException("Encountered \"<EOF>\"");
+    ml("from (x, y)").assertParseSame();
     ml("from e in emps\n" //
             + "through e in empsInDept 20\n"
             + "yield e.sal")
@@ -2342,27 +2346,19 @@ public class MainTest {
             "fn f => exists i in [1, 2, 3],"
                 + " j in [3, 4] on f (i, j) yield i + j");
 
-    // In "exists p in exp" and "exists p = exp", p can be any pattern
-    // but in "exists v" v can only be an identifier.
+    // In "exists p in exp", "exists p = exp" and the unbounded "exists p", p
+    // may be any pattern.
     ml("exists x, y in [1, 2], z").assertParseSame();
     ml("exists {x, y} in [{x=1, y=2}], z")
         .assertParse("exists {x = x, y = y} in [{x = 1, y = 2}], z");
-    mlE("exists {x, y}$,$ z")
-        .assertParseThrowsParseException("Encountered \" \",\" \", \"\"");
-    mlE("exists {x, y} $group$")
-        .assertParseThrowsParseException(
-            "Encountered \" \"group\" \"group \"\"");
-    mlE("exists {x, y} $where$ true")
-        .assertParseThrowsParseException(
-            "Encountered \" \"where\" \"where \"\"");
-    mlE("exists (x, y) $where$ true")
-        .assertParseThrowsParseException(
-            "Encountered \" \"where\" \"where \"\"");
-    mlE("exists w as (x, y) $order$ x")
-        .assertParseThrowsParseException(
-            "Encountered \" \"order\" \"order \"\"");
-    mlE("exists (x, y$)$")
+    ml("exists {x, y}, z").assertParse("exists {x = x, y = y}, z");
+    ml("exists {x, y} where true")
+        .assertParse("exists {x = x, y = y} where true");
+    ml("exists (x, y) where true").assertParseSame();
+    ml("exists w as (x, y) order x").assertParseSame();
+    mlE("exists {x, y} grou$p$")
         .assertParseThrowsParseException("Encountered \"<EOF>\"");
+    ml("exists (x, y)").assertParseSame();
     ml("exists e in emps\n" //
             + "through e in empsInDept 20\n"
             + "yield e.sal")
@@ -2475,27 +2471,19 @@ public class MainTest {
             "fn f => forall i in [1, 2, 3],"
                 + " j in [3, 4] on f (i, j) yield i + j");
 
-    // In "forall p in exp" and "forall p = exp", p can be any pattern
-    // but in "forall v" v can only be an identifier.
+    // In "forall p in exp", "forall p = exp" and the unbounded "forall p", p
+    // may be any pattern.
     ml("forall x, y in [1, 2], z").assertParseSame();
     ml("forall {x, y} in [{x=1, y=2}], z")
         .assertParse("forall {x = x, y = y} in [{x = 1, y = 2}], z");
-    mlE("forall {x, y}$,$ z")
-        .assertParseThrowsParseException("Encountered \" \",\" \", \"\"");
-    mlE("forall {x, y} $group$")
-        .assertParseThrowsParseException(
-            "Encountered \" \"group\" \"group \"\"");
-    mlE("forall {x, y} $where$ true")
-        .assertParseThrowsParseException(
-            "Encountered \" \"where\" \"where \"\"");
-    mlE("forall (x, y) $where$ true")
-        .assertParseThrowsParseException(
-            "Encountered \" \"where\" \"where \"\"");
-    mlE("forall w as (x, y) $order$ x")
-        .assertParseThrowsParseException(
-            "Encountered \" \"order\" \"order \"\"");
-    mlE("forall (x, y$)$")
+    ml("forall {x, y}, z").assertParse("forall {x = x, y = y}, z");
+    ml("forall {x, y} where true")
+        .assertParse("forall {x = x, y = y} where true");
+    ml("forall (x, y) where true").assertParseSame();
+    ml("forall w as (x, y) order x").assertParseSame();
+    mlE("forall {x, y} grou$p$")
         .assertParseThrowsParseException("Encountered \"<EOF>\"");
+    ml("forall (x, y)").assertParseSame();
     ml("forall e in emps\n" //
             + "through e in empsInDept 20\n"
             + "yield e.sal")

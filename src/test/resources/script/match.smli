@@ -352,4 +352,28 @@ val _ = 9;
 let val (i, j) = (2, 3) in (j, i) end;
 > val it = (3,2) : int * int
 
+(* In a record pattern, a label may stand for itself, and may bear a type
+ * annotation: "{r: bool, s}" is short for "{r = r: bool, s = s}". *)
+val {r: bool, s} = {r=true, s=1};
+> val r = true : bool
+> val s = 1 : int
+val {r: bool, s: int} = {r=false, s=2};
+> val r = false : bool
+> val s = 2 : int
+val {r = t: bool, s} = {r=true, s=3};
+> val t = true : bool
+> val s = 3 : int
+val {r: bool, ...} = {r=true, s=4, u=5};
+> val r = true : bool
+fun toInt {r: bool, s} = if r then s else 0;
+> val toInt = fn : {r:bool, s:int} -> int
+toInt {r=true, s=7};
+> val it = 7 : int
+case {r=true, s=1} of {r: bool, s} => s;
+> val it = 1 : int
+(*) The annotation constrains the type, and so can be wrong.
+val {r: bool, s} = {r=1, s=2};
+> stdIn:1.1-1.30 Error: Cannot deduce type: conflict: int vs bool
+>   raised at: stdIn:1.1-1.30
+
 (*) End match.smli

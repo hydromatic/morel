@@ -18,6 +18,7 @@
  */
 package net.hydromatic.morel.compile;
 
+import static java.lang.String.format;
 import static net.hydromatic.morel.ast.AstBuilder.ast;
 
 import com.google.common.collect.ImmutableList;
@@ -222,6 +223,7 @@ public abstract class Compiles {
         tracer.onCore(i + 2, coreDecl);
       }
     }
+    checkExtentsFinite(coreDecl);
     tracer.onCore(-1, coreDecl);
     final Compiler compiler;
     if (hybrid) {
@@ -343,6 +345,43 @@ public abstract class Compiles {
    * or plan, because these should operate on the previous command, not
    * themselves.
    */
+  /**
+   * Throws if an infinite extent survived generator expansion.
+   *
+   * <p>"{@code from i}" asks for every value of {@code i}'s type, and unless
+   * some step bounds it, as "{@code from i where i elem [1, 2]}" does, there is
+   * no way to produce them. {@link Expander} reports "pattern 'i' is not
+   * grounded" where it can see the pattern, but a query whose only step is the
+   * scan simplifies to the extent alone, so no scan remains for the expander to
+   * look at. Such an extent used to reach the evaluator and fail an assertion
+   * at run time; catch it here instead, at the position of the pattern that
+   * asked for it.
+   */
+  private static void checkExtentsFinite(Core.Decl decl) {
+    decl.accept(
+        new Visitor() {
+          @Override
+          protected void visit(Core.Fn fn) {
+            // Do not look inside a function. Its body is not evaluated here,
+            // and an unbounded query in it is expanded when the function is
+            // called, or is recognized as a transitive closure; either way it
+            // is not this pass's business.
+          }
+
+          @Override
+          protected void visit(Core.Apply apply) {
+            super.visit(apply);
+            if (Extents.isInfinite(apply)) {
+              final String message =
+                  format(
+                      "cannot enumerate all values of type '%s'",
+                      apply.getRangeExtent().type);
+              throw new CompileException(message, false, apply.pos);
+            }
+          }
+        });
+  }
+
   private static boolean isPlanExCall(Core.Decl decl) {
     if (!(decl instanceof Core.NonRecValDecl)) {
       return false;
