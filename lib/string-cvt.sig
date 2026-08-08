@@ -32,14 +32,12 @@ sig
    *)
   datatype radix = BIN | OCT | DEC | HEX
 
-(* TODO
   (**
    * is the type of a scanning function that reads one value of type `'a`
    * from a stream of type `'b`, returning the value and the remaining
    * stream, or `NONE` at end of input.
    *)
   type ('a, 'b) reader = 'b -> ('a * 'b) option
-*)
 
   (** specifies the format for converting real numbers to strings. *)
   datatype realfmt = SCI of int option | FIX of int option | GEN of int option | EXACT
@@ -59,6 +57,41 @@ sig
    *)
   val padRight : char -> int -> string -> string
       [@@prototype "padRight c i s"]
+
+  (**
+   * `splitl f rdr src` reads from `src` the longest prefix of characters
+   * satisfying `f`, and returns that prefix together with the rest of
+   * `src`.
+   *)
+  val splitl : (char -> bool) -> (char, 'a) reader -> 'a -> string * 'a
+      [@@prototype "splitl f rdr src"]
+
+  (**
+   * `takel f rdr src` returns the longest prefix of `src` whose characters
+   * satisfy `f`. It is the first component of `splitl f rdr src`.
+   *)
+  val takel : (char -> bool) -> (char, 'a) reader -> 'a -> string
+      [@@prototype "takel f rdr src"]
+
+  (**
+   * `dropl f rdr src` drops the longest prefix of `src` whose characters
+   * satisfy `f`. It is the second component of `splitl f rdr src`.
+   *)
+  val dropl : (char -> bool) -> (char, 'a) reader -> 'a -> 'a
+      [@@prototype "dropl f rdr src"]
+
+  (** `skipWS rdr src` drops any leading whitespace from `src`. *)
+  val skipWS : (char, 'a) reader -> 'a -> 'a
+      [@@prototype "skipWS rdr src"]
+
+  (**
+   * `scanString f s` scans the string `s` using the scanner `f`, and returns
+   * `SOME a` if `f` reads a value `a` from a prefix of `s`, `NONE` otherwise.
+   * `f` is given a reader over the characters of `s`; the type of the stream
+   * that it reads from is not specified.
+   *)
+  val scanString : ((char, 'b) reader -> ('a, 'b) reader) -> string -> 'a option
+      [@@prototype "scanString f s"]
 end
 [@@description "String conversion utilities and types."]
 

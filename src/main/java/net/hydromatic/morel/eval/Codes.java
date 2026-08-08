@@ -4318,6 +4318,58 @@ public abstract class Codes {
     }
   }
 
+  /**
+   * Reads from {@code src} the longest prefix of characters that satisfy {@code
+   * p}, and returns it with the rest of the stream.
+   *
+   * <p>Shared by {@link BuiltIn#STRING_CVT_SPLITL}, {@link
+   * BuiltIn#STRING_CVT_TAKEL} and {@link BuiltIn#STRING_CVT_DROPL}, which
+   * return the prefix and the rest, the prefix, and the rest respectively.
+   *
+   * @param p Whether a character belongs to the prefix
+   * @param rdr Reads one character, returning it with the rest of the stream,
+   *     or {@code NONE} at the end of the stream
+   * @param src Stream to read from
+   * @return the prefix, and the stream that follows it
+   */
+  private static List splitl(
+      Applicable1<Boolean, Character> p,
+      Applicable1<List, Object> rdr,
+      Object src) {
+    final StringBuilder b = new StringBuilder();
+    Object s = src;
+    for (; ; ) {
+      final List option = rdr.apply(s);
+      if (option.size() < 2) {
+        break; // NONE: end of stream
+      }
+      final List pair = (List) option.get(1);
+      final Character c = (Character) pair.get(0);
+      if (!p.apply(c)) {
+        break;
+      }
+      b.append(c.charValue());
+      s = pair.get(1);
+    }
+    return ImmutableList.of(b.toString(), s);
+  }
+
+  /** @see BuiltIn#STRING_CVT_DROPL */
+  private static final Applicable STRING_CVT_DROPL =
+      new BaseApplicable3<
+          Object,
+          Applicable1<Boolean, Character>,
+          Applicable1<List, Object>,
+          Object>(BuiltIn.STRING_CVT_DROPL) {
+        @Override
+        public Object apply(
+            Applicable1<Boolean, Character> p,
+            Applicable1<List, Object> rdr,
+            Object src) {
+          return splitl(p, rdr, src).get(1);
+        }
+      };
+
   /** @see BuiltIn#STRING_CVT_PAD_LEFT */
   private static final Applicable STRING_CVT_PAD_LEFT =
       new BaseApplicable3<String, Character, Integer, String>(
@@ -4344,6 +4396,79 @@ public abstract class Codes {
           }
           final StringBuilder sb = new StringBuilder(i).append(s);
           return padRightTo(sb, i, c).toString();
+        }
+      };
+
+  /** @see BuiltIn#STRING_CVT_SCAN_STRING */
+  private static final Applicable STRING_CVT_SCAN_STRING =
+      new BaseApplicable2<
+          List,
+          Applicable1<Applicable1<List, Object>, Applicable1<List, Object>>,
+          String>(BuiltIn.STRING_CVT_SCAN_STRING) {
+        @Override
+        public List apply(
+            Applicable1<Applicable1<List, Object>, Applicable1<List, Object>> f,
+            String s) {
+          // Give the scanner a reader over the characters of s. The stream is
+          // a position in s, but the scanner's type does not say so, and the
+          // reader is the only thing that can make sense of it.
+          final Applicable1<List, Object> reader =
+              new BaseApplicable1<List, Object>(
+                  BuiltIn.STRING_CVT_SCAN_STRING) {
+                @Override
+                public List apply(Object stream) {
+                  final int i = (Integer) stream;
+                  return i < s.length()
+                      ? optionSome(ImmutableList.of(s.charAt(i), i + 1))
+                      : OPTION_NONE;
+                }
+              };
+          final List option = f.apply(reader).apply(0);
+          return option.size() < 2
+              ? OPTION_NONE
+              : optionSome(((List) option.get(1)).get(0));
+        }
+      };
+
+  /** @see BuiltIn#STRING_CVT_SKIP_WS */
+  private static final Applicable STRING_CVT_SKIP_WS =
+      new BaseApplicable2<Object, Applicable1<List, Object>, Object>(
+          BuiltIn.STRING_CVT_SKIP_WS) {
+        @Override
+        public Object apply(Applicable1<List, Object> rdr, Object src) {
+          return splitl(c -> Character.isWhitespace(c), rdr, src).get(1);
+        }
+      };
+
+  /** @see BuiltIn#STRING_CVT_SPLITL */
+  private static final Applicable STRING_CVT_SPLITL =
+      new BaseApplicable3<
+          List,
+          Applicable1<Boolean, Character>,
+          Applicable1<List, Object>,
+          Object>(BuiltIn.STRING_CVT_SPLITL) {
+        @Override
+        public List apply(
+            Applicable1<Boolean, Character> p,
+            Applicable1<List, Object> rdr,
+            Object src) {
+          return splitl(p, rdr, src);
+        }
+      };
+
+  /** @see BuiltIn#STRING_CVT_TAKEL */
+  private static final Applicable STRING_CVT_TAKEL =
+      new BaseApplicable3<
+          String,
+          Applicable1<Boolean, Character>,
+          Applicable1<List, Object>,
+          Object>(BuiltIn.STRING_CVT_TAKEL) {
+        @Override
+        public String apply(
+            Applicable1<Boolean, Character> p,
+            Applicable1<List, Object> rdr,
+            Object src) {
+          return (String) splitl(p, rdr, src).get(0);
         }
       };
 
@@ -6563,8 +6688,13 @@ public abstract class Codes {
     b.add(BuiltIn.STRING_COMPARE, STRING_COMPARE);
     b.add(BuiltIn.STRING_CONCAT, STRING_CONCAT);
     b.add(BuiltIn.STRING_CONCAT_WITH, STRING_CONCAT_WITH);
+    b.add(BuiltIn.STRING_CVT_DROPL, STRING_CVT_DROPL);
     b.add(BuiltIn.STRING_CVT_PAD_LEFT, STRING_CVT_PAD_LEFT);
     b.add(BuiltIn.STRING_CVT_PAD_RIGHT, STRING_CVT_PAD_RIGHT);
+    b.add(BuiltIn.STRING_CVT_SCAN_STRING, STRING_CVT_SCAN_STRING);
+    b.add(BuiltIn.STRING_CVT_SKIP_WS, STRING_CVT_SKIP_WS);
+    b.add(BuiltIn.STRING_CVT_SPLITL, STRING_CVT_SPLITL);
+    b.add(BuiltIn.STRING_CVT_TAKEL, STRING_CVT_TAKEL);
     b.add(BuiltIn.STRING_EXPLODE, STRING_EXPLODE);
     b.add(BuiltIn.STRING_EXTRACT, STRING_EXTRACT);
     b.add(BuiltIn.STRING_FIELDS, STRING_FIELDS);

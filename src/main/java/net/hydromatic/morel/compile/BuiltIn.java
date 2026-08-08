@@ -3923,6 +3923,26 @@ public enum BuiltIn {
    * c} characters so that the result has length at least {@code i}. If {@code
    * s} is already at least {@code i} characters long, it is returned unchanged.
    */
+  /**
+   * Function "StringCvt.dropl", of type "(char &rarr; bool) &rarr; (char,
+   * &alpha;) reader &rarr; &alpha; &rarr; &alpha;".
+   *
+   * <p>"dropl f rdr src" drops the longest prefix of "src" whose characters
+   * satisfy "f".
+   */
+  STRING_CVT_DROPL(
+      "StringCvt",
+      "dropl",
+      ts ->
+          ts.forallType(
+              1,
+              h ->
+                  ts.fnType(
+                      ts.fnType(CHAR, BOOL),
+                      ts.reader(CHAR, h.get(0)),
+                      h.get(0),
+                      h.get(0)))),
+
   STRING_CVT_PAD_LEFT(
       "StringCvt", "padLeft", ts -> ts.fnType(CHAR, INT, STRING, STRING)),
 
@@ -3936,6 +3956,83 @@ public enum BuiltIn {
    */
   STRING_CVT_PAD_RIGHT(
       "StringCvt", "padRight", ts -> ts.fnType(CHAR, INT, STRING, STRING)),
+
+  /**
+   * Function "StringCvt.scanString", of type "((char, &beta;) reader &rarr;
+   * (&alpha;, &beta;) reader) &rarr; string &rarr; &alpha; option".
+   *
+   * <p>"scanString f s" scans the string "s" using the scanner "f", and returns
+   * "SOME a" if "f" reads a value "a" from a prefix of "s", "NONE" otherwise.
+   * The stream that "f" reads from is a position in "s", but its type is a
+   * variable, so that "f" cannot rely on what it is.
+   */
+  STRING_CVT_SCAN_STRING(
+      "StringCvt",
+      "scanString",
+      ts ->
+          ts.forallType(
+              2,
+              h ->
+                  ts.fnType(
+                      ts.fnType(
+                          ts.reader(CHAR, h.get(0)),
+                          ts.reader(h.get(1), h.get(0))),
+                      STRING,
+                      ts.option(h.get(1))))),
+
+  /**
+   * Function "StringCvt.skipWS", of type "(char, &alpha;) reader &rarr; &alpha;
+   * &rarr; &alpha;".
+   *
+   * <p>"skipWS rdr src" drops any leading whitespace from "src".
+   */
+  STRING_CVT_SKIP_WS(
+      "StringCvt",
+      "skipWS",
+      ts ->
+          ts.forallType(
+              1,
+              h -> ts.fnType(ts.reader(CHAR, h.get(0)), h.get(0), h.get(0)))),
+
+  /**
+   * Function "StringCvt.splitl", of type "(char &rarr; bool) &rarr; (char,
+   * &alpha;) reader &rarr; &alpha; &rarr; string * &alpha;".
+   *
+   * <p>"splitl f rdr src" reads from "src" the longest prefix of characters
+   * satisfying "f", and returns it with the rest of "src".
+   */
+  STRING_CVT_SPLITL(
+      "StringCvt",
+      "splitl",
+      ts ->
+          ts.forallType(
+              1,
+              h ->
+                  ts.fnType(
+                      ts.fnType(CHAR, BOOL),
+                      ts.reader(CHAR, h.get(0)),
+                      h.get(0),
+                      ts.tupleType(STRING, h.get(0))))),
+
+  /**
+   * Function "StringCvt.takel", of type "(char &rarr; bool) &rarr; (char,
+   * &alpha;) reader &rarr; &alpha; &rarr; string".
+   *
+   * <p>"takel f rdr src" returns the longest prefix of "src" whose characters
+   * satisfy "f".
+   */
+  STRING_CVT_TAKEL(
+      "StringCvt",
+      "takel",
+      ts ->
+          ts.forallType(
+              1,
+              h ->
+                  ts.fnType(
+                      ts.fnType(CHAR, BOOL),
+                      ts.reader(CHAR, h.get(0)),
+                      h.get(0),
+                      STRING))),
 
   /**
    * Function "String.explode", of type "string &rarr; char list".

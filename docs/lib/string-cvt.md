@@ -34,6 +34,7 @@ specifiers and reader types.
 
 <pre>
 datatype <a id='radix' href="#radix-impl">radix</a> = BIN | OCT | DEC | HEX
+type ('a, 'b) <a id='reader' href="#reader-impl">reader</a> = 'b -> ('a * 'b) option
 datatype <a id='realfmt' href="#realfmt-impl">realfmt</a>
   = SCI of int option
   | FIX of int option
@@ -42,6 +43,11 @@ datatype <a id='realfmt' href="#realfmt-impl">realfmt</a>
 
 val <a id='padLeft' href="#padLeft-impl">padLeft</a> : char -> int -> string -> string
 val <a id='padRight' href="#padRight-impl">padRight</a> : char -> int -> string -> string
+val <a id='splitl' href="#splitl-impl">splitl</a> : (char -> bool) -> (char, 'a) reader -> 'a -> string * 'a
+val <a id='takel' href="#takel-impl">takel</a> : (char -> bool) -> (char, 'a) reader -> 'a -> string
+val <a id='dropl' href="#dropl-impl">dropl</a> : (char -> bool) -> (char, 'a) reader -> 'a -> 'a
+val <a id='skipWS' href="#skipWS-impl">skipWS</a> : (char, 'a) reader -> 'a -> 'a
+val <a id='scanString' href="#scanString-impl">scanString</a> : ((char, 'b) reader -> ('a, 'b) reader) -> string -> 'a option
 </pre>
 
 <a id="radix-impl"></a>
@@ -49,6 +55,13 @@ val <a id='padRight' href="#padRight-impl">padRight</a> : char -> int -> string 
 
 specifies the numeric base: binary (2), octal (8), decimal (10), or
 hexadecimal (16).
+
+<a id="reader-impl"></a>
+<h3><code><strong>type</strong> ('a, 'b) reader</code></h3>
+
+is the type of a scanning function that reads one value of type `'a`
+from a stream of type `'b`, returning the value and the remaining
+stream, or `NONE` at end of input.
 
 <a id="realfmt-impl"></a>
 <h3><code><strong>datatype</strong> realfmt</code></h3>
@@ -68,5 +81,37 @@ that the result has length at least `i`. If `s` is already at least
 `padRight c i s` `padRight c i s` returns `s` padded on the right with `c` characters
 so that the result has length at least `i`. If `s` is already at
 least `i` characters long, it is returned unchanged.
+
+<a id="splitl-impl"></a>
+<h3><code>splitl</code></h3>
+
+`splitl f rdr src` `splitl f rdr src` reads from `src` the longest prefix of characters
+satisfying `f`, and returns that prefix together with the rest of
+`src`.
+
+<a id="takel-impl"></a>
+<h3><code>takel</code></h3>
+
+`takel f rdr src` `takel f rdr src` returns the longest prefix of `src` whose characters
+satisfy `f`. It is the first component of `splitl f rdr src`.
+
+<a id="dropl-impl"></a>
+<h3><code>dropl</code></h3>
+
+`dropl f rdr src` `dropl f rdr src` drops the longest prefix of `src` whose characters
+satisfy `f`. It is the second component of `splitl f rdr src`.
+
+<a id="skipWS-impl"></a>
+<h3><code>skipWS</code></h3>
+
+`skipWS rdr src` `skipWS rdr src` drops any leading whitespace from `src`.
+
+<a id="scanString-impl"></a>
+<h3><code>scanString</code></h3>
+
+`scanString f s` `scanString f s` scans the string `s` using the scanner `f`, and returns
+`SOME a` if `f` reads a value `a` from a prefix of `s`, `NONE` otherwise.
+`f` is given a reader over the characters of `s`; the type of the stream
+that it reads from is not specified.
 
 [//]: # (end:lib/string-cvt)

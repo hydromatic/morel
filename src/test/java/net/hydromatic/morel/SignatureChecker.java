@@ -991,6 +991,14 @@ public class SignatureChecker {
               return namedType.name.toUpperCase(Locale.ROOT);
             case "option":
               return format("ts.option(%s)", str(namedType.types.get(0)));
+            case "reader":
+              // "(v, s) reader" is an alias for "s -> (v * s) option".
+              // Expand it, because that is the type that is registered.
+              final String v = str(namedType.types.get(0));
+              final String stream = str(namedType.types.get(1));
+              return format(
+                  "ts.fnType(%s, ts.option(ts.tupleType(%s, %s)))",
+                  stream, v, stream);
             case "order":
               return "ts.order()";
             case "list":

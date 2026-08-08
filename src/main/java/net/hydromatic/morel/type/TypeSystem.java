@@ -696,6 +696,19 @@ public class TypeSystem {
   }
 
   /**
+   * Creates a "reader" type, {@code (v, s) reader}.
+   *
+   * <p>{@code StringCvt.reader} is an alias, not a type of its own: {@code (v,
+   * s) reader} is {@code s -> (v * s) option}, the type of a function that
+   * reads one value of type {@code v} from a stream of type {@code s},
+   * returning the value and the rest of the stream, or {@code NONE} at the end
+   * of the stream.
+   */
+  public Type reader(Type valueType, Type streamType) {
+    return fnType(streamType, option(tupleType(valueType, streamType)));
+  }
+
+  /**
    * Creates a "continuous_set" type.
    *
    * <p>"continuousSet(type)" is shorthand for "apply(lookup("continuous_set"),

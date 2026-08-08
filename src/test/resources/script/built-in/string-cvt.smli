@@ -27,9 +27,18 @@ Sys.set ("stringDepth", ~1);
 > val it = () : unit
 
 StringCvt;
-> val it = {padLeft=fn,padRight=fn}
->   : {padLeft:char -> int -> string -> string,
->       padRight:char -> int -> string -> string}
+> val it =
+>   {dropl=fn,padLeft=fn,padRight=fn,scanString=fn,skipWS=fn,splitl=fn,
+>    takel=fn}
+>   : {dropl:(char -> bool) -> ('a -> (char * 'a) option) -> 'a -> 'a,
+>       padLeft:char -> int -> string -> string,
+>       padRight:char -> int -> string -> string,
+>       scanString:(('b -> (char * 'b) option) -> 'b -> ('c * 'b) option)
+>                   -> string -> 'c option,
+>       skipWS:('d -> (char * 'd) option) -> 'd -> 'd,
+>       splitl:(char -> bool)
+>               -> ('e -> (char * 'e) option) -> 'e -> string * 'e,
+>       takel:(char -> bool) -> ('f -> (char * 'f) option) -> 'f -> string}
 
 (*) The constructors of `radix` and `realfmt` are at the top level.
 BIN;
@@ -80,5 +89,115 @@ StringCvt.padRight #" " 0 "ab";
 > val it = "ab" : string
 StringCvt.padRight #"*" 5 "";
 > val it = "*****" : string
+
+(* A reader reads one character from a stream, returning it with the rest
+ * of the stream, or NONE at the end of the stream. Here the stream is a
+ * position in a string. *)
+fun reader s i =
+  if i < String.size s then SOME (String.sub (s, i), i + 1) else NONE;
+> val reader = fn : string -> int -> (char * int) option
+
+(* "splitl f rdr src" reads the longest prefix of characters satisfying f,
+ * and returns it with the rest of src. *)
+StringCvt.splitl;
+> val it = fn
+>   : (char -> bool) -> ('a -> (char * 'a) option) -> 'a -> string * 'a
+StringCvt.splitl Char.isAlpha (reader "abc123") 0;
+> val it = ("abc",3) : string * int
+StringCvt.splitl Char.isDigit (reader "abc123") 0;
+> val it = ("",0) : string * int
+StringCvt.splitl Char.isAlpha (reader "abc") 0;
+> val it = ("abc",3) : string * int
+StringCvt.splitl Char.isAlpha (reader "") 0;
+> val it = ("",0) : string * int
+
+(*) The prefix may start part-way through the stream.
+StringCvt.splitl Char.isDigit (reader "abc123") 3;
+> val it = ("123",6) : string * int
+
+(* "takel f rdr src" is the first component of "splitl f rdr src". *)
+StringCvt.takel;
+> val it = fn : (char -> bool) -> ('a -> (char * 'a) option) -> 'a -> string
+StringCvt.takel Char.isAlpha (reader "abc123") 0;
+> val it = "abc" : string
+StringCvt.takel Char.isDigit (reader "abc123") 0;
+> val it = "" : string
+
+(* "dropl f rdr src" is the second component of "splitl f rdr src". *)
+StringCvt.dropl;
+> val it = fn : (char -> bool) -> ('a -> (char * 'a) option) -> 'a -> 'a
+StringCvt.dropl Char.isAlpha (reader "abc123") 0;
+> val it = 3 : int
+StringCvt.dropl Char.isDigit (reader "abc123") 0;
+> val it = 0 : int
+
+(* "skipWS rdr src" drops leading whitespace. *)
+StringCvt.skipWS;
+> val it = fn : ('a -> (char * 'a) option) -> 'a -> 'a
+StringCvt.skipWS (reader "   abc") 0;
+> val it = 3 : int
+StringCvt.skipWS (reader "abc") 0;
+> val it = 0 : int
+StringCvt.skipWS (reader "   ") 0;
+> val it = 3 : int
+
+(*) A reader over a list of characters is a stream of another kind.
+fun listReader [] = NONE
+  | listReader (c :: cs) = SOME (c, cs);
+> val listReader = fn : 'a list -> ('a * 'a list) option
+StringCvt.splitl Char.isAlpha listReader (String.explode "ab1");
+> val it = ("ab",[#"1"]) : string * char list
+
+(* "scanString f s" scans s with the scanner f. scanString makes the reader
+ * and passes it to f, so these tests also check that a function value made
+ * by the interpreter can be applied by a Morel closure. *)
+StringCvt.scanString;
+> val it = fn
+>   : (('a -> (char * 'a) option) -> 'a -> ('b * 'a) option)
+>      -> string -> 'b option
+
+(*) The scanner applies the reader directly.
+fun firstChar rdr src =
+  case rdr src of
+      NONE => NONE
+    | SOME (c, src2) => SOME (Char.toUpper c, src2);
+> val firstChar = fn : ('a -> (char * 'b) option) -> 'a -> (char * 'b) option
+StringCvt.scanString firstChar "abc";
+> val it = SOME #"A" : char option
+StringCvt.scanString firstChar "";
+> val it = NONE : char option
+
+(*) The scanner reads twice, threading the stream through itself.
+fun firstTwo rdr src =
+  case rdr src of
+      NONE => NONE
+    | SOME (c1, s1) =>
+      (case rdr s1 of
+           NONE => NONE
+         | SOME (c2, s2) => SOME (String.implode [c1, c2], s2));
+> val firstTwo = fn : ('a -> (char * 'a) option) -> 'a -> (string * 'a) option
+StringCvt.scanString firstTwo "abc";
+> val it = SOME "ab" : string option
+StringCvt.scanString firstTwo "a";
+> val it = NONE : string option
+
+(*) The scanner passes the reader on to another function.
+fun digits rdr src =
+  case StringCvt.splitl Char.isDigit rdr src of
+      ("", _) => NONE
+    | (s, src2) => SOME (s, src2);
+> val digits = fn : ('a -> (char * 'a) option) -> 'a -> (string * 'a) option
+StringCvt.scanString digits "123abc";
+> val it = SOME "123" : string option
+StringCvt.scanString digits "abc";
+> val it = NONE : string option
+
+(*) The scan may stop before the end of the string.
+StringCvt.scanString digits "12ab34";
+> val it = SOME "12" : string option
+
+(*) A scanner that ignores the reader never looks at the stream.
+StringCvt.scanString (fn rdr => fn src => SOME (1, src)) "abc";
+> val it = SOME 1 : int option
 
 (*) End string-cvt.smli
