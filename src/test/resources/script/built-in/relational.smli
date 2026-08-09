@@ -35,7 +35,7 @@ Relational;
 >       only:'h bag -> 'h, sum:'i bag -> 'i}
 
 (* Descending:
-     datatype descending = DESC of 'a
+ *   datatype descending = DESC of 'a
 *)
 DESC;
 > val it = fn : 'a -> 'a descending
@@ -353,7 +353,7 @@ Relational.compare ([], [1, 2]);
 Relational.compare ([SOME 1, NONE], [SOME 1, SOME 2, SOME 3, NONE]);
 > val it = LESS : order
 (* 'word' compares as unsigned: a word with the high bit set is the largest
-   value, and 'order'/'order DESC' sort accordingly. *)
+ * value, and 'order'/'order DESC' sort accordingly. *)
 Relational.compare (0wxffffffffffffffff, 0w1);
 > val it = GREATER : order
 Relational.compare (0w3, 0w7);

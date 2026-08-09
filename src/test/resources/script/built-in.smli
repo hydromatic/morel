@@ -30,7 +30,7 @@ Sys.set ("now", "2024-01-01T00:00:00Z");
 > val it = () : unit
 
 (* Until we have a real "print" function, we use "ignore" to
-   suppress the output of expressions. *)
+ * suppress the output of expressions. *)
 fun print x = ignore x;
 > val print = fn : 'a -> unit
 

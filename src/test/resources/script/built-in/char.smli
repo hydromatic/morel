@@ -73,7 +73,7 @@ Char.maxOrd;
 > val it = 255 : int
 
 (* [chr i] returns the character whose code is i.  Raises Chr if
-   i<0 or i>maxOrd. *)
+ * i<0 or i>maxOrd. *)
 Char.chr;
 > val it = fn : int -> char
 Char.chr 65;
@@ -97,7 +97,7 @@ Char.ord #"A";
 > val it = 65 : int
 
 (* [succ c] returns the character immediately following c, or raises
-   Chr if c = maxChar. *)
+ * Chr if c = maxChar. *)
 Char.succ;
 > val it = fn : char -> char
 Char.succ #"A";
@@ -111,7 +111,7 @@ Char.succ (chr 255);
 >   raised at: stdIn:1.1-1.20
 
 (* [pred c] returns the character immediately preceding c, or raises
-   Chr if c = minChar. *)
+ * Chr if c = minChar. *)
 Char.pred;
 > val it = fn : char -> char
 Char.pred #"B";
@@ -165,7 +165,7 @@ testChar Char.isDigit;
 > val it = [(false,"Abz! \\t\\128\\255"),(true,"0")] : (bool * string) list
 
 (* [isHexDigit c] returns true if c is a hexadecimal digit (0 to 9 or
-   a to f or A to F). *)
+ * a to f or A to F). *)
 Char.isHexDigit;
 > val it = fn : char -> bool
 Char.isHexDigit #"A";
@@ -174,7 +174,7 @@ testChar Char.isHexDigit;
 > val it = [(false,"z! \\t\\128\\255"),(true,"Ab0")] : (bool * string) list
 
 (* [isAlphaNum c] returns true if c is alphanumeric (a letter or a
-   decimal digit). *)
+ * decimal digit). *)
 Char.isAlphaNum;
 > val it = fn : char -> bool
 Char.isAlphaNum #"A";
@@ -191,7 +191,7 @@ testChar Char.isPrint;
 > val it = [(false,"\\t\\128\\255"),(true,"Abz0! ")] : (bool * string) list
 
 (* [isSpace c] returns true if c is a whitespace character (blank, newline,
-   tab, vertical tab, new page). *)
+ * tab, vertical tab, new page). *)
 Char.isSpace;
 > val it = fn : char -> bool
 Char.isSpace #"A";
@@ -200,7 +200,7 @@ testChar Char.isSpace;
 > val it = [(false,"Abz0!\\128\\255"),(true," \\t")] : (bool * string) list
 
 (* [isGraph c] returns true if c is a graphical character, that is,
-   it is printable and not a whitespace character. *)
+ * it is printable and not a whitespace character. *)
 Char.isGraph;
 > val it = fn : char -> bool
 Char.isGraph #"A";
@@ -209,7 +209,7 @@ testChar Char.isGraph;
 > val it = [(false," \\t\\128\\255"),(true,"Abz0!")] : (bool * string) list
 
 (* [isPunct c] returns true if c is a punctuation character, that is,
-   graphical but not alphanumeric. *)
+ * graphical but not alphanumeric. *)
 Char.isPunct;
 > val it = fn : char -> bool
 Char.isPunct #"A";
@@ -218,7 +218,7 @@ testChar Char.isPunct;
 > val it = [(false,"Abz0 \\t\\128\\255"),(true,"!")] : (bool * string) list
 
 (* [isCntrl c] returns true if c is a control character, that is, if
-   not (isPrint c). *)
+ * not (isPrint c). *)
 Char.isCntrl;
 > val it = fn : char -> bool
 testChar Char.isCntrl;
@@ -231,7 +231,7 @@ testChar Char.isAscii;
 > val it = [(false,"\\128\\255"),(true,"Abz0! \\t")] : (bool * string) list
 
 (* [toLower c] returns the lowercase letter corresponding to c,
-   if c is a letter (a to z or A to Z); otherwise returns c. *)
+ * if c is a letter (a to z or A to Z); otherwise returns c. *)
 Char.toLower;
 > val it = fn : char -> char
 Char.toLower #"A";
@@ -246,7 +246,7 @@ Char.toLower #"\^@";
 > val it = #"\^@" : char
 
 (* [toUpper c] returns the uppercase letter corresponding to c,
-   if c is a letter (a to z or A to Z); otherwise returns c. *)
+ * if c is a letter (a to z or A to Z); otherwise returns c. *)
 Char.toUpper;
 > val it = fn : char -> char
 Char.toUpper #"A";
@@ -259,11 +259,11 @@ Char.toUpper #"\^@";
 > val it = #"\^@" : char
 
 (* [contains s c] returns true if character c occurs in the string s;
-   false otherwise.  The function, when applied to s, builds a table
-   and returns a function which uses table lookup to decide whether a
-   given character is in the string or not.  Hence it is relatively
-   expensive to compute `val p = contains s` but very fast to compute
-   `p(c)` for any given character. *)
+ * false otherwise.  The function, when applied to s, builds a table
+ * and returns a function which uses table lookup to decide whether a
+ * given character is in the string or not.  Hence it is relatively
+ * expensive to compute `val p = contains s` but very fast to compute
+ * `p(c)` for any given character. *)
 Char.contains;
 > val it = fn : string -> char -> bool
 val p = Char.contains "abc";
@@ -278,8 +278,8 @@ testChar p;
 > val it = [(false,"Az0! \\t\\128\\255"),(true,"b")] : (bool * string) list
 
 (* [notContains s c] returns true if character c does not occur in the
-   string s; false otherwise.  Works by construction of a lookup table
-   in the same way as the above function. *)
+ * string s; false otherwise.  Works by construction of a lookup table
+ * in the same way as the above function. *)
 Char.notContains;
 > val it = fn : string -> char -> bool
 val p = Char.notContains "abc";
@@ -294,8 +294,8 @@ testChar p;
 > val it = [(false,"b"),(true,"Az0! \\t\\128\\255")] : (bool * string) list
 
 (* [fromString s] attempts to scan a character or ML escape sequence
-   from the string s.  Does not skip leading whitespace.  For
-   instance, fromString "\\065" equals #"A". *)
+ * from the string s.  Does not skip leading whitespace.  For
+ * instance, fromString "\\065" equals #"A". *)
 Char.fromString;
 > val it = fn : string -> char option
 Char.fromString "\\065";
@@ -314,31 +314,31 @@ Char.fromString "\\009";
 > val it = SOME #"\t" : char option
 
 (* [toString c] returns a string consisting of the character c, if c
-      is printable, else an ML escape sequence corresponding to c.  A
-      printable character is mapped to a one-character string; bell,
-      backspace, tab, newline, vertical tab, form feed, and carriage
-      return are mapped to the two-character strings "\\a", "\\b", "\\t",
-      "\\n", "\\v", "\\f", and "\\r"; other characters with code less
-      than 32 are mapped to three-character strings of the form "\\^Z",
-      and characters with codes 127 through 255 are mapped to
-      four-character strings of the form "\\ddd", where ddd are three decimal
-      digits representing the character code.  For instance,
-                toString #"A"      equals "A"
-                toString #"\\"     equals "\\\\"
-                toString #"\""     equals "\\\""
-                toString (chr   0) equals "\\^@"
-                toString (chr   1) equals "\\^A"
-                toString (chr   6) equals "\\^F"
-                toString (chr   7) equals "\\a"
-                toString (chr   8) equals "\\b"
-                toString (chr   9) equals "\\t"
-                toString (chr  10) equals "\\n"
-                toString (chr  11) equals "\\v"
-                toString (chr  12) equals "\\f"
-                toString (chr  13) equals "\\r"
-                toString (chr  14) equals "\\^N"
-                toString (chr 127) equals "\\127"
-                toString (chr 128) equals "\\128" *)
+ *    is printable, else an ML escape sequence corresponding to c.  A
+ *    printable character is mapped to a one-character string; bell,
+ *    backspace, tab, newline, vertical tab, form feed, and carriage
+ *    return are mapped to the two-character strings "\\a", "\\b", "\\t",
+ *    "\\n", "\\v", "\\f", and "\\r"; other characters with code less
+ *    than 32 are mapped to three-character strings of the form "\\^Z",
+ *    and characters with codes 127 through 255 are mapped to
+ *    four-character strings of the form "\\ddd", where ddd are three decimal
+ *    digits representing the character code.  For instance,
+ *              toString #"A"      equals "A"
+ *              toString #"\\"     equals "\\\\"
+ *              toString #"\""     equals "\\\""
+ *              toString (chr   0) equals "\\^@"
+ *              toString (chr   1) equals "\\^A"
+ *              toString (chr   6) equals "\\^F"
+ *              toString (chr   7) equals "\\a"
+ *              toString (chr   8) equals "\\b"
+ *              toString (chr   9) equals "\\t"
+ *              toString (chr  10) equals "\\n"
+ *              toString (chr  11) equals "\\v"
+ *              toString (chr  12) equals "\\f"
+ *              toString (chr  13) equals "\\r"
+ *              toString (chr  14) equals "\\^N"
+ *              toString (chr 127) equals "\\127"
+ *              toString (chr 128) equals "\\128" *)
 Char.toString;
 > val it = fn : char -> string
 Char.toString #"A";
@@ -422,44 +422,44 @@ chr 255;
 > val it = #"\255" : char
 
 (* [fromCString s] attempts to scan a character or C escape sequence
-   from the string s.  Does not skip leading whitespace.  For
-   instance, fromString "\\065" equals #"A". *)
+ * from the string s.  Does not skip leading whitespace.  For
+ * instance, fromString "\\065" equals #"A". *)
 Char.fromString;
 > val it = fn : string -> char option
 
 (* [toCString c] returns a string consisting of the character c, if c
-   is printable, else an C escape sequence corresponding to c.  A
-   printable character is mapped to a one-character string; bell,
-   backspace, tab, newline, vertical tab, form feed, and carriage
-   return are mapped to the two-character strings "\\a", "\\b", "\\t",
-   "\\n", "\\v", "\\f", and "\\r"; other characters are mapped to
-   four-character strings of the form "\\ooo", where ooo are three
-   octal digits representing the character code.  For instance,
-             toString #"A"      equals "A"
-             toString #"A"      equals "A"
-             toString #"\\"     equals "\\\\"
-             toString #"\""     equals "\\\""
-             toString (chr   0) equals "\\000"
-             toString (chr   1) equals "\\001"
-             toString (chr   6) equals "\\006"
-             toString (chr   7) equals "\\a"
-             toString (chr   8) equals "\\b"
-             toString (chr   9) equals "\\t"
-             toString (chr  10) equals "\\n"
-             toString (chr  11) equals "\\v"
-             toString (chr  12) equals "\\f"
-             toString (chr  13) equals "\\r"
-             toString (chr  14) equals "\\016"
-             toString (chr 127) equals "\\177"
-             toString (chr 128) equals "\\200" *)
+ * is printable, else an C escape sequence corresponding to c.  A
+ * printable character is mapped to a one-character string; bell,
+ * backspace, tab, newline, vertical tab, form feed, and carriage
+ * return are mapped to the two-character strings "\\a", "\\b", "\\t",
+ * "\\n", "\\v", "\\f", and "\\r"; other characters are mapped to
+ * four-character strings of the form "\\ooo", where ooo are three
+ * octal digits representing the character code.  For instance,
+ *           toString #"A"      equals "A"
+ *           toString #"A"      equals "A"
+ *           toString #"\\"     equals "\\\\"
+ *           toString #"\""     equals "\\\""
+ *           toString (chr   0) equals "\\000"
+ *           toString (chr   1) equals "\\001"
+ *           toString (chr   6) equals "\\006"
+ *           toString (chr   7) equals "\\a"
+ *           toString (chr   8) equals "\\b"
+ *           toString (chr   9) equals "\\t"
+ *           toString (chr  10) equals "\\n"
+ *           toString (chr  11) equals "\\v"
+ *           toString (chr  12) equals "\\f"
+ *           toString (chr  13) equals "\\r"
+ *           toString (chr  14) equals "\\016"
+ *           toString (chr 127) equals "\\177"
+ *           toString (chr 128) equals "\\200" *)
 Char.toCString;
 > val it = fn : char -> string
 
 (* [<]
-   [<=]
-   [>]
-   [>=] compares character codes.  For instance, c1 < c2 returns true
-   if ord(c1) < ord(c2), and similarly for <=, >, >=. *)
+ * [<=]
+ * [>]
+ * [>=] compares character codes.  For instance, c1 < c2 returns true
+ * if ord(c1) < ord(c2), and similarly for <=, >, >=. *)
 
 Char.`<`;
 > val it = fn : char * char -> bool
@@ -484,14 +484,14 @@ Char.`>=`;
 > val it = false : bool
 
 (* TODO: Standard ML accepts the following:
-    Char.<;
-    Char.<=;
-    Char.>;
-    Char.>=;
-*)
+ *  Char.<;
+ *  Char.<=;
+ *  Char.>;
+ *  Char.>=;
+ *)
 
 (* [compare(c1, c2)] returns LESS, EQUAL, or GREATER, according as c1 is
-   precedes, equals, or follows c2 in the ordering Char.< . *)
+ * precedes, equals, or follows c2 in the ordering Char.< . *)
 Char.compare;
 > val it = fn : char * char -> order
 Char.compare (#"a", #"a");
@@ -514,7 +514,7 @@ Char.`<>` (#"a", #"a");
 > val it = false : bool
 
 (* [fromInt i] returns SOME c, the character with code i, or NONE if i is out
-   of range. *)
+ * of range. *)
 Char.fromInt 65;
 > val it = SOME #"A" : char option
 Char.fromInt 0;

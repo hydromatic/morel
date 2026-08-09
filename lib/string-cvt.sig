@@ -32,7 +32,7 @@ sig
    *)
   datatype radix = BIN | OCT | DEC | HEX
 
-(*
+(* TODO
   (**
    * is the type of a scanning function that reads one value of type `'a`
    * from a stream of type `'b`, returning the value and the remaining

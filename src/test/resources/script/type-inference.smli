@@ -421,7 +421,8 @@ end;
 (*) The following should give error but currently does not.
 :t let val rec x = 1 and y = 2 in x + y end;
 > val it : int
-(* sml-nj gives:
+(*) SML/NJ emits an error:
+(*
 stdIn:1.14-1.19 Error: fn expression required on rhs of val rec
 stdIn:1.24-1.29 Error: fn expression required on rhs of val rec
 stdIn:1.33-1.38 Error: operator and operand do not agree [overload - bad instantiation]
@@ -434,7 +435,8 @@ stdIn:1.33-1.38 Error: operator and operand do not agree [overload - bad instant
 (*) The following should give error but currently does not.
 :t let val rec s = "s" and t = "t" in s ^ t end;
 > val it : string
-(* sml-nj gives:
+(*) SML/NJ emits an error:
+(*
 stdIn:1.14-1.21 Error: fn expression required on rhs of val rec
 stdIn:1.26-1.33 Error: fn expression required on rhs of val rec
 stdIn:1.37-1.42 Error: operator and operand do not agree [tycon mismatch]
@@ -710,7 +712,7 @@ end;
 > val it : {i:int, j:int} list
 
 (* "map String.size" has type "string list -> int list",
-   and therefore the type of "j" is "int". *)
+ * and therefore the type of "j" is "int". *)
 :t
 from s in ["ab","c"]
   through j in (map String.size);

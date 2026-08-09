@@ -290,7 +290,7 @@ o4a (SOME 1);
  * The 'unorder' operator will help us mix lists and bags in queries. *)
 
 (* A type similar to the built-in 'bag', and a function to convert any list to
-   a multiset. *)
+ * a multiset. *)
 datatype 'a multiset =
     MULTI_NIL
   | MULTI_CONS of ('a * 'a multiset);

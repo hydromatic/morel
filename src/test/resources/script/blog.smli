@@ -89,7 +89,7 @@ from e in emps, d in depts
 (* As in any ML expression, you can define functions within a from
  * expression, and those functions can operate on lists. Thus we can
  * implement equivalents of SQL's IN and EXISTS operators: *)
-(* FIXME
+(* TODO: Fix
 let
   fun in_ e [] = false
     | in_ e (h :: t) = e = h orelse (in_ e t)
@@ -101,7 +101,7 @@ in
   yield e.name
 end;
 *)
-(* FIXME
+(* TODO
 let
   fun exists [] = false
     | exists hd :: tl = true
@@ -324,8 +324,8 @@ yield {e.id, e.deptno, ename = e.name, dname = d.name};
 (* --- 2020/03/03: Morel: The basic language ---------------------- *)
 
 (* As a functional language, everything in Morel is an expression.
-The basic types are `bool`, `int`, `float`, `string` and `char`.  Here
-are literals in each. *)
+ * The basic types are `bool`, `int`, `float`, `string` and `char`.  Here
+ * are literals in each. *)
 false;
 > val it = false : bool
 10;
@@ -340,7 +340,7 @@ false;
 > val it = () : unit
 
 (* As you'd expect, there are built-in operators for each data
-type. Here are a few examples: *)
+ * type. Here are a few examples: *)
 true andalso false;
 > val it = false : bool
 true orelse false;
@@ -365,8 +365,8 @@ x + y;
 > val it = 8 : int
 
 (* The shell deduces the type of each expression,
-   and assigns it to a variable called `it`.
-   We can use `it` in the next expression. *)
+ * and assigns it to a variable called `it`.
+ * We can use `it` in the next expression. *)
 "morel";
 > val it = "morel" : string
 String.size it;
@@ -384,7 +384,7 @@ end;
 > val it = 5 : int
 
 (* In addition to primitive types, there are list, record and tuple
-   types. *)
+ * types. *)
 [1, 2, 3];
 > val it = [1,2,3] : int list
 {id = 10, name = "Scooby"};
@@ -393,7 +393,7 @@ end;
 > val it = (1,true,"yes") : int * bool * string
 
 (* Tuples are actually just records with fields named "1", "2",
-   etc.: *)
+ * etc.: *)
 (1, true, "yes");
 > val it = (1,true,"yes") : int * bool * string
 {1 = 1, 2 = true, 3 = "yes"};
@@ -402,7 +402,7 @@ end;
 > val it = true : bool
 
 (* The empty record and empty tuple are equal, and are the only value
-   of the type unit. *)
+ * of the type unit. *)
 {};
 > val it = () : unit
 ();
@@ -411,15 +411,15 @@ end;
 > val it = true : bool
 
 (* Functions are expressions, too.  `fn` makes a lambda expression.
-   After we have bound the lambda value to `plusOne`, we can use
-   `plusOne` as a function. *)
+ * After we have bound the lambda value to `plusOne`, we can use
+ * `plusOne` as a function. *)
 val plusOne = fn x => x + 1;
 > val plusOne = fn : int -> int
 plusOne 2;
 > val it = 3 : int
 
 (* Functions declarations are common, so the `fun` keyword provides a
-   shorthand. *)
+ * shorthand. *)
 fun plusOne x = x + 1;
 > val plusOne = fn : int -> int
 plusOne 2;
@@ -432,7 +432,7 @@ plus 3 4;
 > val it = 7 : int
 
 (* If we supply too few arguments, we get a closure that captures the
-   argument value and can be applied later. *)
+ * argument value and can be applied later. *)
 val plusTen = plus 10;
 > val plusTen = fn : int -> int
 plusTen 2;
@@ -451,10 +451,10 @@ factorial 5;
 > val it = 120 : int
 
 (* A higher-order function is a function that operates on other
-   functions. Here are a couple of examples.
-
-   The map function applies a given function `f` to each element of a
-   list, returning a list. *)
+ * functions. Here are a couple of examples.
+ *
+ * The map function applies a given function `f` to each element of a
+ * list, returning a list. *)
 fun map f [] = []
   | map f (head :: tail) = (f head) :: (map f tail);
 > val map = fn : ('a -> 'b) -> 'a list -> 'b list
@@ -464,7 +464,7 @@ map double [1, 2, 3, 4];
 > val it = [2,4,6,8] : int list
 
 (* The filter function keeps only those elements of a list for which a
-   predicate `p` evaluates to true. *)
+ * predicate `p` evaluates to true. *)
 fun filter p [] = []
   | filter p (head :: tail) =
     if (p head) then
@@ -478,7 +478,7 @@ filter even [1, 2, 3, 4];
 > val it = [2,4] : int list
 
 (* Let's start by defining emps and depts relations as lists of
-   records. *)
+ * records. *)
 
 val emps =
   [{id = 100, name = "Fred", deptno = 10},
@@ -507,7 +507,7 @@ from e in emps yield e;
 >   : {deptno:int, id:int, name:string} list
 
 (* There is no difference between a query, a table and a list-valued
-   expression, so we could have instead written just `emps`. *)
+ * expression, so we could have instead written just `emps`. *)
 emps;
 > val it =
 >   [{deptno=10,id=100,name="Fred"},{deptno=20,id=101,name="Velma"},
@@ -556,9 +556,9 @@ from e in emps,
 >   : {deptno:int, dname:string, ename:string, id:int} list
 
 (* The following query would, in SQL, be described as having 'EXISTS
-   and a correlated sub-query'. But 'exists' is not a built-in keyword
-   in Morel, just a function that we define in the query, and a
-   sub-query is just an expression that happens to return a list. *)
+ * and a correlated sub-query'. But 'exists' is not a built-in keyword
+ * in Morel, just a function that we define in the query, and a
+ * sub-query is just an expression that happens to return a list. *)
 let
   fun exists_ [] = false
     | exists_ (head :: tail) = true
@@ -1369,9 +1369,8 @@ datatype personnel_id =
 > datatype personnel_id
 >   = EMPLOYEE of int
 >   | CONTRACTOR of {agency:string, ssid:string}
-(* Disabled until "[MOREL-285] Type declaration" is fixed.
 type member = {name: string, deptno: int, id: personnel_id};
-*)
+> type member = {deptno:int, id:personnel_id, name:string}
 val members = [
   {name = "Smith", deptno = 10, id = EMPLOYEE 100},
   {name = "Jones", deptno = 20,
@@ -1609,7 +1608,7 @@ from b, c
 (* --- GCD and LCM ------------------------------------------------ *)
 
 (* "INTERSECT ALL, EXCEPT ALL, and the arithmetic of fractions",
-   posted on 2025/06/03. *)
+ * posted on 2025/06/03. *)
 fun factorize n =
   let
     fun factorize' n d =
@@ -1766,7 +1765,7 @@ from c in clients
 > val it : {cname:string, dname:string, ename:string} bag
 
 (* Define the shipments data set; each shipment has one or
-   more nested items. *)
+ * more nested items. *)
 val shipments =
   [{id=1, shipping=10.0, items=[{product="soda", quantity=12},
                                 {product="beer", quantity=3}]},
@@ -1793,7 +1792,7 @@ from s in shipments,
 > val it : {id:int, product:string, quantity:int} list
 
 (* Single-row scan. Iterate over a list of integers and compute whether
-   they are odd. *)
+ * they are odd. *)
 from i in [1, 2, 3, 4, 5],
     odd = (i mod 2 = 1);
 > i odd
@@ -1820,7 +1819,7 @@ from i in [1, 2, 3, 4, 5],
 > val it : {i:int, odd:bool} list
 
 (* Empty scan. In case you are wondering, yes, a query with
-   no scans is legal. It produces one row with zero fields. *)
+ * no scans is legal. It produces one row with zero fields. *)
 from;
 > val it = [()] : unit list
 
@@ -1882,7 +1881,7 @@ from i in [1, 2, 3]
 > val it = [1,0,1] : int list
 
 (* Single field named "dname". Current is an atom, but you
-   can also refer to the field by name. *)
+ * can also refer to the field by name. *)
 from d in scott.depts
   yield d.dname
   yield current;
@@ -1896,7 +1895,7 @@ from d in scott.depts
 >   : string bag
 
 (* Yield is a record expression with a single field.
-   Current is a record. *)
+ * Current is a record. *)
 from i in [1, 2, 3]
   yield {j = i + 1}
   yield current;
@@ -1958,7 +1957,7 @@ from e in scott.emps
 > val it : {c:int, deptno:int} list
 
 (* `elements` is only available inside a `compute` step, or the
-   `compute` clause of a `group` step. *)
+ * `compute` clause of a `group` step. *)
 from e in scott.emps
   yield length elements;
 > stdIn:2.16-2.24 Error: 'elements' is only valid in a 'compute' clause
@@ -1992,7 +1991,7 @@ from i in [1, 2, 3, 4, 5, 6],
 > val it = [2,3,4,5,6,7,8,9,10,11,12] : int list
 
 (* Which job titles exist in department 10 but not in
-   department 20 or 30? *)
+ * department 20 or 30? *)
 from e in scott.emps
   where e.deptno = 10
   yield e.job
@@ -2006,7 +2005,7 @@ from e in scott.emps
 > val it = ["PRESIDENT"] : string bag
 
 (* I have two sodas and three candies and give my friend
-   one soda and two candies. What do I have left? *)
+ * one soda and two candies. What do I have left? *)
 from i in ["candy", "soda", "soda", "candy", "candy"]
   except ["soda", "candy"];
 > val it = ["soda","candy","candy"] : string list
@@ -2017,7 +2016,7 @@ List.`except` [["candy", "soda", "soda", "candy", "candy"],
 > val it = ["soda","candy","candy"] : string list
 
 (* Count employees and compute total salary for each
-   department. *)
+ * department. *)
 (* The "order deptno unorder" line is added for determinism across JDK versions. *)
 from e in scott.emps
   group e.deptno
@@ -2032,7 +2031,7 @@ from e in scott.emps
 > val it : {count:int, deptno:int, sumSal:real} bag
 
 (* One group key and no compute expressions gives an
-   atomic result. *)
+ * atomic result. *)
 (* The "order deptno unorder" line is added for determinism across JDK versions. *)
 from e in scott.emps
   group e.deptno
@@ -2040,13 +2039,13 @@ from e in scott.emps
 > val it = [10,20,30] : int bag
 
 (* Empty group key and one compute expression gives an
-   atomic result. *)
+ * atomic result. *)
 from e in scott.emps
   group {} compute min over e.sal + e.comm;
 > val it = [800] : real bag
 
 (* Which job titles exist in department 10 and also in
-   departments 20 and 30? *)
+ * departments 20 and 30? *)
 from e in scott.emps
   where e.deptno = 10
   yield e.job
@@ -2060,8 +2059,8 @@ from e in scott.emps
 > val it = ["MANAGER","CLERK"] : string bag
 
 (* I have two sodas and three candies, and my friend
-   has one soda, one donut, and four candies. What do we
-   have in common? *)
+ * has one soda, one donut, and four candies. What do we
+ * have in common? *)
 from i in ["candy", "soda", "soda", "candy", "candy"]
   intersect ["soda", "donut", "candy",
              "donut", "candy", "candy"];
@@ -2073,7 +2072,7 @@ List.`intersect` [["candy", "soda", "soda", "candy", "candy"],
 > val it = ["candy","soda","candy","candy"] : string list
 
 (* Find the name of each department and the name of all
-   employees in those departments. *)
+ * employees in those departments. *)
 from d in scott.depts
   join e in scott.emps on e.deptno = d.deptno
   yield {d.dname, e.ename};
@@ -2097,7 +2096,7 @@ from d in scott.depts
 > val it : {dname:string, ename:string} bag
 
 (* List employees ordered by salary (descending) then
-   name. *)
+ * name. *)
 from e in scott.emps
   order (DESC e.sal, e.ename)
   yield {e.ename, e.job, e.sal};
@@ -2121,9 +2120,9 @@ from e in scott.emps
 > val it : {ename:string, job:string, sal:real} list
 
 (* Record expressions are sorted lexicographically on field
-   name, that is, by job then by salary. Morel gives a
-   warning, in case you were expecting to sort on salary
-   first. *)
+ * name, that is, by job then by salary. Morel gives a
+ * warning, in case you were expecting to sort on salary
+ * first. *)
 from e in scott.emps
   order {e.sal, e.job}
   yield {e.ename, e.job, e.sal};
@@ -2159,7 +2158,7 @@ from i in [1, 2, 3, 4, 5, 6, 7]
 > val it = [1,2,3] : int list
 
 (* Define a table function that returns the even numbers
-   from a collection. *)
+ * from a collection. *)
 fun evenNumbers (xs: int list) =
   from x in xs
     where x mod 2 = 0;
@@ -2171,7 +2170,7 @@ from i in [1, 2, 3, 4, 5, 6, 7]
 > val it = [2,4,6] : int list
 
 (* Define a table function that returns the numbers from
-   a collection that are multiples of base. *)
+ * a collection that are multiples of base. *)
 fun multiplesOf base (xs: int list) =
   from x in xs
     where x mod base = 0;
@@ -2197,15 +2196,15 @@ from e in scott.emps
 >   : string bag
 
 (* I have two sodas and three candies, and my friend has
-   one soda and one candy. What do we have if we combine
-   our stashes? *)
+ * one soda and one candy. What do we have if we combine
+ * our stashes? *)
 from i in ["candy", "soda", "soda", "candy", "candy"]
   union ["soda", "candy"];
 > val it = ["candy","soda","soda","candy","candy","soda","candy"]
 >   : string list
 
 (* Find the top 3 employees by salary, as an unordered
-   collection. *)
+ * collection. *)
 from e in scott.emps
   order DESC e.sal
   take 3
@@ -2234,7 +2233,7 @@ from e in scott.emps
 > val it : {ename:string, job:string} bag
 
 (* Create a new record from each employee with modified
-   fields. *)
+ * fields. *)
 from e in scott.emps
   yield {name = String.map Char.toUpper e.ename,
       position = String.map Char.toLower e.job,
@@ -2259,7 +2258,7 @@ from e in scott.emps
 > val it : {annualSalary:real, name:string, position:string} bag
 
 (* Return a list of strings describing each employee in
-   department 20. *)
+ * department 20. *)
 from e in scott.emps
   where e.deptno = 20
   yield e.ename ^ " is a " ^ e.job;
@@ -2326,20 +2325,20 @@ exists e in scott.emps
 > val it = true : bool
 
 (* Do all employees have a job title of clerk, manager or
-   president? *)
+ * president? *)
 forall e in scott.emps
   require e.job elem ["CLERK", "MANAGER", "PRESIDENT"];
 > val it = false : bool
 
 (* Do all employees in department 10 have a job title of
-   clerk, manager or president? *)
+ * clerk, manager or president? *)
 forall e in scott.emps
   where e.deptno = 10
   require e.job elem ["CLERK", "MANAGER", "PRESIDENT"];
 > val it = true : bool
 
 (* Are all employees in department 10 and have a job
-   title of clerk, manager or president? *)
+ * title of clerk, manager or president? *)
 forall e in scott.emps
   require e.deptno = 10
     andalso e.job elem ["CLERK", "MANAGER", "PRESIDENT"];

@@ -442,8 +442,8 @@ from e in emps
 >   : {deptno:int, id:int, name:string} list
 
 (* Composite order using record may not have the intended effect,
-   because record fields are sorted alphabetically. Note that data
-   is sorted first by deptno then by name. *)
+ * because record fields are sorted alphabetically. Note that data
+ * is sorted first by deptno then by name. *)
 from e in emps
   order {e.name, e.deptno};
 > stdIn:2.9-2.27 Warning: Sorting on a record whose fields are not in alphabetical order. Sort order may not be what you expect.
@@ -746,21 +746,21 @@ from e in emps
 >   : {deptno:int, id:int, name:string} list
 
 (* 'ordinal' in an 'order' key counts the rows arriving at the 'order'
-   step, so sorting on its negation reverses the input. *)
+ * step, so sorting on its negation reverses the input. *)
 from e in emps
   order (~ordinal)
   yield e.name;
 > val it = ["Scooby","Shaggy","Velma","Fred"] : string list
 
 (* Reading 'ordinal' twice in one step reads one counter twice; it does
-   not advance it twice. *)
+ * not advance it twice. *)
 from i in [10,20,30]
   yield {a = ordinal, b = ordinal};
 > val it = [{a=0,b=0},{a=1,b=1},{a=2,b=2}] : {a:int, b:int} list
 
 (* A 'yield' holds the counter, so a call must still find it after the
-   contexts that compiling the expression creates: a 'let', a recursive
-   function, and a mutually recursive one. *)
+ * contexts that compiling the expression creates: a 'let', a recursive
+ * function, and a mutually recursive one. *)
 from i in [10,20] yield (let val x = ordinal in x + 1 end);
 > val it = [1,2] : int list
 from i in [10,20] yield (let fun f y = if y = 0 then ordinal else f (y - 1) in f 2 end);
@@ -771,7 +771,7 @@ from i in [10,20] yield (let fun f y = y in f 1 + ordinal end);
 > val it = [1,2] : int list
 
 (* The count advances once per row, even on a row that does not read it:
-   the ordinals on either side of a row that yields ~1 differ by 2. *)
+ * the ordinals on either side of a row that yields ~1 differ by 2. *)
 from i in [10,11,20,21,30]
   yield (if i mod 10 = 0 then ordinal else ~1);
 > val it = [0,~1,2,~1,4] : int list
@@ -796,9 +796,9 @@ from e in scott.emps
 >   raised at: stdIn:2.33-2.40
 
 (* In the following query, the query becomes unordered after
-   the join with the unordered `scott.depts` table, but we can
-   restore the same order by sorting on `i` (which is assigned
-   in a previous step from `ordinal`). *)
+ * the join with the unordered `scott.depts` table, but we can
+ * restore the same order by sorting on `i` (which is assigned
+ * in a previous step from `ordinal`). *)
 from e in scott.emps
   order e.deptno
   yield {i = ordinal, e}
@@ -818,8 +818,8 @@ from e in scott.emps
 >   : {dname:string, ename:string, i:int} list
 
 (* Morel's order step does not provide stable sorts, but you
-   can achieve stable sorts using `ordinal`. Note that employees
-   are sorted by job then empno. *)
+ * can achieve stable sorts using `ordinal`. Note that employees
+ * are sorted by job then empno. *)
 from e in scott.emps
   order e.empno
   where e.deptno > 10
@@ -855,13 +855,13 @@ from i in [1,2]
 >   : {i:int, j:int} list
 
 (* A correlated subquery is evaluated afresh for each outer row, so its
-   ordinal restarts; here the number of rows it produces varies. *)
+ * ordinal restarts; here the number of rows it produces varies. *)
 from i in [1,2,3]
   join j in (from k in [10,20,30] where k > i * 10 yield ordinal);
 > val it = [{i=1,j=0},{i=1,j=1},{i=2,j=0}] : {i:int, j:int} list
 
 (* Two counters are live at once: the outer one advances while the
-   inner one restarts for each outer row. *)
+ * inner one restarts for each outer row. *)
 from i in [10,20,30]
   yield {a = ordinal, ks = (from k in ["p","q"] yield ordinal)};
 > val it = [{a=0,ks=[0,1]},{a=1,ks=[0,1]},{a=2,ks=[0,1]}]
@@ -1020,7 +1020,7 @@ from i in [10,20,30] yield {i, js = (from j in [i + ordinal, i + ordinal + 1])};
 (* Ordinal in a join condition ------------------------------------ *)
 
 (* An 'on' condition is evaluated once per candidate pair, so 'ordinal'
-   in it counts pairs, continuously across the join. *)
+ * in it counts pairs, continuously across the join. *)
 from i in [0..4] join j in ["a","b","c"] on ordinal mod 2 = 0;
 > val it =
 >   [{i=0,j="a"},{i=0,j="c"},{i=1,j="b"},{i=2,j="a"},{i=2,j="c"},{i=3,j="b"},
@@ -1405,7 +1405,7 @@ from i in [1, 2, 3],
 > val it = [2,3,4,5,6] : int list
 
 (* 'distinct' preserves arrival order: each value appears in the position
-   of its first occurrence, not in sorted order. *)
+ * of its first occurrence, not in sorted order. *)
 from i in [3, 1, 2, 1, 3]
   distinct;
 > val it = [3,1,2] : int list
@@ -1489,7 +1489,7 @@ from e in emps
 >   : {dept:int, total:int} list
 
 (* a singleton compute expression does not need a derivable label
-   if group key is empty *)
+ * if group key is empty *)
 from i in [1,2]
   group {} compute 1 + 2;
 > val it = [3] : int list
@@ -1905,8 +1905,8 @@ from (i, j) in [("a", 1), ("b", 4), ("a", 3)]
 >   raised at: stdIn:2.16-2.24
 
 (* "elements" is invalid in a "yield" that follows a "group" whose "compute"
-   created a field called "elements". (Previously this crashed the compiler
-   because "elements" remained bound after the "compute" clause.) *)
+ * created a field called "elements". (Previously this crashed the compiler
+ * because "elements" remained bound after the "compute" clause.) *)
 from i in [1, 2, 3]
   group i compute {elements}
   yield elements;
@@ -2292,9 +2292,9 @@ from i in [2, 1, 2, 2, 2, 3] except [2, 2, 4] distinct;
 > val it = [1,2,3] : int list
 
 (* A set operation may directly follow a 'distinct' (or 'group') step, where
-   the row's variables live in the environment rather than on the stack.
-   To make this work in morel-java, the compiler adds a 'rematerialize'
-   adapter. *)
+ * the row's variables live in the environment rather than on the stack.
+ * To make this work in morel-java, the compiler adds a 'rematerialize'
+ * adapter. *)
 from i in [2, 1, 2, 3] distinct except [2];
 > val it = [1,3] : int list
 from i in [2, 1, 2, 3] distinct union [9];
@@ -2326,7 +2326,7 @@ from e in scott.emps
 > val it = [{c=5,deptno=20},{c=6,deptno=30}] : {c:int, deptno:int} list
 
 (* In the morel-java implementation, the scan emits {j, i} records, which
-   an adapter permutes to {i, j} to match those from except's argument. *)
+ * an adapter permutes to {i, j} to match those from except's argument. *)
 from j in [1, 2],
     i in ["x", "y"]
   except [{i = "y", j = 2}];
@@ -2733,11 +2733,11 @@ end;
 >   : {deptno:int, my_sum:int} list
 
 (*) Identity aggregate function (equivalent to SQL's COLLECT)
-(* TODO: Type inference gets confused because it doesn't
+(* Type inference gets confused because it doesn't
  * know whether 'id' is 'a list' or 'a bag'. When
  * [MOREL-343] "Allow type variables in type constraints"
- * is fixed, we will be able to constrain 'x' to 'a list' or 'a bag'.
- *
+ * is fixed, we will be able to constrain 'x' to 'a list' or 'a bag'. *)
+(* TODO
 let
   fun id x = x
 in
@@ -3449,8 +3449,8 @@ from i in [1,2,3] into (fn l => i);
 >   raised at: stdIn:1.33
 
 (* The function in a 'through' may be a structure member such as
-   'List.map'; resolving it rewrites the expression, which once left the
-   step's type unregistered and threw a NullPointerException. *)
+ * 'List.map'; resolving it rewrites the expression, which once left the
+ * step's type unregistered and threw a NullPointerException. *)
 from i in [1,2,3]
   through xs in (List.map (fn x => x * 10));
 > val it = [10,20,30] : int list
@@ -3506,8 +3506,8 @@ fun threeBag list = bag (threes list);
 > val threeBag = fn : 'a list -> 'a list bag
 
 (* When we switch the query to use "threeBag" rather than "threes",
-   the input still must be a list, but the output changes from
-   "list list" to "list bag". *)
+ * the input still must be a list, but the output changes from
+ * "list list" to "list bag". *)
 from i in [0,1,2,3,4,5,6,7,8,9,10]
   through j in threeBag;
 > val it = [[9,10],[6,7,8],[3,4,5],[0,1,2]] : int list bag

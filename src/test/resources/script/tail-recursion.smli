@@ -133,8 +133,8 @@ queens 12;
 >    (1,1)] : (int * int) list option
 
 (* For higher values of N, the algorithm is correct but takes too
- * long to run.
-
+ * long to run. *)
+(*
 (*) N=16, t=4 seconds
 queens 16;
 > val it =

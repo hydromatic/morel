@@ -172,7 +172,8 @@ suit0 = suit0;
 ip = ip;
 op0 = op0;
 op1 = op1;
-(* The following give error:
+(*) The following give error:
+(*
 stdIn:1.2-1.11 Error: operator and operand don't agree [equality type required]
 op2 = op2;
 rp = rp;

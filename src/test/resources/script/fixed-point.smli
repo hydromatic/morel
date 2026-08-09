@@ -372,8 +372,8 @@ from s in states_within "CA" 2 group {} compute count over ();
 from s in states_within "CA" 3 group {} compute count over ();
 > val it = [15] : int list
 (* It takes 11 steps to reach to all 48 contiguous states plus DC.
-   But it takes 2 minutes, so the following expression is disabled.
-   See later, the same expression computed efficiently using semi-naive. *)
+ * But it takes 2 minutes, so the following expression is disabled.
+ * See later, the same expression computed efficiently using semi-naive. *)
 if true then [49] else from s in states_within "CA" 11 group {} compute count over ();
 > val it = [49] : int list
 from s in states_within "HI" 0 order s;

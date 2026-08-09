@@ -74,7 +74,8 @@ sig
    *)
   val repeat   : int -> ('a -> 'a) -> ('a -> 'a) [@@prototype "repeat n f"]
 
-(* TODO support eqtype in signatures
+(*
+TODO support eqtype in signatures
   (**
    * returns whether `a` is equal to `b`. It is a curried version of the
    * polymorphic equality function (`=`).

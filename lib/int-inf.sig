@@ -26,7 +26,7 @@
 signature INT_INF =
 sig
 
-(*
+(* TODO
   (** is the type of arbitrary-precision integers. *)
   eqtype int
 *)

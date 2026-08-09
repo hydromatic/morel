@@ -26,7 +26,7 @@
 signature IEEE_REAL =
 sig
 
-(*
+(* TODO
   (**
    * is a record type representing a decimal approximation of a
    * floating-point number.
@@ -34,19 +34,19 @@ sig
   type decimal_approx
 *)
 
-(*
+(* TODO
   (** classifies a floating-point value. *)
   datatype float_class = NAN | INF | ZERO | NORMAL | SUBNORMAL
 *)
 
-(*
+(* TODO
   (**
    * is like `order` but adds `UNORDERED` for comparisons involving NaN.
    *)
   datatype real_order = LESS | EQUAL | GREATER | UNORDERED
 *)
 
-(*
+(* TODO
   (**
    * specifies the IEEE 754 rounding mode for floating-point operations.
    *)

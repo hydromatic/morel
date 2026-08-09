@@ -166,8 +166,7 @@ op /;
 op x;
 > stdIn:1.1-1.5 Error: unbound variable or constructor: op x
 >   raised at: stdIn:1.1-1.5
-(* TODO sml-nj allows "op SOME" and "op NONE"
-   but I'm not sure whether Morel should allow them.
+(* TODO sml-nj allows "op SOME" and "op NONE"; should Morel?
 op SOME;
 > val it = fn : 'a -> 'a option
 op NONE;

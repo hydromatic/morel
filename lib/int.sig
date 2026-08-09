@@ -157,7 +157,7 @@ sig
    * StringCvt.DEC r)`.
    *)
   val toString : int -> string [@@method] [@@prototype "toString i"]
-(*
+(* TODO
   (**
    * returns `SOME (i,rest)` if an integer in the format denoted by `radix`
    * can be parsed from a prefix of the character stream `strm` after

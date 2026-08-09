@@ -204,10 +204,10 @@ num(Foo).";
 > val it = "Compilation error: Argument in fact is not constant: Foo" : string
 
 (* Transitive closure
-
-   Input graph:
-        1 ---> 2 ---> 3
-*)
+ *
+ * Input graph:
+ *      1 ---> 2 ---> 3
+ *)
 val program = ".decl edge(x:int, y:int)
 .decl path(x:int, y:int)
 edge(1,2).

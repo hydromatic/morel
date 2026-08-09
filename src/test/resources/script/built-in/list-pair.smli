@@ -68,10 +68,10 @@ ListPair;
 >       zipEq:'bg list * 'bh list -> ('bg * 'bh) list}
 
 (* [all p (xs, ys)] applies predicate p to the pairs of corresponding
-   elements of xs and ys from left to right until p evaluates to false
-   or one or both lists is exhausted; returns true if p is true of all
-   such pairs; otherwise false.  Hence all p (xs, ys) has the same
-   result and effect as List.all p (zip (xs, ys)). *)
+ * elements of xs and ys from left to right until p evaluates to false
+ * or one or both lists is exhausted; returns true if p is true of all
+ * such pairs; otherwise false.  Hence all p (xs, ys) has the same
+ * result and effect as List.all p (zip (xs, ys)). *)
 ListPair.all;
 > val it = fn : ('a * 'b -> bool) -> 'a list * 'b list -> bool
 
@@ -85,8 +85,8 @@ ListPair.all (fn (x, y) => x < y) ([1, 2, 3], [2, 2, 4, 5, 6]);
 > val it = false : bool
 
 (* [allEq p (xs, ys)] works as all p (xs, ys) but returns false if xs
-   and ys do not have the same length.  Equivalent to all p (xs, ys)
-   andalso length xs = length ys. *)
+ * and ys do not have the same length.  Equivalent to all p (xs, ys)
+ * andalso length xs = length ys. *)
 ListPair.allEq;
 > val it = fn : ('a * 'b -> bool) -> 'a list * 'b list -> bool
 ListPair.allEq (fn (x, y) => x < y) ([1, 2, 3], [2, 3, 4]);
@@ -99,9 +99,9 @@ ListPair.allEq (fn (x, y) => x < y) ([1, 5, 3], [2, 3, 4]);
 > val it = false : bool
 
 (* [app f (xs, ys)] applies function f to the pairs of corresponding
-   elements of xs and ys from left to right and returns ().  Hence app
-   f (xs, ys) has the same result and effect as List.app f (zip (xs,
-   ys)). *)
+ * elements of xs and ys from left to right and returns ().  Hence app
+ * f (xs, ys) has the same result and effect as List.app f (zip (xs,
+ * ys)). *)
 ListPair.app;
 > val it = fn : ('a * 'b -> unit) -> 'a list * 'b list -> unit
 ListPair.app (fn (x, y) => print (Int.toString x ^ " " ^ Int.toString y ^ "\n")) ([1, 2, 3], [4, 5, 6]);
@@ -110,8 +110,8 @@ ListPair.app (fn (x, y) => print (Int.toString x ^ " " ^ Int.toString y ^ "\n"))
 > val it = () : unit
 
 (* [appEq f (xs, ys)] applies function f to pairs of corresponding
-   elements of xs and ys from left to right, and then raises
-   UnequalLengths if xs and ys have the same length. *)
+ * elements of xs and ys from left to right, and then raises
+ * UnequalLengths if xs and ys have the same length. *)
 ListPair.appEq;
 > val it = fn : ('a * 'b -> unit) -> 'a list * 'b list -> unit
 ListPair.appEq (fn (x, y) => print (Int.toString x ^ " " ^ Int.toString y ^ "\n")) ([1, 2, 3], [4, 5, 6]);
@@ -121,12 +121,12 @@ ListPair.appEq (fn (x, y) => print (Int.toString x ^ " " ^ Int.toString y ^ "\n"
 >   raised at: stdIn:1.1-1.103
 
 (* [exists p (xs, ys)] applies predicate p to the pairs of
-   corresponding elements of xs and ys from left to right until p
-   evaluates to true or one or both lists is exhausted; returns true
-   if p is true of any such pair; otherwise false.  Hence exists p
-   (xs, ys) has the same result and effect as List.exists p (zip (xs,
-   ys)).  Also, exists p (xs, ys) is equivalent to not(all (not o p)
-   (xs, ys)). *)
+ * corresponding elements of xs and ys from left to right until p
+ * evaluates to true or one or both lists is exhausted; returns true
+ * if p is true of any such pair; otherwise false.  Hence exists p
+ * (xs, ys) has the same result and effect as List.exists p (zip (xs,
+ * ys)).  Also, exists p (xs, ys) is equivalent to not(all (not o p)
+ * (xs, ys)). *)
 ListPair.`exists`;
 > val it = fn : ('a * 'b -> bool) -> 'a list * 'b list -> bool
 ListPair.`exists` (fn (x, y) => x < y) ([1, 2, 3], [2, 3, 4]);
@@ -141,10 +141,10 @@ ListPair.`exists` (fn (x, y) => x < y) ([1, 2, 3], []);
 > val it = false : bool
 
 (* [foldl f e (xs, ys)] evaluates f(xn, yn, f( ..., f(x2, y2, f(x1,
-   y1, e)))) where xs = [x1, x2, ..., x(n-1), xn, ...], ys = [y1, y2,
-   ..., y(n-1), yn, ...], and n = min(length xs, length ys).
-   Equivalent to List.foldl (fn ((x, y), r) => f(x, y, r)) e (zip(xs,
-   ys)). *)
+ * y1, e)))) where xs = [x1, x2, ..., x(n-1), xn, ...], ys = [y1, y2,
+ * ..., y(n-1), yn, ...], and n = min(length xs, length ys).
+ * Equivalent to List.foldl (fn ((x, y), r) => f(x, y, r)) e (zip(xs,
+ * ys)). *)
 ListPair.foldl;
 > val it = fn : ('a * 'b * 'c -> 'c) -> 'c -> 'a list * 'b list -> 'c
 ListPair.foldl (fn (x, y, r) => x + y + r) 0 ([1, 2, 3], [4, 5, 6]);
@@ -153,12 +153,12 @@ ListPair.foldl (fn (x, y, r) => x + y + r) 0 ([1, 2], [4, 5, 6]);
 > val it = 12 : int
 
 (* [foldlEq f e (xs, ys)] evaluates f(xn, yn, f( ..., f(x2, y2, f(x1,
-   y1, e)))) where xs = [x1, x2, ..., x(n-1), xn, ...], ys = [y1, y2,
-   ..., y(n-1), yn, ...], and n = min(length xs, length ys).  Then
-   raises UnequalLengths if xs and ys do not have the same length.  If
-   f has no side effects and terminates normally, then it is
-   equivalent to List.foldl (fn ((x,y),r) => f(x,y,r)) e (zipEq(xs,
-   ys)). *)
+ * y1, e)))) where xs = [x1, x2, ..., x(n-1), xn, ...], ys = [y1, y2,
+ * ..., y(n-1), yn, ...], and n = min(length xs, length ys).  Then
+ * raises UnequalLengths if xs and ys do not have the same length.  If
+ * f has no side effects and terminates normally, then it is
+ * equivalent to List.foldl (fn ((x,y),r) => f(x,y,r)) e (zipEq(xs,
+ * ys)). *)
 ListPair.foldlEq;
 > val it = fn : ('a * 'b * 'c -> 'c) -> 'c -> 'a list * 'b list -> 'c
 ListPair.foldlEq (fn (x, y, r) => x + y + r) 0 ([1, 2, 3], [4, 5, 6]);
@@ -168,9 +168,9 @@ ListPair.foldlEq (fn (x, y, r) => x + y + r) 0 ([1, 2], [4, 5, 6]);
 >   raised at: stdIn:1.1-1.67
 
 (* [foldr f e (xs, ys)] evaluates f(x1, y1, f(x2, y2, f(..., f(xn, yn,
-   e)))) where xs = [x1, x2, ..., x(n-1), xn, ...], ys = [y1, y2, ...,
-   y(n-1), yn, ...], and n = min(length xs, length ys).  Equivalent to
-   List.foldr (fn ((x, y), r) => f(x, y, r)) e (zip(xs, ys)). *)
+ * e)))) where xs = [x1, x2, ..., x(n-1), xn, ...], ys = [y1, y2, ...,
+ * y(n-1), yn, ...], and n = min(length xs, length ys).  Equivalent to
+ * List.foldr (fn ((x, y), r) => f(x, y, r)) e (zip(xs, ys)). *)
 ListPair.foldr;
 > val it = fn : ('a * 'b * 'c -> 'c) -> 'c -> 'a list * 'b list -> 'c
 ListPair.foldr (fn (x, y, r) => x + y + r) 0 ([1, 2, 3], [4, 5, 6]);
@@ -179,11 +179,11 @@ ListPair.foldr (fn (x, y, r) => x + y + r) 0 ([1, 2], [4, 5, 6]);
 > val it = 12 : int
 
 (* [foldrEq f e (xs, ys)] raises UnequalLengths if xs and ys do not
-   have the same length.  Otherwise evaluates f(x1, y1, f(x2, y2,
-   f(..., f(xn, yn, e)))) where xs = [x1, x2, ..., x(n-1), xn], ys =
-   [y1, y2, ..., y(n-1), yn], and n = length xs = length ys.
-   Equivalent to List.foldr (fn ((x,y),r) => f(x,y,r)) e (zipEq(xs,
-   ys)). *)
+ * have the same length.  Otherwise evaluates f(x1, y1, f(x2, y2,
+ * f(..., f(xn, yn, e)))) where xs = [x1, x2, ..., x(n-1), xn], ys =
+ * [y1, y2, ..., y(n-1), yn], and n = length xs = length ys.
+ * Equivalent to List.foldr (fn ((x,y),r) => f(x,y,r)) e (zipEq(xs,
+ * ys)). *)
 ListPair.foldrEq;
 > val it = fn : ('a * 'b * 'c -> 'c) -> 'c -> 'a list * 'b list -> 'c
 ListPair.foldrEq (fn (x, y, r) => x + y + r) 0 ([1, 2, 3], [4, 5, 6]);
@@ -193,9 +193,9 @@ ListPair.foldrEq (fn (x, y, r) => x + y + r) 0 ([1, 2], [4, 5, 6]);
 >   raised at: stdIn:1.1-1.67
 
 (* [map f (xs, ys)] applies function f to the pairs of corresponding
-   elements of xs and ys from left to right and returns the list of
-   results.  Hence map f (xs, ys) has the same result and effect as
-   List.map f (zip (xs, ys)). *)
+ * elements of xs and ys from left to right and returns the list of
+ * results.  Hence map f (xs, ys) has the same result and effect as
+ * List.map f (zip (xs, ys)). *)
 ListPair.map;
 > val it = fn : ('a * 'b -> 'c) -> 'a list * 'b list -> 'c list
 ListPair.map (op +) ([1, 2, 3], [4, 5, 6]);
@@ -206,10 +206,10 @@ ListPair.map (op +) ([], [4, 5]);
 > val it = [] : int list
 
 (* [mapEq f (xs, ys)] applies function f to pairs of corresponding
-   elements of xs and ys from left to right, and then returns the list
-   of results if xs and ys have the same length, otherwise raises
-   UnequalLengths.  If f has no side effects and terminates, then it
-   is equivalent to List.map f (zipEq (xs, ys)). *)
+ * elements of xs and ys from left to right, and then returns the list
+ * of results if xs and ys have the same length, otherwise raises
+ * UnequalLengths.  If f has no side effects and terminates, then it
+ * is equivalent to List.map f (zipEq (xs, ys)). *)
 ListPair.mapEq;
 > val it = fn : ('a * 'b -> 'c) -> 'a list * 'b list -> 'c list
 ListPair.mapEq (op +) ([1, 2, 3], [4, 5, 6]);
@@ -222,16 +222,16 @@ ListPair.mapEq (op +) ([], [4, 5]);
 >   raised at: stdIn:1.1-1.35
 
 (* [unzip xys] returns a pair (xs, ys), where xs is the list of first
-   components of xys, and ys is the list of second components from
-   xys.  Hence zip (unzip xys) has the same result and effect as
-   xys. *)
+ * components of xys, and ys is the list of second components from
+ * xys.  Hence zip (unzip xys) has the same result and effect as
+ * xys. *)
 ListPair.unzip;
 > val it = fn : ('a * 'b) list -> 'a list * 'b list
 ListPair.unzip [(1, "a"), (2, "b"), (3, "c")];
 > val it = ([1,2,3],["a","b","c"]) : int list * string list
 
 (* [zip (xs, ys)] returns the list of pairs of corresponding elements
-   from xs and ys. *)
+ * from xs and ys. *)
 ListPair.zip;
 > val it = fn : 'a list * 'b list -> ('a * 'b) list
 ListPair.zip ([1, 2, 3], ["a", "b", "c"]);
@@ -242,8 +242,8 @@ ListPair.zip ([], ["a", "b"]);
 > val it = [] : ('a * string) list
 
 (* [zipEq (xs, ys)] returns the list of pairs of corresponding
-   elements from xs and ys.  Raises UnequalLengths if xs and ys do not
-   have the same length. *)
+ * elements from xs and ys.  Raises UnequalLengths if xs and ys do not
+ * have the same length. *)
 ListPair.zipEq;
 > val it = fn : 'a list * 'b list -> ('a * 'b) list
 ListPair.zipEq ([1, 2, 3], ["a", "b", "c"]);

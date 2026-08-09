@@ -34,8 +34,8 @@ r.age;
 > val it = 30 : int
 
 (* Atom-arg form works with bound variables (not just with literals).
-   These exercise the case where the receiver is a bare identifier that
-   refers to a non-record value, not a module/structure. *)
+ * These exercise the case where the receiver is a bare identifier that
+ * refers to a non-record value, not a module/structure. *)
 val xs = [3, 1, 4, 1, 5];
 > val xs = [3,1,4,1,5] : int list
 xs.drop 2;
@@ -81,17 +81,17 @@ r.n.compare 3;
 > val it = GREATER : order
 
 (* When the receiver is a field access (e.ename), the receiver is not
-   a bare identifier, and atom-arg postfix works correctly. *)
+ * a bare identifier, and atom-arg postfix works correctly. *)
 from e in [{ename = "alice"}, {ename = "bob"}]
 yield {size = e.ename.size (), initial = e.ename.sub 0};
 > val it = [{initial=#"a",size=5},{initial=#"b",size=3}]
 >   : {initial:char, size:int} list
 
 (* User-defined postfix functions work when the function definition and call
-   site are in the same TypeResolver scope (e.g. the same let expression).
-   Limitation: a function defined at the top level in a previous statement is
-   not visible to the postfix interceptor in a later statement, because each
-   statement is resolved independently. *)
+ * site are in the same TypeResolver scope (e.g. the same let expression).
+ * Limitation: a function defined at the top level in a previous statement is
+ * not visible to the postfix interceptor in a later statement, because each
+ * statement is resolved independently. *)
 let
   fun greet self = "Hello, " ^ self
 in
@@ -112,11 +112,11 @@ end;
 > val it = "hi   " : string
 
 (* Disambiguation between functions with the same name in different structures.
-   Six names are shared between Int and Real: abs, max, min, rem, sign,
-   toString. Bool and Char also have toString.
-   Disambiguation uses the receiver's type, resolved via the type constraint
-   chain (termOperatorOf follows variable-to-variable links so that bound
-   identifiers like 'r' are correctly resolved to their concrete type). *)
+ * Six names are shared between Int and Real: abs, max, min, rem, sign,
+ * toString. Bool and Char also have toString.
+ * Disambiguation uses the receiver's type, resolved via the type constraint
+ * chain (termOperatorOf follows variable-to-variable links so that bound
+ * identifiers like 'r' are correctly resolved to their concrete type). *)
 
 (* Int.abs vs Real.abs — literal receivers *)
 (~3).abs ();
@@ -187,7 +187,8 @@ let val r = 3.14   in r.toString () end;
 > val it = "3.14" : string
 
 (* The following would work if the limitation were lifted: a top-level
-   function definition followed by a postfix call in a separate statement.
+ * function definition followed by a postfix call in a separate statement. *)
+(*
 fun greet self = "Hello, " ^ self;
 > val greet = fn : string -> string
 "world".greet ();

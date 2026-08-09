@@ -222,7 +222,7 @@ sig
    * `(fmt StringCvt.HEX i)`.
    *)
   val toString : word -> string [@@method] [@@prototype "toString i"]
-(*
+(* TODO
   (**
    * returns `SOME (w, rest)` if an unsigned number in the format denoted by
    * `radix` can be parsed from a prefix of the character stream `strm` using

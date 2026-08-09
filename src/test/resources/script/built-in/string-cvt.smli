@@ -50,7 +50,7 @@ EXACT;
 > val it = EXACT : realfmt
 
 (* "padLeft c i s" returns s padded on the left with c characters to length
-   at least i; if s is already at least i characters long, returns s unchanged. *)
+ * at least i; if s is already at least i characters long, returns s unchanged. *)
 StringCvt.padLeft;
 > val it = fn : char -> int -> string -> string
 StringCvt.padLeft #" " 5 "ab";
@@ -67,7 +67,7 @@ StringCvt.padLeft #"*" 5 "";
 > val it = "*****" : string
 
 (* "padRight c i s" returns s padded on the right with c characters to length
-   at least i; if s is already at least i characters long, returns s unchanged. *)
+ * at least i; if s is already at least i characters long, returns s unchanged. *)
 StringCvt.padRight;
 > val it = fn : char -> int -> string -> string
 StringCvt.padRight #" " 5 "ab";

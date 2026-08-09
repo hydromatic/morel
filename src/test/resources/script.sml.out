@@ -286,7 +286,8 @@ val it = true : bool
 op1 = op1;
 val it = true : bool
 
-(* The following give error:
+(*) The following give error:
+(*
 stdIn:1.2-1.11 Error: operator and operand don't agree [equality type required]
 op2 = op2;
 rp = rp;

@@ -401,10 +401,13 @@ public class SignatureChecker {
     int i = 0;
     while (i < lines.length) {
       final String line = lines[i];
-      // Looking for "(*" on its own line, followed by val/type/datatype line(s)
-      // and "*)". We're conservative: only match the simple, well-formatted
-      // shape produced by the convention.
-      if (line.trim().equals("(*")) {
+      // Looking for an opening line, followed by val/type/datatype line(s)
+      // and "*)". The opener is "(* TODO", which says that what follows is an
+      // unimplemented spec rather than prose, or a bare "(*", the older form.
+      // We're conservative: only match the simple, well-formatted shape
+      // produced by the convention.
+      final String trimmedLine = line.trim();
+      if (trimmedLine.equals("(*") || trimmedLine.startsWith("(* TODO")) {
         final int start = i + 1;
         int end = start;
         while (end < lines.length && !lines[end].trim().equals("*)")) {

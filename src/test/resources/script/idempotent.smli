@@ -23,7 +23,7 @@
 > val it = "a string" : string
 
 (* A multi-line comment
-   not followed by a statement. *)
+ * not followed by a statement. *)
 
 (*) Composite declarations
 val x = 5
@@ -60,8 +60,9 @@ val gt = 3
 > val gt = true : bool
 
 (* Output lines in comments should not be touched.
-   It's pretty important, because it allows us to comment out code
-   and expected results.
+ * It's pretty important, because it allows us to comment out code
+ * and expected results. *)
+(*
 val x = 10 - 1;
 > val x = 9 : int
 *)

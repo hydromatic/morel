@@ -200,7 +200,7 @@ sig
   (** returns true if `s` and `t` are not equal. *)
   val `<>` : string * string -> bool [@@prototype "s <> t"] [@@syntax "infix"]
 
-(*
+(* TODO
   (**
    * returns a string corresponding to `s`, with non-printable
    * characters replaced by SML escape sequences. This is equivalent to
@@ -210,7 +210,7 @@ sig
   val toString : string -> string
 *) [@@prototype "toString s"]
 
-(*
+(* TODO
   (**
    * scans its character source as a sequence of printable
    * characters, converting SML escape sequences into the appropriate
@@ -224,7 +224,7 @@ sig
   val scan : (char, 'a) StringCvt.reader -> (string, 'a) StringCvt.reader
 *) [@@prototype "scan getc strm"]
 
-(*
+(* TODO
   (**
    * scans the string `s` as a sequence of printable
    * characters, converting SML escape sequences into the appropriate
@@ -276,7 +276,7 @@ sig
   val fromString : string -> string option
 *) [@@prototype "fromString s"]
 
-(*
+(* TODO
   (**
    * returns a string corresponding to `s`, with non-printable
    * characters replaced by C escape sequences. This is equivalent to
@@ -286,7 +286,7 @@ sig
   val toCString : string -> string
 *) [@@prototype "toCString s"]
 
-(*
+(* TODO
   (**
    * scans the string `s` as a string in the C language,
    * converting C escape sequences into the appropriate characters. The

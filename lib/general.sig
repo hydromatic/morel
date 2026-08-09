@@ -106,7 +106,7 @@ sig
 
   (* The type for ordering values. *)
   datatype `order` = LESS | EQUAL | GREATER
-(*
+(* TODO
   val ! : 'a ref -> 'a
   val := : 'a ref * 'a -> unit
 *)

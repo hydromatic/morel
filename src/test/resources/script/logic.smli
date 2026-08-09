@@ -64,7 +64,7 @@ forall e in emps
 > val it = true : bool
 
 (* Not equivalent to Q3. Syntax is valid, but query
-   does not return the result the user wanted. *)
+ * does not return the result the user wanted. *)
 forall e in emps
   require e.deptno = 10 andalso e.sal > 1000.0;
 > val it = false : bool
@@ -146,7 +146,7 @@ false implies (true implies false);
 > val it = true : bool
 
 (* All departments are not department 30 or are called
-   "SALES". *)
+ * "SALES". *)
 from d in scott.depts
   where d.deptno = 30 implies d.dname = "SALES";
 > val it =
@@ -157,7 +157,7 @@ from d in scott.depts
 >   : {deptno:int, dname:string, loc:string} bag
 
 (* Three departments are not department 30 or are called
-   "RESEARCH". *)
+ * "RESEARCH". *)
 from d in scott.depts
   where d.deptno = 30 implies d.dname = "RESEARCH";
 > val it =
@@ -189,8 +189,8 @@ g3 (fn (i, j) => j - i = 2);
 > val it = true : bool
 
 (* Empty 'exists' iterates over zero variables, a collection
-   that contains one instance of the unit tuple, hence
-   returns true. *)
+ * that contains one instance of the unit tuple, hence
+ * returns true. *)
 exists;
 > val it = true : bool
 not exists;

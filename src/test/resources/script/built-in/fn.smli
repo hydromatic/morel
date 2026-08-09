@@ -45,7 +45,8 @@ Fn.const;
 > val it = fn : 'a -> 'b -> 'a
 Fn.const "b";
 > val it = fn : 'a -> string
-(* In SMLNJ, the previous line is
+(*) In SML/NJ, the previous line is:
+(*
 > val it = fn : ?.X1 -> string
 *)
 (Fn.const "b") false;
@@ -98,7 +99,8 @@ Fn.repeat ~5;
 >   raised at: stdIn:1.1-1.13
 Fn.equal;
 > val it = fn : 'a -> 'a -> bool
-(* ^ SMLNJ gives
+(*) In SML/NJ, the previous line is:
+(*
 > val it = fn : ''a -> ''a -> bool
 *)
 Fn.equal 3 5;
@@ -107,7 +109,8 @@ Fn.equal 3 3;
 > val it = true : bool
 Fn.notEqual;
 > val it = fn : 'a -> 'a -> bool
-(* ^ SMLNJ gives
+(*) In SML/NJ, the previous line is:
+(*
 > val it = fn : ''a -> ''a -> bool
 *)
 Fn.notEqual 3 5;

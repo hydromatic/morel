@@ -279,11 +279,11 @@ end;
 >   : {empno:int, ename:string, level:int, mgr:int} bag
 
 (* 'max' and 'min' over a type that the Calcite adapter cannot order the way
-   Morel does -- 'word' (which Calcite compares as a signed integer) or a
-   composite type such as a tuple or 'option' -- run locally rather than being
-   pushed to Calcite, giving the right answer rather than crashing. 'Sys.plan'
-   confirms the plan has no 'calcite' node. See the Calcite adapter limitations
-   in 'docs/reference.md'. *)
+ * Morel does -- 'word' (which Calcite compares as a signed integer) or a
+ * composite type such as a tuple or 'option' -- run locally rather than being
+ * pushed to Calcite, giving the right answer rather than crashing. 'Sys.plan'
+ * confirms the plan has no 'calcite' node. See the Calcite adapter limitations
+ * in 'docs/reference.md'. *)
 Sys.set ("hybrid", true);
 > val it = () : unit
 from w in [0w1, 0wxFFFFFFFFFFFFFFFF] compute max over w;
