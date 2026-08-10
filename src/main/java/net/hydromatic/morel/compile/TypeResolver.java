@@ -1669,8 +1669,9 @@ public class TypeResolver {
     }
     if (scan.exp == null) {
       scanExp3 = null;
-      // If we're iterating over 'all values' of the type, we'd better not
-      // commit to doing it in order.
+      // An unbounded scan yields its values in the natural order of the
+      // variables that its pattern binds, so it is ordered, and leaves the
+      // query as ordered as it found it.
       sourceKind = SourceKind.NONE;
       c0 = null;
     } else if (scan.exp.op == Op.FROM_EQ) {
@@ -1745,8 +1746,6 @@ public class TypeResolver {
     final Variable v = fieldVar(fieldVars, true);
     switch (sourceKind) {
       case NONE:
-        equiv(c, bagTerm(v));
-        break;
       case SCALAR:
         // Consider "from ... yield {i=1} join b = false".
         // p.c is "int list" or "int bag" - collection type from previous step
@@ -5917,7 +5916,8 @@ public class TypeResolver {
   private enum SourceKind {
     /**
      * No source expression (e.g. {@code from p}, iterating all values of a
-     * type); the query is an unordered bag.
+     * type); the query inherits the input's orderedness, as {@link #SCALAR}
+     * does.
      */
     NONE,
     /**

@@ -2615,7 +2615,7 @@ public class MainTest {
             + "from i in extent \"bool option\" "
             + "where #getOpt Option (i, false)";
     ml(ml)
-        .assertType("bool option bag")
+        .assertType("bool option list")
         .assertCore(-1, hasToString(core))
         .assertEval(is(list(list("SOME", true))));
   }

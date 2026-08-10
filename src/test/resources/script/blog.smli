@@ -1583,11 +1583,11 @@ fun isAncestor (x, z) =
 
 from a
   where isAncestor(a, "arwen");
-> val it = ["elrond","earendil"] : string bag
+> val it = ["elrond","earendil"] : string list
 
 from d
   where isAncestor("earendil", d);
-> val it = ["elrond","arwen","elladan","elrohir"] : string bag
+> val it = ["elrond","arwen","elladan","elrohir"] : string list
 
 (*) Recipe optimization
 from b, c
@@ -2356,7 +2356,7 @@ fun reachable (x, y) =
 
 from source in [1,2,3,4,5,6]
   yield {source,
-         c = count (from target where reachable (source, target))};
+         c = List.length (from target where reachable (source, target))};
 > c source
 > - ------
 > 6      1

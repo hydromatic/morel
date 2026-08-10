@@ -397,6 +397,7 @@ class Generators {
     final List<Core.NamedPat> yieldPats = dependentGen.pat.expand();
     fromBuilder.yield_(core.recordOrAtom(typeSystem, yieldPats));
     fromBuilder.distinct();
+    fromBuilder.order(core.recordOrAtom(typeSystem, yieldPats));
 
     final Core.From joinedFrom = fromBuilder.build();
     final Set<Core.NamedPat> freePats2 = freePats(typeSystem, joinedFrom);
@@ -567,8 +568,10 @@ class Generators {
       // pat is not in sourceGen.pat - this shouldn't happen
       return;
     }
-    fromBuilder.yield_(core.id(yieldPat));
+    final Core.Id yieldExp = core.id(yieldPat);
+    fromBuilder.yield_(yieldExp);
     fromBuilder.distinct();
+    fromBuilder.order(yieldExp);
 
     final Core.From filteredFrom = fromBuilder.build();
     final Set<Core.NamedPat> freePats2 = freePats(typeSystem, filteredFrom);
@@ -4048,12 +4051,17 @@ class Generators {
         Core.Exp collection,
         Iterable<? extends Core.NamedPat> freePats,
         Set<Core.Exp> provenance) {
+      // A collection may hold a value more than once, and an unbounded scan
+      // yields each satisfying assignment once, so the generator is not
+      // unique: 'expandFrom2' wraps it in 'distinct'. Whether the collection
+      // in fact holds duplicates is not something we try to prove here; an
+      // optimizer may later remove a 'distinct' that it can see is redundant.
       super(
           collection,
           freePats,
           pat,
           Cardinality.FINITE,
-          true,
+          false,
           true,
           provenance);
       this.collection = collection;

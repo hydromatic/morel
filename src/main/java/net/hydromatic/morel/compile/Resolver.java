@@ -2065,11 +2065,6 @@ public class Resolver {
                   .withOrdinalPat(null)
                   .toCore(scan.condition);
       fromBuilder.scan(scan.op, corePat, coreExp, coreCondition);
-      if (scan.exp == null) {
-        // This is an extent scan. Extents are unordered, which makes the query
-        // unordered.
-        fromBuilder.unorder();
-      }
     }
 
     @Override

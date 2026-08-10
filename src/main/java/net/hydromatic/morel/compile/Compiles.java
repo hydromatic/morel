@@ -339,13 +339,6 @@ public abstract class Compiles {
   }
 
   /**
-   * Returns true if the Core.Decl is a call to Sys.planEx or Sys.plan.
-   *
-   * <p>We don't want to update the stored coreDecl when the user calls planEx
-   * or plan, because these should operate on the previous command, not
-   * themselves.
-   */
-  /**
    * Throws if an infinite extent survived generator expansion.
    *
    * <p>"{@code from i}" asks for every value of {@code i}'s type, and unless
@@ -382,6 +375,13 @@ public abstract class Compiles {
         });
   }
 
+  /**
+   * Returns true if the Core.Decl is a call to Sys.planEx or Sys.plan.
+   *
+   * <p>We don't want to update the stored coreDecl when the user calls planEx
+   * or plan, because these should operate on the previous command, not
+   * themselves.
+   */
   private static boolean isPlanExCall(Core.Decl decl) {
     if (!(decl instanceof Core.NonRecValDecl)) {
       return false;

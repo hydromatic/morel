@@ -112,7 +112,11 @@ public class Expander {
     }
 
     // Third, substitute generators.
-    Core.From from2 = expandFrom2(cache, env, stepVars);
+    // Deduplicating a generator is observable if the query's rows are used,
+    // and also if a 'take' or 'skip' is applied to them: those depend on how
+    // many rows there are, which removing duplicates changes.
+    final boolean dedupObservable = rowsUsed || hasTakeOrSkip(from.steps);
+    Core.From from2 = expandFrom2(cache, env, stepVars, dedupObservable);
     if (from2.steps.isEmpty() && !from.steps.isEmpty()) {
       // Every pattern was dropped, because none is referred to by a step and
       // none can be grounded, as in "from i, j". Dropping them all leaves a
@@ -253,8 +257,21 @@ public class Expander {
     DONE
   }
 
+  /** Returns whether any step is a 'take' or a 'skip'. */
+  private static boolean hasTakeOrSkip(List<Core.FromStep> steps) {
+    for (Core.FromStep step : steps) {
+      if (step.op == Op.TAKE || step.op == Op.SKIP) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   private static Core.From expandFrom2(
-      Generators.Cache cache, Environment env, StepVarSet stepVarSet) {
+      Generators.Cache cache,
+      Environment env,
+      StepVarSet stepVarSet,
+      boolean dedupObservable) {
     // Build the set of patterns that are assigned in some scan.
     final TypeSystem typeSystem = cache.typeSystem;
     // Tracks processing state for each pattern.
@@ -334,6 +351,7 @@ public class Expander {
           // Pull forward any generators.
           for (Core.NamedPat freePat : freePats) {
             addGeneratorScan(
+                dedupObservable,
                 typeSystem,
                 patternState,
                 freePat,
@@ -351,6 +369,7 @@ public class Expander {
                 // ground, e.g. "y" in "exists x, y where x elem [1, 2]", have
                 // no entry in generatorMap, and addGeneratorScan skips them.
                 addGeneratorScan(
+                    dedupObservable,
                     typeSystem,
                     patternState,
                     p,
@@ -495,6 +514,7 @@ public class Expander {
    * those variables' generators first.
    */
   private static void addGeneratorScan(
+      boolean dedupObservable,
       TypeSystem typeSystem,
       Map<Core.NamedPat, PatternState> patternState,
       Core.NamedPat freePat,
@@ -520,6 +540,7 @@ public class Expander {
     // Make sure all dependencies have a scan.
     for (Core.NamedPat p : generator.freePats) {
       addGeneratorScan(
+          dedupObservable,
           typeSystem,
           patternState,
           p,
@@ -555,16 +576,36 @@ public class Expander {
     }
     // Now all dependencies are DONE, add a scan for the generator.
     if (expandedPats.equals(requiredPats)) {
-      if (generator.unique) {
+      if (generator.unique || !dedupObservable) {
         // Add "join (x, y, z) in collection".
+        //
+        // A query whose rows are only counted - 'exists' or 'forall', with no
+        // 'take' or 'skip' - does not need the generator deduplicated:
+        // removing duplicate rows cannot change whether there are any.
         fromBuilder.scan(generator.pat, generator.exp);
       } else {
-        // Generator may produce duplicates (e.g., union of overlapping ranges).
-        // Wrap with distinct: "from pat in collection group pat"
+        // The generator may produce a value more than once - a collection may
+        // hold duplicates, and a union of ranges may overlap - but an
+        // unbounded scan yields each assignment once. Deduplicate:
+        //   join (x, y, z) in (from (x, y, z) in collection
+        //                        distinct
+        //                        yield {x, y, z})
+        // The yield and the scan pattern both use the canonical record form,
+        // because 'distinct' groups by the variables and sorts them, and so
+        // does not return a tuple in the order the generator's pattern
+        // expects.
         final FromBuilder fromBuilder2 = core.fromBuilder(typeSystem);
         fromBuilder2.scan(generator.pat, generator.exp);
         fromBuilder2.distinct();
-        fromBuilder.scan(generator.pat, fromBuilder2.build());
+        // An unbounded scan yields its values in the natural order of the
+        // variables. Sort after the 'distinct', whose 'group' has no order of
+        // its own, and before the 'yield', which rebinds the variables that
+        // the sort names.
+        fromBuilder2.order(core.recordOrAtom(typeSystem, expandedPats));
+        fromBuilder2.yield_(core.recordOrAtom(typeSystem, expandedPats));
+        fromBuilder.scan(
+            core.recordOrAtomPat(typeSystem, expandedPats),
+            fromBuilder2.build());
       }
     } else {
       // Some patterns are already bound. Create a filtered projection.
@@ -598,7 +639,8 @@ public class Expander {
           scanPat, generator.exp, core.andAlso(typeSystem, joinConditions));
 
       // Yield only the required patterns.
-      fromBuilder2.yield_(core.recordOrAtom(typeSystem, requiredPats));
+      final Core.Exp yieldExp = core.recordOrAtom(typeSystem, requiredPats);
+      fromBuilder2.yield_(yieldExp);
 
       // Add distinct if:
       // 1. The generator may produce duplicates (!generator.unique), or
@@ -609,8 +651,9 @@ public class Expander {
       // uniqueness via the join condition.
       // If patterns are projected away because they're not in `allPats` (inner
       // variables like y in "exists y"), we need distinct to avoid duplicates.
-      boolean needsDistinct = !generator.unique;
-      if (!needsDistinct) {
+      // As above, a query whose rows are only counted needs no deduplication.
+      boolean needsDistinct = !generator.unique && dedupObservable;
+      if (!needsDistinct && dedupObservable) {
         for (Core.NamedPat p : expandedPats) {
           // Outer-scope variables (!allScanPats) have join conditions added
           // above and don't require distinct. Only inner variables (those that
@@ -625,6 +668,7 @@ public class Expander {
       }
       if (needsDistinct) {
         fromBuilder2.distinct();
+        fromBuilder2.order(yieldExp);
       }
 
       // Add scan from the filtered subquery.

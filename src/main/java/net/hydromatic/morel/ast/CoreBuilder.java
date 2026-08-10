@@ -875,13 +875,15 @@ public enum CoreBuilder {
       TypeSystem typeSystem,
       Type type,
       Map<String, ImmutableRangeSet> rangeSetMap) {
-    final Type bagType = typeSystem.bagType(type);
+    // An extent yields its values in the natural order of the type, so it is
+    // a list; 'Z_EXTENT' is declared to return one.
+    final Type listType = typeSystem.listType(type);
     // Store an ImmutableRangeSet value inside a literal of type 'unit'.
     // The value of such literals is usually Unit.INSTANCE, but we cheat.
     return core.apply(
         pos,
-        bagType,
-        core.functionLiteral(bagType, BuiltIn.Z_EXTENT),
+        listType,
+        core.functionLiteral(listType, BuiltIn.Z_EXTENT),
         core.internalLiteral(new RangeExtent(typeSystem, type, rangeSetMap)));
   }
 

@@ -374,27 +374,26 @@ fun path (x, y) =
 > val path = fn : int * int -> bool
 
 from p where path p;
-> val it = [(1,2),(2,3),(1,3)] : (int * int) bag
+> val it = [(1,2),(2,3),(1,3)] : (int * int) list
 
 (*) Adjacent range branches of orelse are merged into a single discreteSetOf.
 from i where i > 0 andalso i < 10 orelse i > 12 andalso i <= 15;
-> val it = [1,2,3,4,5,6,7,8,9,13,14,15] : int bag
+> val it = [1,2,3,4,5,6,7,8,9,13,14,15] : int list
 Sys.planEx "1";
 > val it =
->   "val it = from i in #fromList Bag (#flatten Range ([OPEN (0, 10), OPEN_CLOSED (12, 15)]))"
+>   "val it = from i in #flatten Range ([OPEN (0, 10), OPEN_CLOSED (12, 15)])"
 >   : string
 
 (*) Point (i = v) and range branches are also merged.
 from i where i = 1 orelse i > 5 andalso i < 8 orelse i = 3;
-> val it = [1,3,6,7] : int bag
+> val it = [1,6,7,3] : int list
 Sys.planEx "1";
-> val it =
->   "val it = from i in #fromList Bag (#flatten Range ([POINT 1, OPEN (5, 8), POINT 3]))"
+> val it = "val it = from i in #flatten Range ([POINT 1, OPEN (5, 8), POINT 3])"
 >   : string
 
 (*) Char is a finite type (256 values), so the plan filters the extent directly.
 from c where c >= #"a" andalso c <= #"e" orelse c >= #"x" andalso c <= #"z";
-> val it = [#"a",#"b",#"c",#"d",#"e",#"x",#"y",#"z"] : char bag
+> val it = [#"a",#"b",#"c",#"d",#"e",#"x",#"y",#"z"] : char list
 Sys.planEx "1";
 > val it =
 >   "val it = from c in extent \"char\" where c >= #\"a\" andalso c <= #\"e\" orelse c >= #\"x\" andalso c <= #\"z\""
@@ -408,19 +407,19 @@ Sys.planEx "1";
 (* For abs, FBBT recognizes `abs x OP c` for the connected-interval
  * cases and emits the equivalent two-sided bounds. *)
 from x where abs x < 5;
-> val it = [~4,~3,~2,~1,0,1,2,3,4] : int bag
+> val it = [~4,~3,~2,~1,0,1,2,3,4] : int list
 Sys.planEx "3";
 > val it =
->   "val it = from x in #fromList Bag (#flatten Range ([OPEN (~5, 5)])) where #abs Int x < 5"
+>   "val it = from x in #flatten Range ([OPEN (~5, 5)]) where #abs Int x < 5"
 >   : string
 from x where abs x <= 3;
-> val it = [~3,~2,~1,0,1,2,3] : int bag
+> val it = [~3,~2,~1,0,1,2,3] : int list
 from x where 5 > abs x;
-> val it = [~4,~3,~2,~1,0,1,2,3,4] : int bag
+> val it = [~4,~3,~2,~1,0,1,2,3,4] : int list
 from x where abs x = 0;
-> val it = [0] : int bag
+> val it = [0] : int list
 from x where abs x < 10 andalso x > 0;
-> val it = [1,2,3,4,5,6,7,8,9] : int bag
+> val it = [1,2,3,4,5,6,7,8,9] : int list
 (* Disjoint case (abs x > c) is two intervals — FBBT skips and the
  * constraint cannot be inverted by the existing extractor either. *)
 from x where abs x > 5;
@@ -430,11 +429,11 @@ from x where abs x > 5;
 (* Strengthened bounds via a non-linear constraint. FBBT recognizes
  * `(varA + kA) * (varB + kB) OP c` and propagates one side's bounds to
  * the other (positive quadrant only). *)
-Bag.length (from x, y where x >= 1 andalso y >= 1 andalso x * (y + 3) < 30);
+List.length (from x, y where x >= 1 andalso y >= 1 andalso x * (y + 3) < 30);
 > val it = 51 : int
 Sys.planEx "3";
 > val it =
->   "val it = #length Bag (from x in #fromList Bag (#flatten Range ([CLOSED (1, 7)])) join y in #fromList Bag (#flatten Range ([CLOSED_OPEN (1, 27)])) where #* Int (x, y + 3) < 30)"
+>   "val it = #length List (from x in #flatten Range ([CLOSED (1, 7)]) join y in #flatten Range ([CLOSED_OPEN (1, 27)]) where #* Int (x, y + 3) < 30)"
 >   : string
 
 (* Same strengthening via the literal range-list syntax. FBBT injects
@@ -467,18 +466,18 @@ from c in [#"a"..] where c <= #"d";
  * variable: the deduced bounds let the extractor build a finite range
  * for each generator, and the original cross-variable predicates
  * (e.g. `x < y`) remain as post-generation filters. *)
-Bag.length (from x, y where x > 0 andalso x < y andalso y < 10);
+List.length (from x, y where x > 0 andalso x < y andalso y < 10);
 > val it = 36 : int
 Sys.planEx "3";
 > val it =
->   "val it = #length Bag (from x in #fromList Bag (#flatten Range ([OPEN (0, 10)])) join y in #fromList Bag (#flatten Range ([OPEN (0, 10)])) where x < y)"
+>   "val it = #length List (from x in #flatten Range ([OPEN (0, 10)]) join y in #flatten Range ([OPEN (0, 10)]) where x < y)"
 >   : string
-Bag.length (from x, y where y > 0 andalso y < x andalso x < 10);
+List.length (from x, y where y > 0 andalso y < x andalso x < 10);
 > val it = 36 : int
-Bag.length (from x, y, z where x > 0 andalso x < y andalso y < z andalso z < 10);
+List.length (from x, y, z where x > 0 andalso x < y andalso y < z andalso z < 10);
 > val it = 84 : int
 from x where x > 0 andalso x < x + 1 andalso x < 5;
-> val it = [1,2,3,4] : int bag
+> val it = [1,2,3,4] : int list
 
 (* Ranges that cannot be deduced even with FBBT.
  *
@@ -500,5 +499,33 @@ from x, y
   andalso x - y >= ~3 andalso x - y <= 3;
 > stdIn:1.6 Error: pattern 'x' is not grounded
 >   raised at: stdIn:1.6
+
+(* -------------------------------------------------------------------
+ * Deduplication that the consumer of a query renders unnecessary.
+ *)
+
+(* The expander deduplicates each generator it derives, because an unbounded
+ * scan yields each assignment once. 'exists' and 'forall' ask only whether a
+ * query has rows, which duplicates cannot change, so the generator is left as
+ * it is; the plan below has no 'group'. *)
+exists i where i elem [3, 1, 2];
+> val it = true : bool
+Sys.plan ();
+> val it =
+>   "apply(fnValue Relational.nonEmpty, argCode from(sink join(pat i_5, exp tuple(constant(3), constant(1), constant(2)), sink collect(stack(offset 1, name i)))))"
+>   : string
+forall i where i elem [2, 4] require i mod 2 = 0;
+> val it = true : bool
+
+(* A 'take' or 'skip' depends on how many rows there are, which
+ * deduplicating changes, so the generator is deduplicated after all. Here
+ * '[1, 1, 2]' has two distinct values, which 'skip 2' removes; the three
+ * undeduplicated rows would leave one. *)
+from i where i elem [1, 1, 2] skip 2;
+> val it = [] : int list
+exists i where i elem [1, 1, 2] skip 2;
+> val it = false : bool
+exists i where i elem [1, 1, 2] skip 1;
+> val it = true : bool
 
 (*) End optimize.smli
