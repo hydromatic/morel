@@ -20,6 +20,7 @@ package net.hydromatic.morel.ast;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.Iterables.getOnlyElement;
+import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.util.Pair.forEach;
 import static net.hydromatic.morel.util.Static.allMatch;
@@ -88,6 +89,18 @@ public class FromBuilder {
    */
   private int removeIfLastIndex = Integer.MIN_VALUE;
 
+  /**
+   * If non-negative, flags that particular step - a {@code yield} of a
+   * one-field record, added when a subquery whose last step yielded a scalar
+   * was inlined - should yield {@link #scalarIfLastExp} instead if it is the
+   * last step. The record names the binding for the steps that follow; if none
+   * follow, the query's value is the scalar, and a record would be the wrong
+   * type.
+   */
+  private int scalarIfLastIndex = Integer.MIN_VALUE;
+
+  private Core.@Nullable Exp scalarIfLastExp;
+
   /** Use {@link net.hydromatic.morel.ast.CoreBuilder#fromBuilder}. */
   FromBuilder(
       TypeSystem typeSystem, @Nullable Supplier<Environment> envSupplier) {
@@ -101,6 +114,8 @@ public class FromBuilder {
     bindings.clear();
     removeIfNotLastIndex = Integer.MIN_VALUE;
     removeIfLastIndex = Integer.MIN_VALUE;
+    scalarIfLastIndex = Integer.MIN_VALUE;
+    scalarIfLastExp = null;
   }
 
   @Override
@@ -121,6 +136,11 @@ public class FromBuilder {
           steps.isEmpty() ? Core.StepEnv.EMPTY : last(steps).env;
       final Environment env = envSupplier.get();
       RefChecker.of(typeSystem, env).visitStep(step, previousEnv);
+    }
+    if (scalarIfLastIndex == steps.size() - 1) {
+      // A step follows, so the record does name a binding that is used.
+      scalarIfLastIndex = Integer.MIN_VALUE;
+      scalarIfLastExp = null;
     }
     if (removeIfNotLastIndex == steps.size() - 1) {
       // A trivial record yield with a single yield, e.g. 'yield {i = i}', has
@@ -251,7 +271,12 @@ public class FromBuilder {
                   ImmutableList.of(Binding.of(idPat)),
                   true,
                   lastStep.env.ordered);
-          return yield_(false, env2, core.record(typeSystem, nameExps), true);
+          yield_(false, env2, core.record(typeSystem, nameExps), true);
+          // Note: 'steps' here is the subquery's list; the field is the one
+          // being built.
+          scalarIfLastIndex = this.steps.size() - 1;
+          scalarIfLastExp = yieldStep.exp;
+          return this;
         }
         final Binding binding = lastStep.env.bindings.get(0);
         nameExps.add(idPat.name, core.id(binding.id));
@@ -338,16 +363,49 @@ public class FromBuilder {
   private static boolean isSimplePat(Core.Pat pat, Core.From exp) {
     switch (pat.op) {
       case ID_PAT:
-        return !exp.steps.isEmpty() && last(exp.steps).env.bindings.size() == 1;
+        return !exp.steps.isEmpty()
+            && last(exp.steps).env.bindings.size() == 1
+            && !yieldsRecord(exp);
       case RECORD_PAT:
         return allMatch(
-            ((Core.RecordPat) pat).args, a -> a instanceof Core.IdPat);
+                ((Core.RecordPat) pat).args, a -> a instanceof Core.IdPat)
+            && endsWithBindings(exp);
       case TUPLE_PAT:
         return allMatch(
-            ((Core.TuplePat) pat).args, a -> a instanceof Core.IdPat);
+                ((Core.TuplePat) pat).args, a -> a instanceof Core.IdPat)
+            && endsWithBindings(exp);
       default:
         return false;
     }
+  }
+
+  /**
+   * Returns whether the last step of {@code from} leaves behind the bindings
+   * that inlining will refer to.
+   *
+   * <p>Inlining a subquery drops its last step if that step is a {@code yield},
+   * and pairs the components of a tuple or record pattern with the bindings of
+   * that step. Those bindings are what the dropped {@code yield} produced, so
+   * nothing binds them afterwards, and the inlined query refers to a variable
+   * that does not exist. It makes no difference whether the {@code yield}
+   * produces a tuple, "{@code yield (k, k + 1)}", or a record, "{@code yield {a
+   * = k, b = k}}", whose bindings are the right number but the wrong ones.
+   */
+  /**
+   * Returns whether the last step of {@code from} is a {@code yield} of a
+   * record.
+   *
+   * <p>Inlining such a subquery under a scalar pattern would refer to the
+   * bindings of the {@code yield} that it drops. A {@code yield} of a scalar is
+   * different: inlining refers to the yielded expression, which survives.
+   */
+  private static boolean yieldsRecord(Core.From from) {
+    final Core.FromStep last = last(from.steps);
+    return last.op == Op.YIELD && ((Core.Yield) last).exp.op == Op.RECORD;
+  }
+
+  private static boolean endsWithBindings(Core.From from) {
+    return !from.steps.isEmpty() && last(from.steps).op != Op.YIELD;
   }
 
   public FromBuilder addAll(Iterable<? extends Core.FromStep> steps) {
@@ -700,6 +758,17 @@ public class FromBuilder {
   }
 
   private Core.Exp build(boolean simplify) {
+    if (scalarIfLastIndex == steps.size() - 1) {
+      // No step followed the record, so nothing uses the name it gave the
+      // binding, and the query's value is the scalar.
+      final Core.Yield yield = (Core.Yield) last(steps);
+      final Core.Exp exp = requireNonNull(scalarIfLastExp);
+      scalarIfLastIndex = Integer.MIN_VALUE;
+      scalarIfLastExp = null;
+      steps.set(
+          steps.size() - 1,
+          core.yield_(typeSystem, exp, true, yield.env.ordered));
+    }
     if (removeIfLastIndex == steps.size() - 1) {
       removeIfLastIndex = Integer.MIN_VALUE;
       final Core.Yield yield = (Core.Yield) last(steps);

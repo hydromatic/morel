@@ -3631,6 +3631,51 @@ in
 end;
 > val it = [{i=3,j=2}] : {i:int, j:int} bag
 
+(* A subquery is inlined into the query that scans it, but only if the
+ * pattern that destructures it matches what its last step binds. A subquery
+ * that ends by yielding drops that yield when it is inlined, and so leaves
+ * behind none of the bindings the yield made; pairing a tuple or record
+ * pattern with them used to make the inlined query refer to a variable that
+ * nothing bound, and raise "VerifyException: not found". *)
+from (a, b) in (from yield (1, 2));
+> val it = [{a=1,b=2}] : {a:int, b:int} list
+from (a, b) in (from k in [4, 6, 5] yield (k, k + 1));
+> val it = [{a=4,b=5},{a=6,b=7},{a=5,b=6}] : {a:int, b:int} list
+from (a, b) in (from k in [4, 6, 5] order k yield (k, k + 1)) join i in [1, 2];
+> val it =
+>   [{a=4,b=5,i=1},{a=4,b=5,i=2},{a=5,b=6,i=1},{a=5,b=6,i=2},{a=6,b=7,i=1},
+>    {a=6,b=7,i=2}] : {a:int, b:int, i:int} list
+from (a, b) in (from k in [4, 6, 5] group k yield (k, k + 1)) join i in [1, 2];
+> val it =
+>   [{a=4,b=5,i=1},{a=4,b=5,i=2},{a=6,b=7,i=1},{a=6,b=7,i=2},{a=5,b=6,i=1},
+>    {a=5,b=6,i=2}] : {a:int, b:int, i:int} list
+from {a, b} in (from k in [4, 6, 5] yield {a = k, b = k + 1});
+> val it = [{a=4,b=5},{a=6,b=7},{a=5,b=6}] : {a:int, b:int} list
+from {a, b} in (from k in [4, 6, 5] yield {a = k, b = k + 1}) join i in [1, 2];
+> val it =
+>   [{a=4,b=5,i=1},{a=4,b=5,i=2},{a=6,b=7,i=1},{a=6,b=7,i=2},{a=5,b=6,i=1},
+>    {a=5,b=6,i=2}] : {a:int, b:int, i:int} list
+
+(* A subquery whose last step yields a scalar is still inlined, into a
+ * 'yield' of a one-field record that names the binding for the steps that
+ * follow. Where no step follows there is no name to give, and the query's
+ * value is the scalar; yielding the record made the query return a record
+ * where its type said scalar, and fail with a ClassCastException. *)
+from j in (from k in [1] yield k + 1);
+> val it = [2] : int list
+from j in (from k in [1] yield {x = k});
+> val it = [{x=1}] : {x:int} list
+
+(* A subquery whose last step yields a scalar is still inlined where a step
+ * does follow, and an ordered subquery keeps its order. *)
+from j in (from k in [4, 6, 5] order k yield k + 1) join i in [1, 2];
+> val it = [{i=1,j=5},{i=2,j=5},{i=1,j=6},{i=2,j=6},{i=1,j=7},{i=2,j=7}]
+>   : {i:int, j:int} list
+from i in [3, 2, 1] join j in (from k in [4, 6, 5] order k);
+> val it =
+>   [{i=3,j=4},{i=3,j=5},{i=3,j=6},{i=2,j=4},{i=2,j=5},{i=2,j=6},{i=1,j=4},
+>    {i=1,j=5},{i=1,j=6}] : {i:int, j:int} list
+
 (*) dummy
 from message in ["the end"];
 > val it = ["the end"] : string list
