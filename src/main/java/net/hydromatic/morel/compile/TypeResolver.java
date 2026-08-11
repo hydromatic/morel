@@ -650,12 +650,33 @@ public class TypeResolver {
     return realTypes;
   }
 
+  /**
+   * Whether a type AST contains a {@code typeof}, whose type only inference
+   * knows. {@link #toType} converts a type AST syntactically, and has no case
+   * for such a type; a caller that would reach one must skip it.
+   */
+  private static boolean containsExpressionType(Ast.Type type) {
+    final AtomicBoolean found = new AtomicBoolean();
+    type.accept(
+        new Visitor() {
+          @Override
+          protected void visit(Ast.ExpressionType expressionType) {
+            found.set(true);
+          }
+        });
+    return found.get();
+  }
+
   private @Nullable Type deduceRealType(
       Ast.Pat pat,
       @Nullable Type annotatedType,
       Ast.Exp exp,
       BiConsumer<Ast.Pat, Type> consumer) {
-    if (pat instanceof Ast.AnnotatedPat) {
+    // An annotation that uses 'typeof' is skipped, here and below. It
+    // never names an alias -- it gives the binding exactly the type that is
+    // deduced for it -- so there is no real type to record.
+    if (pat instanceof Ast.AnnotatedPat
+        && !containsExpressionType(((Ast.AnnotatedPat) pat).type)) {
       final Ast.AnnotatedPat annotatedPat = (Ast.AnnotatedPat) pat;
       final Type annotatedType2 = toType(annotatedPat.type, typeSystem);
       final Type realType =
@@ -671,7 +692,8 @@ public class TypeResolver {
         return annotatedType;
       }
     }
-    if (exp instanceof Ast.AnnotatedExp) {
+    if (exp instanceof Ast.AnnotatedExp
+        && !containsExpressionType(((Ast.AnnotatedExp) exp).type)) {
       final Ast.AnnotatedExp annotatedExp = (Ast.AnnotatedExp) exp;
       final Type annotatedType2 = toType(annotatedExp.type, typeSystem);
       final Type realType =

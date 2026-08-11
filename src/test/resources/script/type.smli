@@ -562,6 +562,8 @@ fun f NONE:int list = []
 > stdIn:1.5-2.32 Error: parameter or result constraints of clauses don't agree [tycon mismatch]
 >   raised at: stdIn:1.5-2.32
 
+(* typeof --------------------------------------------------------- *)
+
 (*) Annotations that use 'typeof'
 fn x: typeof 1 => true;
 > val it = fn : int -> bool
@@ -623,6 +625,33 @@ in
   fact 5
 end;
 > val it = 120 : int
+
+(* An annotation on an expression, like one on a pattern, resolves in the
+ * environment it appears in. *)
+let
+  val s = "abc"
+in
+  (1, s) : typeof (2, s)
+end;
+> val it = (1,"abc") : int * string
+
+let
+  val n = 5
+in
+  n + 1 : typeof n
+end;
+> val it = 6 : int
+
+(* A 'typeof' annotation on the expression or the pattern of a value
+ * declaration gives the binding the type that is deduced for it. *)
+(1, true) : typeof (0, false);
+> val it = (1,true) : int * bool
+val x : typeof m = 6;
+> val x = 6 : int
+val y = 6 : typeof m;
+> val y = 6 : int
+val z = [1] : typeof [m];
+> val z = [1] : int list
 
 (* type_string ---------------------------------------------------- *)
 (* The 'type_string' operator renders the inferred type of an expression as
