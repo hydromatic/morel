@@ -52,6 +52,7 @@ jobs:
           - java-version: "11"
             checkstyle-version: "10.26.1"
           - java-version: "17"
+            checkstyle-version: "10.26.1"
             javadoc: true
           - java-version: "21"
             guava-version: "31.1-jre"

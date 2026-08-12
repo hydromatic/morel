@@ -19,6 +19,7 @@
 
 options {
   STATIC = false;
+  LOOKAHEAD = 1;
   IGNORE_CASE = false;
   UNICODE_INPUT = true;
 }

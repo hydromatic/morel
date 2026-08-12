@@ -32,9 +32,9 @@ until version 0.2.)
 
 ## Requirements
 
-Java version 17 or higher.
+Java version 21 or higher.
 
-(Java 8 through 16 work fine, but you must override certain
+(Java 8 through 20 work fine, but you must override certain
 dependencies; see below.)
 
 ## Get Morel
@@ -68,7 +68,7 @@ On Windows, the last line is
 
 If you are using Java 8 through 10, you must add parameters
 `-Dcheckstyle.version=9.3 -Dhsqldb.version=2.5.1` to this command
-line; if you are using Java 11 through 16, you must add parameter
+line; if you are using Java 11 through 20, you must add parameter
 `-Dcheckstyle.version=10.26.1`.
 
 ### Run the shell

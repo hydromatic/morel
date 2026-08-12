@@ -78,35 +78,34 @@ License.
     <!-- Component and plugin versions, in alphabetical order. -->
     <!-- // lint: sort until 'maven-javadoc-plugin.additionalOptions' where '##<[a-z]' -->
     <build-helper-maven-plugin.version>3.6.1</build-helper-maven-plugin.version>
-    <calcite.version>1.41.0</calcite.version>
-    <central-publishing-maven-plugin.version>0.8.0</central-publishing-maven-plugin.version>
+    <calcite.version>1.42.0</calcite.version>
+    <central-publishing-maven-plugin.version>0.11.0</central-publishing-maven-plugin.version>
     <!-- We support (and test) Checkstyle as low as 9.3.
          In JDK 8 through 10, you must add '-Dcheckstyle.version=9.3'
          because Checkstyle 10 requires JDK 11 or higher.
-         In JDK 11 through 16, you must add '-Dcheckstyle.version=10.26.1'
-         because Checkstyle 11 and 12 require JDK 17 or higher. -->
-    <checkstyle.version>12.1.2</checkstyle.version>
+         In JDK 11 through 20, you must add '-Dcheckstyle.version=10.26.1'
+         because Checkstyle 13 requires JDK 21 or higher. -->
+    <checkstyle.version>13.10.0</checkstyle.version>
     <findbugs.version>3.0.2</findbugs.version>
     <foodmart-data-hsqldb.version>0.5</foodmart-data-hsqldb.version>
     <git-commit-id-plugin.version>4.9.10</git-commit-id-plugin.version>
     <googleformatter-maven-plugin.version>1.7.5</googleformatter-maven-plugin.version>
     <!-- We support (and test) Guava as low as 23.1-jre. -->
-    <guava.version>33.5.0-jre</guava.version>
+    <guava.version>33.6.0-jre</guava.version>
     <hamcrest.version>3.0</hamcrest.version>
     <!-- We support (and test) HSQLDB as low as 2.5.1.
          In JDK 8, you must add '-Dhsqldb.version=2.5.1' because
          HSQLDB 2.7.x requires JDK 11 or higher. -->
     <hsqldb.version>2.7.4</hsqldb.version>
-    <jackson.version>2.20.1</jackson.version>
     <javacc.version>7.0.13</javacc.version>
-    <javacc-maven-plugin.version>3.0.3</javacc-maven-plugin.version>
+    <javacc-maven-plugin.version>3.8.0</javacc-maven-plugin.version>
     <java-diff.version>1.1.2</java-diff.version>
     <jline.version>3.25.0</jline.version>
-    <jspecify.version>1.0.0</jspecify.version>
+    <jspecify.version>1.0.1</jspecify.version>
     <junit-jupiter.version>5.14.1</junit-jupiter.version>
     <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
-    <maven-compiler-plugin.version>3.14.1</maven-compiler-plugin.version>
-    <maven-enforcer-plugin.version>3.6.2</maven-enforcer-plugin.version>
+    <maven-compiler-plugin.version>3.15.0</maven-compiler-plugin.version>
+    <maven-enforcer-plugin.version>3.6.3</maven-enforcer-plugin.version>
     <maven-javadoc-plugin.version>3.12.0</maven-javadoc-plugin.version>
     <maven-project-info-reports-plugin.version>3.9.0</maven-project-info-reports-plugin.version>
     <maven-release-plugin.version>2.4.2</maven-release-plugin.version>
@@ -116,7 +115,7 @@ License.
     <maven-surefire-plugin.version>3.5.4</maven-surefire-plugin.version>
     <scott-data-hsqldb.version>0.3</scott-data-hsqldb.version>
     <slf4j.version>2.1.0-alpha1</slf4j.version>
-    <versions-maven-plugin.version>2.19.1</versions-maven-plugin.version>
+    <versions-maven-plugin.version>2.21.0</versions-maven-plugin.version>
 
     <maven-javadoc-plugin.additionalOptions>-html5</maven-javadoc-plugin.additionalOptions>
     <maven-javadoc-plugin.excludePackageNames>net.hydromatic.morel.parse</maven-javadoc-plugin.excludePackageNames>
@@ -147,12 +146,6 @@ License.
 
   <dependencies>
     <!-- // lint: sort until '#</dependencies>' where '##  <groupId>' -->
-    <dependency>
-      <groupId>com.fasterxml.jackson.dataformat</groupId>
-      <artifactId>jackson-dataformat-toml</artifactId>
-      <version>${jackson.version}</version>
-      <scope>test</scope>
-    </dependency>
     <dependency>
       <groupId>com.google.code.findbugs</groupId>
       <artifactId>jsr305</artifactId>
@@ -460,8 +453,6 @@ License.
                 <include>**/MorelParser.jj</include>
                 <include>**/DatalogParser.jj</include>
               </includes>
-              <lookAhead>1</lookAhead>
-              <isStatic>false</isStatic>
             </configuration>
           </execution>
         </executions>
