@@ -34,11 +34,22 @@ and commit the modified `pom.xml`.
 
 Write release notes. Run the
 [relNotes](https://github.com/julianhyde/share/blob/master/tools/relNotes)
-script and append the output to [HISTORY.md](HISTORY.md).
+script and append the output to [HISTORY.md](HISTORY.md), laid out as
+the commented-out template there. Then edit the entries:
+
+* One entry per issue; merge those marked "continued" or "part N".
+* Drop entries too vague to tell from the change that subsumes them.
+* List breaking changes as bullets, just before the contributors.
+* Date the release in UTC.
 
 Update version numbers in
-`src/main/java/net/hydromatic/morel/Shell.java`, `README` and
-`README.md`, and the copyright date in `NOTICE`.
+`src/main/java/net/hydromatic/morel/util/JavaVersion.java`, `README`,
+`README.md` and `docs/reference.md`, and the copyright year in
+`NOTICE`. To check that you have missed none of them:
+
+```bash
+./mvnw test -Dtest=LintTest -Dmorel.releaseVersion=x.y.0
+```
 
 Switch to JDK 21.
 
@@ -62,18 +73,17 @@ Perform:
 mvn -Prelease -DskipTests release:perform
 ```
 
-Stage the release:
-* Go to https://oss.sonatype.org and log in.
-* Under "Build Promotion", click on "Staging Repositories".
-* Select the line "morel-nnnn", and click "Close". You might need to
-  click "Refresh" a couple of times before it closes.
+`release:perform` uploads the artifacts to the
+[Central Portal](https://central.sonatype.com), authenticating as the
+`<server>` whose `id` is `central` in your `settings.xml`, and
+publishes them as soon as they pass validation. Watch progress at
+https://central.sonatype.com/publishing/deployments.
 
-After testing, publish the release:
-* Go to https://oss.sonatype.org and log in.
-* Under "Build Promotion", click on "Staging Repositories".
-* Select the line "morel-nnnn", and click "Release".
+To verify the artifacts by hand before they become public (see
+"Manually verify a release" below), first set `autoPublish` to `false`
+in `pom.xml`; then publish from the portal when you are satisfied.
 
-Wait a couple of hours for the artifacts to appear on Maven central,
+Wait a couple of hours for the artifacts to appear on Maven Central,
 and announce the release.
 
 Update the [github release list](https://github.com/hydromatic/morel/releases).

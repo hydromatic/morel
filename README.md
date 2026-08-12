@@ -48,7 +48,7 @@ Get Morel from
 <dependency>
   <groupId>net.hydromatic</groupId>
   <artifactId>morel</artifactId>
-  <version>0.8.0</version>
+  <version>0.9.0</version>
 </dependency>
 ```
 
@@ -75,7 +75,7 @@ line; if you are using Java 11 through 20, you must add parameter
 
 ```bash
 $ ./morel
-morel-java version 0.8.0 (java version "25", JLine terminal, xterm-256color)
+morel-java version 0.9.0 (java version "25", JLine terminal, xterm-256color)
 - "Hello, world!";
 val it = "Hello, world!" : string
 - exit
@@ -261,14 +261,13 @@ Implemented:
 
 Not implemented:
 * `eqtype`, `exception`
-* `structure`, `struct`, `signature`, `sig`, `open`
+* `structure`, `struct`, `open`
 * `local`
-* `raise`, `handle`
+* `handle`
 * `while`
 * References, and operators `!` and `:=`
 * Operators: `before`
 * User-defined operators (`infix`, `infixr`)
-* Type annotations in expressions and patterns
 
 Bugs:
 * Prevent user from overriding built-in constants and functions:
@@ -321,14 +320,15 @@ In the relational extensions, `group` and `compute` expressions also use
 implicit labels. For instance,
 ```
 from e in emps
-  group e.deptno compute sum of e.salary, count
+  group e.deptno compute {sum over e.salary, count over ()}
 ```
 is shorthand for
 ```
 from e in emps
-  group deptno = e.deptno compute sum = sum of e.salary, count = count
+  group {deptno = e.deptno}
+    compute {sum = sum over e.salary, count = count over ()}
 ```
-and both expressions have type `{count:int,deptno:int,sum:int} list`.
+and both expressions have type `{count:int, deptno:int, sum:int} list`.
 
 ### Relational extensions
 

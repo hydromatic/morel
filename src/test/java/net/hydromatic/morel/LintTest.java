@@ -21,6 +21,7 @@ package net.hydromatic.morel;
 import static com.google.common.base.Strings.repeat;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
+import static net.hydromatic.morel.TestUtils.getBaseDir;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -40,6 +41,8 @@ import java.io.PrintWriter;
 import java.io.Reader;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -122,6 +125,7 @@ public class LintTest {
         Puffin.builder(GlobalState::new, global -> new FileState(global));
     addProgram0(b);
     addProgram1(b);
+    addVersionProgram(b);
     addProgram2(b);
     addProgram3(b);
     addProgram4(b);
@@ -433,12 +437,94 @@ public class LintTest {
                 .message(line, "<code> and </code> must be on same line");
           }
         });
+  }
 
-    // README.md must have a line "morel-java version x.y.z (java version ...)"
-    final String versionString = JavaVersion.MOREL_VERSION.toString();
+  /**
+   * Returns the version that the code and documentation should declare.
+   *
+   * <p>It is the value of system property {@code morel.releaseVersion}, if that
+   * is set; otherwise the project's version, read from {@code pom.xml}. A
+   * project version ending in {@code -SNAPSHOT} means that we are in the middle
+   * of a development cycle, when the documentation still describes the previous
+   * release; there is then no independent statement of what the version ought
+   * to be, and we fall back to {@link JavaVersion#MOREL_VERSION}.
+   *
+   * <p>This matters because comparing every version against {@code
+   * MOREL_VERSION} cannot tell a correctly updated tree from one where nobody
+   * bumped {@code MOREL_VERSION}: each location agrees with the stale value.
+   * That is how release 0.8.0 came to be published with documentation that said
+   * 0.7.0. During {@code release:prepare} the POM's version loses its {@code
+   * -SNAPSHOT} suffix, and so the release build checks {@code MOREL_VERSION}
+   * too, without anyone having to remember to ask for it.
+   */
+  private static String expectedVersion() {
+    final String property = System.getProperty("morel.releaseVersion");
+    if (property != null) {
+      return property;
+    }
+    final String pomVersion = pomVersion();
+    if (pomVersion == null || pomVersion.endsWith("-SNAPSHOT")) {
+      return JavaVersion.MOREL_VERSION.toString();
+    }
+    return pomVersion;
+  }
+
+  /**
+   * Returns the project's version, as declared by the {@code <version>} element
+   * of {@code pom.xml}, or null if it cannot be read. The element we want is
+   * the project's own, indented by two spaces; the parent's version is indented
+   * by four.
+   */
+  private static @Nullable String pomVersion() {
+    final File pom = new File(getBaseDir(LintTest.class), "pom.xml");
+    final Pattern pattern = Pattern.compile("^ {2}<version>(.*)</version>$");
+    try (BufferedReader r =
+        Files.newBufferedReader(pom.toPath(), StandardCharsets.UTF_8)) {
+      for (String line = r.readLine(); line != null; line = r.readLine()) {
+        final Matcher matcher = pattern.matcher(line);
+        if (matcher.matches()) {
+          return matcher.group(1);
+        }
+      }
+      return null;
+    } catch (IOException e) {
+      return null;
+    }
+  }
+
+  /**
+   * Adds rules that check that the version number in the code and documentation
+   * matches {@link #expectedVersion()}. Each of these files is easy to forget
+   * when making a release.
+   */
+  private static void addVersionProgram(
+      Puffin.Builder<GlobalState, FileState> b) {
+    final String versionString = expectedVersion();
+
+    // MOREL_VERSION must match the expected version. (During a development
+    // cycle the expected version is MOREL_VERSION, and this rule is trivially
+    // true; it has teeth during a release build, or if you supply
+    // "-Dmorel.releaseVersion".)
     b.add(
         line ->
-            filenameIs(line, "README.md")
+            filenameIs(line, "JavaVersion.java")
+                && line.contains("MOREL_VERSION = JavaVersion.of("),
+        line -> {
+          if (!JavaVersion.MOREL_VERSION.toString().equals(versionString)) {
+            line.state()
+                .message(
+                    line,
+                    "Version '%s' should match '%s'",
+                    JavaVersion.MOREL_VERSION,
+                    versionString);
+          }
+        });
+
+    // README.md and reference.md must each have a line
+    // "morel-java version x.y.z (java version ...)"
+    b.add(
+        line ->
+            (filenameIs(line, "README.md") || filenameIs(line, "reference.md"))
                 && line.startsWith("morel-java version "),
         line -> {
           line.state().versionCount++;
@@ -449,13 +535,12 @@ public class LintTest {
                     line,
                     "Version '%s' should match '%s'",
                     version,
-                    JavaVersion.MOREL_VERSION);
+                    versionString);
           }
         });
 
     // README.md must have a line "<version>x.y.z</version>"
-    final String versionLine =
-        "<version>" + JavaVersion.MOREL_VERSION + "</version>";
+    final String versionLine = "<version>" + versionString + "</version>";
     b.add(
         line -> filenameIs(line, "README.md") && line.matches("  <version>.*"),
         line -> {
@@ -467,7 +552,7 @@ public class LintTest {
                     line,
                     "Version '%s' should match '%s'",
                     version,
-                    JavaVersion.MOREL_VERSION);
+                    versionString);
           }
         });
 
@@ -485,16 +570,20 @@ public class LintTest {
                     line,
                     "Version '%s' should match '%s'",
                     version,
-                    JavaVersion.MOREL_VERSION);
+                    versionString);
           }
         });
+
     b.add(
         line -> line.isLast(),
         line -> {
           int expectedVersionCount =
               filenameIs(line, "README.md")
                   ? 2
-                  : filenameIs(line, "README") ? 1 : 0;
+                  : filenameIs(line, "README")
+                          || filenameIs(line, "reference.md")
+                      ? 1
+                      : 0;
           if (expectedVersionCount != line.state().versionCount) {
             line.state()
                 .message(
