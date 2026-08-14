@@ -331,6 +331,12 @@ public class Shell {
             // an identifier or type variable (e.g. 'a), not a quote.
             setQuoteChars(new char[] {'"'});
             setEofOnUnclosedQuote(true);
+            // Backslash is not an escape character to the line reader. Morel's
+            // lexer owns escape handling, and were the reader to unescape
+            // first, an escape in a literal would be eaten before the lexer
+            // saw it: #"\n" would become #"n", and a literal ending in \\
+            // would look unclosed.
+            setEscapeChars(null);
             // Brackets do not decide where a statement ends; a semicolon
             // does, and the shell finds it (see SubShell.extracted). Were
             // brackets to decide, a bracket inside a comment would count as

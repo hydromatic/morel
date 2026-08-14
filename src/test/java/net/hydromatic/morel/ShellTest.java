@@ -386,6 +386,31 @@ public class ShellTest {
   }
 
   /**
+   * Tests that the shell passes escape sequences to the parser unchanged. The
+   * line reader must not treat backslash as an escape character; if it did,
+   * {@code #"\n"} would reach the parser as {@code #"n"} (character 110), and a
+   * newline would need to be written {@code #"\\n"}.
+   */
+  @Test
+  void testEscapeInCharLiteral() {
+    fixture()
+        .withInputString("Char.ord #\"\\n\";\n")
+        .assertOutput(containsString("val it = 10 : int"));
+  }
+
+  /**
+   * Tests that a string literal ending in an escaped backslash is recognized as
+   * complete. Were backslash an escape character to the line reader, it would
+   * consume the closing quote and wait for a line that never comes.
+   */
+  @Test
+  void testStringLiteralEndingInBackslash() {
+    fixture()
+        .withInputString("String.size \"a\\\\\";\n")
+        .assertOutput(containsString("val it = 2 : int"));
+  }
+
+  /**
    * Tests {@link Shell} with {@code let} statement spread over multiple lines.
    */
   @Test
