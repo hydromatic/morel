@@ -76,7 +76,7 @@ License.
     <top.dir>${project.basedir}</top.dir>
 
     <!-- Component and plugin versions, in alphabetical order. -->
-    <!-- // lint: sort until 'maven-javadoc-plugin.additionalOptions' where '##<[a-z]' -->
+    <!-- // lint: sort until '^$' where '##<[a-z]' -->
     <build-helper-maven-plugin.version>3.6.1</build-helper-maven-plugin.version>
     <calcite.version>1.42.0</calcite.version>
     <central-publishing-maven-plugin.version>0.11.0</central-publishing-maven-plugin.version>
@@ -117,10 +117,9 @@ License.
     <slf4j.version>2.1.0-alpha1</slf4j.version>
     <versions-maven-plugin.version>2.21.0</versions-maven-plugin.version>
 
+    <git-commit-id.skip>false</git-commit-id.skip>
     <maven-javadoc-plugin.additionalOptions>-html5</maven-javadoc-plugin.additionalOptions>
     <maven-javadoc-plugin.excludePackageNames>net.hydromatic.morel.parse</maven-javadoc-plugin.excludePackageNames>
-    <maven-javadoc-plugin.link>https://docs.oracle.com/javase/11/docs/api/</maven-javadoc-plugin.link>
-    <git-commit-id.skip>false</git-commit-id.skip>
   </properties>
 
   <!-- Environment settings. -->
@@ -260,9 +259,7 @@ License.
              under "reporting", and is more lenient. -->
         <configuration>
           <source>8</source>
-          <links>
-            <link>${maven-javadoc-plugin.link}</link>
-          </links>
+          <detectJavaApiLink>true</detectJavaApiLink>
           <notimestamp>true</notimestamp>
           <excludePackageNames>${maven-javadoc-plugin.excludePackageNames}</excludePackageNames>
           <quiet>true</quiet>
