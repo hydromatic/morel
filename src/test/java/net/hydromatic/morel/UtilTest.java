@@ -60,15 +60,19 @@ import com.google.common.collect.Range;
 import com.google.common.graph.GraphBuilder;
 import com.google.common.graph.Graphs;
 import com.google.common.graph.MutableGraph;
+import java.io.File;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
@@ -80,6 +84,7 @@ import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.compile.BuiltIn;
 import net.hydromatic.morel.eval.Codes;
+import net.hydromatic.morel.eval.Prop;
 import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.RangeExtent;
 import net.hydromatic.morel.type.TypeSystem;
@@ -872,6 +877,134 @@ public class UtilTest {
         "> abc\n" //
             + "> def";
     assertThat(Main.prefixLines(abcNewlineDef), is(abcNewlineDefCaret));
+  }
+
+  /**
+   * Tests {@link Prop}: the properties themselves, looking them up, and
+   * reading, writing and validating their values.
+   */
+  @Test
+  void testProp() {
+    // Every property is well-formed: its type is one a property may have, its
+    // name converts between the two cases, and the value it yields when unset
+    // has its type.
+    final Map<Prop, Object> emptyMap = ImmutableMap.of();
+    for (Prop prop : Prop.BY_CAMEL_NAME) {
+      assertThat(prop.camelName, prop.typeName(), notNullValue());
+      assertThat(prop.camelName, prop.description, not(emptyString()));
+      final Object value = prop.get(emptyMap);
+      if (value != null) {
+        assertThat(prop.camelName, prop.isValid(value), is(true));
+      }
+      // "defaultValue" gives the value as it is displayed -- "classic" for
+      // the enum constant CLASSIC -- so what is displayed is a value the
+      // property can be read from, rather than one it already holds.
+      final Object defaultValue = prop.defaultValue();
+      if (defaultValue != null) {
+        assertThat(prop.camelName, prop.isValid(defaultValue, true), is(true));
+      }
+    }
+
+    // Properties are listed in camel-name order, and every one can be looked
+    // up under either of its names.
+    assertThat(Prop.BY_CAMEL_NAME, hasSize(Prop.values().length));
+    String previousName = "";
+    for (Prop prop : Prop.BY_CAMEL_NAME) {
+      assertThat(prop.camelName, prop.camelName.compareTo(previousName) > 0);
+      previousName = prop.camelName;
+      assertThat(Prop.lookup(prop.camelName), is(prop));
+      assertThat(Prop.lookup(prop.name()), is(prop));
+    }
+    assertThrows(
+        RuntimeException.class,
+        () -> Prop.lookup("nosuch"),
+        "property nosuch not found");
+
+    // A property whose value is not in the map has its default value.
+    final Map<Prop, Object> map = new LinkedHashMap<>();
+    assertThat(Prop.LINE_WIDTH.intValue(map), is(79));
+    assertThat(Prop.LINE_WIDTH.get(map), is(79));
+    assertThat(Prop.OPTIONAL_INT.get(map), nullValue());
+
+    // Each type has an accessor, and each accessor its type.
+    Prop.LINE_WIDTH.set(map, 100);
+    assertThat(Prop.LINE_WIDTH.intValue(map), is(100));
+    assertThat(Prop.HYBRID.booleanValue(map), is(false));
+    assertThat(Prop.PRODUCT_NAME.stringValue(map), is("morel-java"));
+    assertThat(Prop.DIRECTORY.fileValue(map), is(new File("")));
+    assertThat(
+        Prop.OUTPUT.enumValue(map, Prop.Output.class), is(Prop.Output.CLASSIC));
+    assertThat(
+        Prop.RANGE_MAX_LENGTH.bigIntegerValue(map),
+        is(BigInteger.ONE.shiftLeft(24).subtract(BigInteger.ONE)));
+    assertThrows(
+        RuntimeException.class, () -> Prop.LINE_WIDTH.booleanValue(map));
+
+    // "typeName" gives the Morel name of the type, not the Java one.
+    assertThat(Prop.LINE_WIDTH.typeName(), is("int"));
+    assertThat(Prop.HYBRID.typeName(), is("bool"));
+    assertThat(Prop.PRODUCT_NAME.typeName(), is("string"));
+    assertThat(Prop.DIRECTORY.typeName(), is("file"));
+    assertThat(Prop.OUTPUT.typeName(), is("enum"));
+    assertThat(Prop.RANGE_MAX_LENGTH.typeName(), is("IntInf.int"));
+
+    // Setting is strict; a value of the wrong type is refused.
+    assertThat(
+        assertThrows(
+                RuntimeException.class, () -> Prop.LINE_WIDTH.set(map, "80"))
+            .getMessage(),
+        is("value for property must have type class java.lang.Integer"));
+
+    // Removing restores the default; a required property may not be set to
+    // null, and an optional one may.
+    Prop.LINE_WIDTH.remove(map);
+    assertThat(Prop.LINE_WIDTH.intValue(map), is(79));
+    assertThat(
+        assertThrows(
+                RuntimeException.class, () -> Prop.LINE_WIDTH.set(map, null))
+            .getMessage(),
+        is("property is required"));
+    Prop.OPTIONAL_INT.set(map, null);
+    assertThat(Prop.OPTIONAL_INT.get(map), nullValue());
+
+    // Setting leniently converts a value that the property can be read from.
+    // A property of arbitrary precision takes an "int", and holds a
+    // BigInteger; a Morel "int" stops at 2^31 - 1, so a larger value is
+    // written as a numeral in a string.
+    Prop.RANGE_MAX_LENGTH.setLenient(map, 100);
+    assertThat(map.get(Prop.RANGE_MAX_LENGTH), is(BigInteger.valueOf(100)));
+    Prop.RANGE_MAX_LENGTH.setLenient(map, "4722366482869645213696");
+    assertThat(
+        Prop.RANGE_MAX_LENGTH.bigIntegerValue(map),
+        is(BigInteger.ONE.shiftLeft(72)));
+    Prop.OUTPUT.setLenient(map, "tabular");
+    assertThat(
+        Prop.OUTPUT.enumValue(map, Prop.Output.class), is(Prop.Output.TABULAR));
+
+    // What "setLenient" takes is what "isValid" calls valid when lenient, and
+    // no more than "set" takes when it is not.
+    assertThat(Prop.RANGE_MAX_LENGTH.isValid(100, true), is(true));
+    assertThat(Prop.RANGE_MAX_LENGTH.isValid(100, false), is(false));
+    assertThat(Prop.RANGE_MAX_LENGTH.isValid("100", true), is(true));
+    assertThat(Prop.RANGE_MAX_LENGTH.isValid("many", true), is(false));
+    assertThat(Prop.OUTPUT.isValid("tabular", true), is(true));
+    assertThat(Prop.OUTPUT.isValid("nosuch", true), is(false));
+    assertThat(Prop.LINE_WIDTH.isValid("80", true), is(false));
+    assertThat(Prop.LINE_WIDTH.isValid(80), is(true));
+
+    // A value it cannot read is refused, and says why.
+    assertThat(
+        assertThrows(
+                RuntimeException.class,
+                () -> Prop.RANGE_MAX_LENGTH.setLenient(map, "many"))
+            .getMessage(),
+        is("value must be a number: many"));
+    assertThat(
+        assertThrows(
+                RuntimeException.class,
+                () -> Prop.OUTPUT.setLenient(map, "nosuch"))
+            .getMessage(),
+        is("value must be one of: 'CLASSIC', 'TABULAR'"));
   }
 
   /**

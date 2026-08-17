@@ -39,6 +39,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Chars;
 import java.io.StringReader;
+import java.math.BigInteger;
 import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -129,6 +130,14 @@ public abstract class Codes {
         return list.get(slot);
       }
     };
+  }
+
+  /**
+   * Returns the largest number of values that expanding a range may produce,
+   * from the session that {@code stack} belongs to.
+   */
+  private static BigInteger rangeMaxLength(Stack stack) {
+    return Prop.RANGE_MAX_LENGTH.bigIntegerValue(stack.session.map);
   }
 
   /**
@@ -9399,12 +9408,24 @@ public abstract class Codes {
     }
 
     @Override
-    @SuppressWarnings({"rawtypes", "unchecked"})
+    public Object apply(Stack stack, Object argValue) {
+      return apply(rangeMaxLength(stack), (List) argValue);
+    }
+
+    @Override
     public List apply(List set) {
+      // No session, so the default applies.
+      return apply(
+          Prop.RANGE_MAX_LENGTH.bigIntegerValue(ImmutableMap.of()), set);
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private List apply(BigInteger maxLength, List set) {
       final PairList<Bound, Bound> ranges = (PairList<Bound, Bound>) set.get(1);
       final ImmutableList.Builder<Object> result = ImmutableList.builder();
       ranges.forEach(
-          (lo, hi) -> Bound.enumerate(discrete, lo, hi, result::add));
+          (lo, hi) ->
+              Bound.enumerate(discrete, lo, hi, maxLength, result::add));
       return result.build();
     }
   }
@@ -9427,20 +9448,27 @@ public abstract class Codes {
     @Override
     public Applicable withType(TypeSystem typeSystem, Type type, Pos pos) {
       Type elemType = rangeElementType(type);
-      Discrete<Object> d;
-      try {
-        d = Discretes.discreteFor(typeSystem, elemType, pos);
-      } catch (CompileException ex) {
-        // Element type is not discrete (e.g. real). POINT items are still
-        // finite; non-POINT items raise Size at runtime.
-        d = null;
-      }
+      // A non-discrete element type (e.g. real) is not an error here. POINT
+      // items are still finite; non-POINT items raise Size at runtime.
+      final Discrete<Object> d =
+          Discretes.discreteForOrNull(typeSystem, elemType, pos);
       return new RangeFlatten(d);
     }
 
     @Override
-    @SuppressWarnings("unchecked")
+    public Object apply(Stack stack, Object argValue) {
+      return apply(rangeMaxLength(stack), (List) argValue);
+    }
+
+    @Override
     public List apply(List ranges) {
+      // No session, so the default applies.
+      return apply(
+          Prop.RANGE_MAX_LENGTH.bigIntegerValue(ImmutableMap.of()), ranges);
+    }
+
+    @SuppressWarnings("unchecked")
+    private List apply(BigInteger maxLength, List ranges) {
       final ImmutableList.Builder<Object> result = ImmutableList.builder();
       for (Object r : ranges) {
         final List range = (List) r;
@@ -9454,7 +9482,7 @@ public abstract class Codes {
         } else {
           final Bound lo = Bound.lowerBound(range);
           final Bound hi = Bound.upperBound(range);
-          Bound.enumerate(discrete, lo, hi, result::add);
+          Bound.enumerate(discrete, lo, hi, maxLength, result::add);
         }
       }
       return result.build();

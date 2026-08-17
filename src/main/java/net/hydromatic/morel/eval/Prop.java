@@ -23,10 +23,10 @@ import static java.util.Objects.requireNonNull;
 
 import com.google.common.base.CaseFormat;
 import com.google.common.base.Enums;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import java.io.File;
+import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -259,6 +259,28 @@ public enum Prop {
       "Current version of Morel."),
 
   /**
+   * Integer property "rangeMaxLength" is the largest number of values that
+   * expanding a range may produce.
+   *
+   * <p>A discrete domain is finite but not therefore small: "int" alone has
+   * 2^32 values, and a nine-character word 2^72. An unremarkable range can thus
+   * ask for more values than will fit in memory, and past this many {@code
+   * Size} is raised instead.
+   *
+   * <p>Default is 2^24 - 1, the same as {@code Vector.maxLen}.
+   *
+   * <p>The value may be larger than a Morel "int" can hold, so it is written as
+   * a string where it does not fit: {@code Sys.set ("rangeMaxLength",
+   * "4722366482869645213696")}.
+   */
+  RANGE_MAX_LENGTH(
+      "rangeMaxLength",
+      BigInteger.class,
+      true,
+      BigInteger.ONE.shiftLeft(24).subtract(BigInteger.ONE),
+      "Largest number of values that expanding a range may produce."),
+
+  /**
    * Boolean property "relationalize" is whether to convert to relational
    * algebra. Default is false.
    */
@@ -391,19 +413,72 @@ public enum Prop {
       checkArgument(
           !required, "required property %s must have default value", camelName);
     } else {
-      checkArgument(validValue(type, defaultValue));
+      checkArgument(isValid(defaultValue));
     }
   }
 
-  private boolean validValue(Class<?> type, Object value) {
-    if (type == Boolean.class
+  /** Returns whether a given value is valid for this property. */
+  public boolean isValid(Object value) {
+    return isValid(value, false);
+  }
+
+  /**
+   * Returns whether a given value is valid for this property, allowing
+   * conversions if {@code lenient}.
+   */
+  public boolean isValid(Object value, boolean lenient) {
+    return isPropertyType(type)
+        && (type.isInstance(value) || lenient && convert(value) != null);
+  }
+
+  /** Returns whether a property may have a given type. */
+  private static boolean isPropertyType(Class<?> type) {
+    return type == BigInteger.class
+        || type == Boolean.class
         || type == File.class
         || type == Integer.class
         || type == String.class
-        || type.isEnum()) {
-      return type.isInstance(value);
+        || type.isEnum();
+  }
+
+  /**
+   * Converts a property value to the correct type. Assumes that it is not null
+   * and is not the correct type. Returns null if it cannot be converted.
+   */
+  @SuppressWarnings({"unchecked", "rawtypes"})
+  private @Nullable Object convert(Object value) {
+    if (type.isEnum() && value instanceof String) {
+      final String name = ((String) value).toUpperCase(Locale.ROOT);
+      return Enums.getIfPresent((Class<Enum>) type, name).orNull();
     }
-    return false;
+    if (type == BigInteger.class) {
+      if (value instanceof Integer) {
+        return BigInteger.valueOf((Integer) value);
+      }
+      if (value instanceof String) {
+        try {
+          return new BigInteger((String) value);
+        } catch (NumberFormatException e) {
+          return null;
+        }
+      }
+    }
+    return null;
+  }
+
+  /** Returns the message to give for a value this property cannot take. */
+  private String invalidValueMessage(Object value) {
+    if (type.isEnum()) {
+      String values =
+          Arrays.stream((Enum[]) type.getEnumConstants())
+              .map(Enum::name)
+              .collect(Collectors.joining("', '", "'", "'"));
+      return "value must be one of: " + values;
+    }
+    if (type == BigInteger.class) {
+      return "value must be a number: " + value;
+    }
+    return "value for property must have type " + type;
   }
 
   /** Looks up a property by name. Throws if not found; never returns null. */
@@ -444,6 +519,13 @@ public enum Prop {
     return this.<Integer>typeValue(o);
   }
 
+  /** Returns the value of a {@link BigInteger} property. */
+  public BigInteger bigIntegerValue(Map<Prop, Object> map) {
+    checkType(BigInteger.class);
+    Object o = map.get(this);
+    return this.typeValue(o);
+  }
+
   /** Returns the value of a string property. */
   public String stringValue(Map<Prop, Object> map) {
     checkType(String.class);
@@ -478,21 +560,13 @@ public enum Prop {
   }
 
   /** Sets the value of a property, allowing strings for enum types. */
-  @SuppressWarnings({"rawtypes", "unchecked"})
   public void setLenient(Map<Prop, Object> map, @Nullable Object value) {
-    if (type.isEnum() && value instanceof String) {
-      Optional<Enum> optional =
-          Enums.getIfPresent(
-              (Class<Enum>) type, ((String) value).toUpperCase(Locale.ROOT));
-      if (!optional.isPresent()) {
-        String values =
-            Arrays.stream((Enum[]) type.getEnumConstants())
-                .map(Enum::name)
-                .collect(Collectors.joining("', '", "'", "'"));
-        throw new RuntimeException("value must be one of: " + values);
+    if (value != null && !type.isInstance(value)) {
+      @Nullable Object converted = convert(value);
+      if (converted == null) {
+        throw new RuntimeException(invalidValueMessage(value));
       }
-      set(map, optional.get());
-      return;
+      value = converted;
     }
     set(map, value);
   }
@@ -524,6 +598,12 @@ public enum Prop {
   public String typeName() {
     if (type.isEnum()) {
       return "enum";
+    } else if (type == BigInteger.class) {
+      // Not "int"; the value may be larger than a Morel "int" can hold, and is
+      // then written as a numeral in a string. "IntInf.int" is the name the
+      // Standard Basis gives arbitrary-precision integers, though Morel has
+      // no such structure yet.
+      return "IntInf.int";
     } else if (type == Integer.class) {
       return "int";
     } else if (type == String.class) {

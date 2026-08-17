@@ -21,6 +21,7 @@ package net.hydromatic.morel.eval;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
+import java.math.BigInteger;
 import java.util.Comparator;
 import java.util.List;
 import java.util.function.Consumer;
@@ -99,10 +100,22 @@ class Bound {
   }
 
   static void enumerate(
-      Discrete<Object> discrete, Bound lo, Bound hi, Consumer<Object> out) {
+      Discrete<Object> discrete,
+      Bound lo,
+      Bound hi,
+      BigInteger maxLength,
+      Consumer<Object> out) {
+    // An endpoint left unbounded is the end of the domain. The domain is
+    // finite, so "AT_LEAST #\"\253\"" yields the last three characters, even
+    // though it names no upper bound.
+    final Object end;
+    final boolean endInclusive;
     if (hi.value == null) {
-      throw new Codes.MorelRuntimeException(
-          Codes.BuiltInExn.SIZE, Pos.ZERO); // unbounded range
+      end = discrete.maxValue();
+      endInclusive = true;
+    } else {
+      end = hi.value;
+      endInclusive = hi.inclusive;
     }
     Object start;
     if (lo.value == null) {
@@ -118,11 +131,20 @@ class Bound {
         }
       }
     }
+    // Count the values before producing any. The count is the distance
+    // between the endpoints' positions, so a range of 2^65 values is refused
+    // as quickly as a range of three is built.
+    final BigInteger count =
+        discrete.ordinal(end).subtract(discrete.ordinal(start));
+    if (count.compareTo(maxLength) >= 0) {
+      throw new Codes.MorelRuntimeException(Codes.BuiltInExn.SIZE, Pos.ZERO);
+    }
+
     Comparator<Object> cmp = discrete.comparator();
     Object v = start;
     while (true) {
-      int c = cmp.compare(v, hi.value);
-      if (c > 0 || c == 0 && !hi.inclusive) {
+      int c = cmp.compare(v, end);
+      if (c > 0 || c == 0 && !endInclusive) {
         break;
       }
       out.accept(v);

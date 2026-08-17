@@ -22,17 +22,16 @@ import static net.hydromatic.morel.Matchers.list;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.google.common.collect.ImmutableList;
+import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.compile.BuiltIn;
-import net.hydromatic.morel.compile.CompileException;
 import net.hydromatic.morel.eval.Discrete;
 import net.hydromatic.morel.eval.Discretes;
-import net.hydromatic.morel.eval.Unit;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.PrimitiveType;
@@ -41,7 +40,15 @@ import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import org.junit.jupiter.api.Test;
 
-/** Unit test for {@link Discrete} and {@link Discretes}. */
+/**
+ * Unit test for {@link Discrete} and {@link Discretes}.
+ *
+ * <p>These tests cover the ends of each domain, which a Morel expression cannot
+ * reach: {@code Range.flatten [AT_LEAST x]} raises {@code Size} rather than
+ * counting up to the greatest value. What a Morel expression can reach -- the
+ * successor function and the order, for each discrete type -- is covered by
+ * {@code script/range.smli}, under "Discrete element types".
+ */
 @SuppressWarnings({"EqualsWithItself", "UnnecessaryUnicodeEscape"})
 class DiscreteTest {
   private static final char CHR_255 = '\u00ff';
@@ -59,10 +66,19 @@ class DiscreteTest {
     BuiltIn.dataTypes(typeSystem, bindings);
   }
 
+  /** Returns two raised to the power {@code n}. */
+  private static BigInteger two(int n) {
+    return BigInteger.ONE.shiftLeft(n);
+  }
+
+  /** Returns the discrete domain of a type. */
+  private Discrete<Object> discrete(Type type) {
+    return Discretes.discreteFor(typeSystem, type, Pos.ZERO);
+  }
+
   @Test
   void testIntDiscrete() {
-    Discrete<Object> d =
-        Discretes.discreteFor(typeSystem, PrimitiveType.INT, Pos.ZERO);
+    Discrete<Object> d = discrete(PrimitiveType.INT);
     assertThat(d.minValue(), is(Integer.MIN_VALUE));
     assertThat(d.maxValue(), is(Integer.MAX_VALUE));
     assertThat(d.next(0), is(1));
@@ -74,12 +90,16 @@ class DiscreteTest {
     assertThat(d.comparator().compare(1, 2) < 0, is(true));
     assertThat(d.comparator().compare(2, 2), is(0));
     assertThat(d.comparator().compare(3, 2) > 0, is(true));
+    assertThat(d.size(), is(two(32)));
+    assertThat(d.ordinal(Integer.MIN_VALUE), is(BigInteger.ZERO));
+    assertThat(d.ordinal(0), is(two(31)));
+    assertThat(
+        d.ordinal(Integer.MAX_VALUE), is(two(32).subtract(BigInteger.ONE)));
   }
 
   @Test
   void testCharDiscrete() {
-    Discrete<Object> d =
-        Discretes.discreteFor(typeSystem, PrimitiveType.CHAR, Pos.ZERO);
+    Discrete<Object> d = discrete(PrimitiveType.CHAR);
     assertThat(d.minValue(), is(CHR_0));
     assertThat(d.maxValue(), is(CHR_255));
     assertThat(d.next(CHR_0), is(CHR_1));
@@ -92,84 +112,59 @@ class DiscreteTest {
     assertThat(d.comparator().compare('a', 'b') < 0, is(true));
     assertThat(d.comparator().compare('b', 'b'), is(0));
     assertThat(d.comparator().compare('c', 'b') > 0, is(true));
-  }
-
-  @Test
-  void testBoolDiscrete() {
-    Discrete<Object> d =
-        Discretes.discreteFor(typeSystem, PrimitiveType.BOOL, Pos.ZERO);
-    assertThat(d.minValue(), is(Boolean.FALSE));
-    assertThat(d.maxValue(), is(Boolean.TRUE));
-    assertThat(d.next(Boolean.FALSE), is(Boolean.TRUE));
-    assertThat(d.next(Boolean.TRUE), nullValue());
-    assertThat(d.prev(Boolean.FALSE), nullValue());
-    assertThat(d.prev(Boolean.TRUE), is(Boolean.FALSE));
-    assertThat(d.comparator().compare(false, true) < 0, is(true));
-    assertThat(d.comparator().compare(true, true), is(0));
-    assertThat(d.comparator().compare(true, false) > 0, is(true));
-  }
-
-  @Test
-  void testUnitDiscrete() {
-    Discrete<Object> d =
-        Discretes.discreteFor(typeSystem, PrimitiveType.UNIT, Pos.ZERO);
-    assertThat(d.minValue(), is(Unit.INSTANCE));
-    assertThat(d.maxValue(), is(Unit.INSTANCE));
-    assertThat(d.next(Unit.INSTANCE), nullValue());
-    assertThat(d.prev(Unit.INSTANCE), nullValue());
-    assertThat(d.comparator().compare(Unit.INSTANCE, Unit.INSTANCE), is(0));
+    assertThat(d.size(), is(two(8)));
+    assertThat(d.ordinal(CHR_0), is(BigInteger.ZERO));
+    assertThat(d.ordinal('a'), is(BigInteger.valueOf(97)));
+    assertThat(d.ordinal(CHR_255), is(BigInteger.valueOf(255)));
   }
 
   @Test
   void testTupleDiscrete() {
-    // bool * int: lexicographic order, rightmost increments first
+    // bool * int: the ends of the product are the ends of each component.
     final RecordLikeType boolIntType =
         typeSystem.tupleType(PrimitiveType.BOOL, PrimitiveType.INT);
-    final Discrete<Object> d =
-        Discretes.discreteFor(typeSystem, boolIntType, Pos.ZERO);
+    final Discrete<Object> d = discrete(boolIntType);
 
-    // min/max
     assertThat(d.minValue(), is(list(Boolean.FALSE, Integer.MIN_VALUE)));
     assertThat(d.maxValue(), is(list(Boolean.TRUE, Integer.MAX_VALUE)));
 
-    // next: increment rightmost (int) component first
-    final List<Object> falseZero = ImmutableList.of(false, 0);
-    final List<Object> falseOne = ImmutableList.of(false, 1);
-    assertThat(d.next(falseZero), is(falseOne));
+    // Carry: the rightmost component wraps into the one on its left.
+    final List<Object> falseMax = ImmutableList.of(false, Integer.MAX_VALUE);
+    final List<Object> trueMin = ImmutableList.of(true, Integer.MIN_VALUE);
+    assertThat(d.next(falseMax), is(trueMin));
+    assertThat(d.prev(trueMin), is(falseMax));
+    assertThat(d.next(d.maxValue()), nullValue());
+    assertThat(d.prev(d.minValue()), nullValue());
 
-    // prev: decrement rightmost component
-    assertThat(d.prev(falseOne), is(falseZero));
-
-    // comparator: false < true, then int order
-    final List<Object> trueZero = ImmutableList.of(true, 0);
-    assertThat(d.comparator().compare(falseZero, trueZero) < 0, is(true));
-    assertThat(d.comparator().compare(falseZero, falseOne) < 0, is(true));
-    assertThat(d.comparator().compare(falseZero, falseZero), is(0));
+    // Positions run over the product, so counting from one value to another
+    // costs no more than subtracting.
+    assertThat(d.size(), is(two(33)));
+    assertThat(d.ordinal(d.minValue()), is(BigInteger.ZERO));
+    assertThat(d.ordinal(falseMax), is(two(32).subtract(BigInteger.ONE)));
+    assertThat(d.ordinal(trueMin), is(two(32)));
+    assertThat(d.ordinal(d.maxValue()), is(two(33).subtract(BigInteger.ONE)));
   }
 
+  /**
+   * Tests a domain with far more values than a machine integer can number. A
+   * nine-character word has 256^9 = 2^72 of them, and its positions are still
+   * exact.
+   */
   @Test
-  void testBoolTupleDiscrete() {
-    // bool * bool: fully bounded, can enumerate completely
-    final RecordLikeType boolBoolType =
-        typeSystem.tupleType(PrimitiveType.BOOL, PrimitiveType.BOOL);
-    final Discrete<Object> d =
-        Discretes.discreteFor(typeSystem, boolBoolType, Pos.ZERO);
+  void testWordDiscrete() {
+    final RecordLikeType wordType =
+        typeSystem.tupleType(Collections.nCopies(9, PrimitiveType.CHAR));
+    final Discrete<Object> d = discrete(wordType);
 
-    final List<Object> ff = ImmutableList.of(false, false);
-    final List<Object> ft = ImmutableList.of(false, true);
-    final List<Object> tf = ImmutableList.of(true, false);
-    final List<Object> tt = ImmutableList.of(true, true);
+    assertThat(d.size(), is(two(72)));
+    assertThat(d.ordinal(d.minValue()), is(BigInteger.ZERO));
+    assertThat(d.ordinal(d.maxValue()), is(two(72).subtract(BigInteger.ONE)));
 
-    assertThat(d.minValue(), is(ff));
-    assertThat(d.maxValue(), is(tt));
-    assertThat(d.next(ff), is(ft));
-    assertThat(d.next(ft), is(tf));
-    assertThat(d.next(tf), is(tt));
-    assertThat(d.next(tt), nullValue());
-    assertThat(d.prev(ff), nullValue());
-    assertThat(d.prev(ft), is(ff));
-    assertThat(d.prev(tf), is(ft));
-    assertThat(d.prev(tt), is(tf));
+    // The leading character is worth 256^8 = 2^64 words, so a word that
+    // differs from the least only there is that far along.
+    final List<Object> word = new ArrayList<>(Collections.nCopies(9, CHR_0));
+    word.set(0, '\u0002');
+    assertThat(d.ordinal(ImmutableList.copyOf(word)), is(two(65)));
   }
 
   @Test
@@ -178,8 +173,7 @@ class DiscreteTest {
     final Type descendingScheme = typeSystem.descending();
     final DataType descendingInt =
         (DataType) typeSystem.apply(descendingScheme, PrimitiveType.INT);
-    final Discrete<Object> d =
-        Discretes.discreteFor(typeSystem, descendingInt, Pos.ZERO);
+    final Discrete<Object> d = discrete(descendingInt);
 
     // In descending order, min is the largest int, max is smallest.
     assertThat(d.minValue(), is(list("DESC", Integer.MAX_VALUE)));
@@ -199,46 +193,13 @@ class DiscreteTest {
     assertThat(d.comparator().compare(desc5, desc4) < 0, is(true));
     assertThat(d.comparator().compare(desc5, desc5), is(0));
     assertThat(d.comparator().compare(desc4, desc5) > 0, is(true));
-  }
 
-  @Test
-  void testEnumDiscrete() {
-    initBuiltIns();
-    final Type orderType = typeSystem.order();
-    final Discrete<Object> d =
-        Discretes.discreteFor(typeSystem, orderType, Pos.ZERO);
-
-    // order has 3 constructors: LESS, EQUAL, GREATER
-    final List<Object> less = ImmutableList.of("LESS");
-    final List<Object> equal = ImmutableList.of("EQUAL");
-    final List<Object> greater = ImmutableList.of("GREATER");
-
-    assertThat(d.minValue(), is(less));
-    assertThat(d.maxValue(), is(greater));
-    assertThat(d.next(less), is(equal));
-    assertThat(d.next(equal), is(greater));
-    assertThat(d.next(greater), nullValue());
-    assertThat(d.prev(less), nullValue());
-    assertThat(d.prev(equal), is(less));
-    assertThat(d.prev(greater), is(equal));
-    assertThat(d.comparator().compare(less, equal) < 0, is(true));
-    assertThat(d.comparator().compare(equal, equal), is(0));
-    assertThat(d.comparator().compare(greater, equal) > 0, is(true));
-  }
-
-  @Test
-  void testRealNotDiscrete() {
-    assertThrows(
-        CompileException.class,
-        () -> Discretes.discreteFor(typeSystem, PrimitiveType.REAL, Pos.ZERO));
-  }
-
-  @Test
-  void testStringNotDiscrete() {
-    assertThrows(
-        CompileException.class,
-        () ->
-            Discretes.discreteFor(typeSystem, PrimitiveType.STRING, Pos.ZERO));
+    // Positions are counted from the far end, so they too are reversed.
+    assertThat(d.size(), is(two(32)));
+    assertThat(d.ordinal(d.minValue()), is(BigInteger.ZERO));
+    assertThat(d.ordinal(desc5), is(two(31).subtract(BigInteger.valueOf(6))));
+    assertThat(d.ordinal(desc4), is(two(31).subtract(BigInteger.valueOf(5))));
+    assertThat(d.ordinal(d.maxValue()), is(two(32).subtract(BigInteger.ONE)));
   }
 }
 

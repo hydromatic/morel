@@ -418,6 +418,132 @@ Range.flatten [POINT 1, POINT 2, POINT 1, POINT 3];
 Range.flatten ([] : int range list);
 > val it = [] : int list
 
+(* Discrete element types ----------------------------------------- *)
+
+(* Flattening a range walks its element type's discrete domain from one
+ * end to the other, so it shows what that domain's successor function
+ * and order are. *)
+
+(*) char: successor is the next code point.
+Range.flatten [CLOSED (#"a", #"d")];
+> val it = [#"a",#"b",#"c",#"d"] : char list
+
+(*) AT_MOST starts at the least value of the domain, #"\^@".
+Range.flatten [AT_MOST #"\002"];
+> val it = [#"\^@",#"\^A",#"\^B"] : char list
+
+(*) bool: false then true.
+Range.flatten [CLOSED (false, true)];
+> val it = [false,true] : bool list
+Range.flatten [AT_MOST false];
+> val it = [false] : bool list
+
+(*) unit has one value.
+Range.flatten [POINT ()];
+> val it = [()] : unit list
+
+(* A tuple is ordered lexicographically, and its rightmost component
+ * moves fastest. *)
+Range.flatten [CLOSED ((false, 1), (false, 3))];
+> val it = [(false,1),(false,2),(false,3)] : (bool * int) list
+
+(*) A tuple of bounded components enumerates completely.
+Range.flatten [CLOSED ((false, false), (true, true))];
+> val it = [(false,false),(false,true),(true,false),(true,true)]
+>   : (bool * bool) list
+
+(*) A datatype whose constructors are all nullary is an enum.
+Range.flatten [CLOSED (LESS, GREATER)];
+> val it = [LESS,EQUAL,GREATER] : order list
+
+(* An endpoint left unbounded is the end of the domain, and a bounded
+ * domain has one, so these enumerate rather than raising Size. *)
+Range.flatten [AT_LEAST #"\253"];
+> val it = [#"\253",#"\254",#"\255"] : char list
+Range.flatten [AT_LEAST EQUAL];
+> val it = [EQUAL,GREATER] : order list
+Range.flatten [ALL] : bool list;
+> val it = [false,true] : bool list
+Range.flatten [ALL] : (bool * bool) list;
+> val it = [(false,false),(false,true),(true,false),(true,true)]
+>   : (bool * bool) list
+Range.flatten [ALL] : unit list;
+> val it = [()] : unit list
+
+(* A domain may be too large to make a list of, whether it is named by an
+ * unbounded endpoint or reached by counting from the end of the domain.
+ * Both are refused at once, by counting, not by counting up to the
+ * limit. *)
+Range.flatten [AT_LEAST 3];
+> uncaught exception Size [size]
+>   raised at: 0.0-0.0
+Range.flatten [AT_MOST (false, 1)];
+> uncaught exception Size [size]
+>   raised at: 0.0-0.0
+Range.flatten [AT_LEAST (DESC 3)];
+> uncaught exception Size [size]
+>   raised at: 0.0-0.0
+
+(* A nine-character word has 256^9 = 2^72 values, more than a machine
+ * integer can number. Counting them is exact all the same, so how many a
+ * range holds decides whether it can be made into a list, however large
+ * the domain it is drawn from.
+ *
+ * Each of these counts from the least word, so a range holds as many
+ * words as its upper bound has words below it: a character in position i
+ * (from 0) is worth 256^(8-i) of them. *)
+
+(*) 2^3 words: the last character, worth 1 word each, reaches 8.
+List.length (Range.flatten
+  [LESS_THAN (#"\000", #"\000", #"\000", #"\000", #"\000", #"\000",
+     #"\000", #"\000", #"\008")]);
+> val it = 8 : int
+
+(*) 2^9 words: the eighth character is worth 256 words, and reaches 2.
+List.length (Range.flatten
+  [LESS_THAN (#"\000", #"\000", #"\000", #"\000", #"\000", #"\000",
+     #"\000", #"\002", #"\000")]);
+> val it = 512 : int
+
+(*) 2^50 words: the third character is worth 256^6 = 2^48, and reaches 4.
+List.length (Range.flatten
+  [LESS_THAN (#"\000", #"\000", #"\004", #"\000", #"\000", #"\000",
+     #"\000", #"\000", #"\000")]);
+> uncaught exception Size [size]
+>   raised at: 0.0-0.0
+
+(*) 2^65 words: the first character is worth 256^8 = 2^64, and reaches 2.
+List.length (Range.flatten
+  [LESS_THAN (#"\002", #"\000", #"\000", #"\000", #"\000", #"\000",
+     #"\000", #"\000", #"\000")]);
+> uncaught exception Size [size]
+>   raised at: 0.0-0.0
+
+(* How many values are too many is the "rangeMaxLength" property. Lower
+ * it and a range that was short enough no longer is. *)
+Sys.set ("rangeMaxLength", 4);
+> val it = () : unit
+Range.flatten [CLOSED (1, 10)];
+> uncaught exception Size [size]
+>   raised at: 0.0-0.0
+Range.flatten [CLOSED (1, 3)];
+> val it = [1,2,3] : int list
+
+(* The limit may be larger than a Morel "int" can hold, and is then
+ * written as a numeral in a string. *)
+Sys.set ("rangeMaxLength", "4722366482869645213696");
+> val it = () : unit
+List.length (Range.flatten [CLOSED (1, 100)]);
+> val it = 100 : int
+Sys.show "rangeMaxLength";
+> val it = SOME "4722366482869645213696" : string option
+Sys.unset "rangeMaxLength";
+> val it = () : unit
+
+(*) 'descending' reverses the order of the type it wraps.
+Range.flatten [CLOSED (DESC 3, DESC 1)];
+> val it = [DESC 3,DESC 2,DESC 1] : int descending list
+
 (* Range list syntax ---------------------------------------------- *)
 
 (*) Plain list literal: no ranges, unchanged.

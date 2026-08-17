@@ -18,6 +18,7 @@
  */
 package net.hydromatic.morel;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.Matchers.hasMoniker;
 import static net.hydromatic.morel.Matchers.isAst;
@@ -68,6 +69,7 @@ import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.Pair;
+import net.hydromatic.morel.util.PairList;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -93,6 +95,7 @@ class Ml {
     this.dataSetMap = ImmutableMap.copyOf(dataSetMap);
     this.propMap = ImmutableMap.copyOf(propMap);
     this.tracer = tracer;
+    checkArgument(PairList.viewOf(propMap).allMatch(Prop::isValid));
   }
 
   /** Creates an {@code Ml}. */
@@ -620,7 +623,12 @@ class Ml {
   }
 
   Ml with(Prop prop, Object value) {
-    return new Ml(ml, pos, dataSetMap, plus(propMap, prop, value), tracer);
+    // Convert the value to the property's type, so that the map holds what
+    // the property says it holds. An "int" will do for a property of
+    // arbitrary precision, as it will in "Sys.set".
+    final Map<Prop, Object> map = new LinkedHashMap<>(propMap);
+    prop.setLenient(map, value);
+    return new Ml(ml, pos, dataSetMap, map, tracer);
   }
 
   Ml withTracer(Tracer tracer) {

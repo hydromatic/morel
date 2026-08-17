@@ -18,6 +18,7 @@
  */
 package net.hydromatic.morel.eval;
 
+import java.math.BigInteger;
 import java.util.Comparator;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -56,6 +57,19 @@ public interface Discrete<T> {
 
   /** Returns the maximum value of this type. */
   T maxValue();
+
+  /** Returns how many values this type has. */
+  BigInteger size();
+
+  /**
+   * Returns the position of {@code v}, counting from 0 at {@link #minValue}.
+   *
+   * <p>Positions serve to count the values between two others without visiting
+   * them. A domain can hold far more values than a machine can -- a
+   * nine-character word has 2^72 of them -- so a position is exact rather than
+   * bounded by the width of a machine integer.
+   */
+  BigInteger ordinal(T v);
 }
 
 // End Discrete.java

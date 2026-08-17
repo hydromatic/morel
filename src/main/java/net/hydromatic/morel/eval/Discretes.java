@@ -18,9 +18,8 @@
  */
 package net.hydromatic.morel.eval;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
-
 import com.google.common.collect.ImmutableList;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -55,8 +54,22 @@ public class Discretes {
    * Returns a {@link Discrete} domain for the given type, or throws {@link
    * CompileException} if the type is not discrete.
    */
-  @SuppressWarnings("unchecked")
   public static Discrete<Object> discreteFor(
+      TypeSystem typeSystem, Type type, Pos pos) {
+    final Discrete<Object> discrete = discreteForOrNull(typeSystem, type, pos);
+    if (discrete == null) {
+      throw new CompileException("not a discrete type: " + type, false, pos);
+    }
+    return discrete;
+  }
+
+  /**
+   * Returns a {@link Discrete} domain for the given type, or null if the type
+   * is not discrete. Use this where not being discrete is an expected answer
+   * rather than an error.
+   */
+  @SuppressWarnings("unchecked")
+  public static @Nullable Discrete<Object> discreteForOrNull(
       TypeSystem typeSystem, Type type, Pos pos) {
     if (type instanceof PrimitiveType) {
       switch ((PrimitiveType) type) {
@@ -69,8 +82,7 @@ public class Discretes {
         case UNIT:
           return (Discrete<Object>) (Discrete<?>) UNIT;
         default:
-          throw new CompileException(
-              "not a discrete type: " + type, false, pos);
+          return null;
       }
     }
     if (type instanceof RecordLikeType) {
@@ -79,19 +91,28 @@ public class Discretes {
     if (type instanceof DataType) {
       return dataTypeDiscrete(typeSystem, (DataType) type, pos);
     }
-    throw new CompileException("not a discrete type: " + type, false, pos);
+    return null;
   }
 
   /** Creates a {@link Discrete} for a tuple or record type. */
-  private static Discrete<Object> tupleDiscrete(
+  private static @Nullable Discrete<Object> tupleDiscrete(
       TypeSystem typeSystem, RecordLikeType type, Pos pos) {
-    final List<Discrete<Object>> components =
-        type.argTypes().stream()
-            .map(t -> discreteFor(typeSystem, t, pos))
-            .collect(toImmutableList());
+    final ImmutableList.Builder<Discrete<Object>> components =
+        ImmutableList.builder();
+    for (Type argType : type.argTypes()) {
+      final Discrete<Object> component =
+          discreteForOrNull(typeSystem, argType, pos);
+      if (component == null) {
+        // A product is discrete only if every component is. Name the component
+        // rather than the whole tuple; it is the one at fault.
+        throw new CompileException(
+            "not a discrete type: " + argType, false, pos);
+      }
+      components.add(component);
+    }
     final Comparator<Object> cmp =
         Comparators.comparatorFor(typeSystem, type, pos);
-    return new TupleDiscrete(cmp, components);
+    return new TupleDiscrete(cmp, components.build());
   }
 
   /**
@@ -150,10 +171,14 @@ public class Discretes {
   }
 
   /** Creates a {@link Discrete} for a DataType. */
-  private static Discrete<Object> dataTypeDiscrete(
+  private static @Nullable Discrete<Object> dataTypeDiscrete(
       TypeSystem typeSystem, DataType dt, Pos pos) {
     if (dt.name.equals(BuiltIn.Datatype.DESCENDING.mlName())) {
-      final Discrete<Object> inner = discreteFor(typeSystem, dt.arg(0), pos);
+      final Discrete<Object> inner =
+          discreteForOrNull(typeSystem, dt.arg(0), pos);
+      if (inner == null) {
+        return null;
+      }
       final Comparator<Object> cmp =
           Comparators.comparatorFor(typeSystem, dt, pos);
       return new DescendingDiscrete(inner, cmp);
@@ -171,13 +196,14 @@ public class Discretes {
       if (e.getValue().equals(Keys.dummy())) {
         ctorDiscretes.add(Optional.empty());
       } else {
-        try {
-          ctorDiscretes.add(
-              Optional.of(
-                  discreteFor(typeSystem, ctorTypes.get(e.getKey()), pos)));
-        } catch (CompileException ex) {
+        final Discrete<Object> argDiscrete =
+            discreteForOrNull(typeSystem, ctorTypes.get(e.getKey()), pos);
+        if (argDiscrete == null) {
+          // A constructor's argument type is not discrete, so neither is the
+          // datatype. Name the datatype; its constructors are its own affair.
           throw new CompileException("not a discrete type: " + dt, false, pos);
         }
+        ctorDiscretes.add(Optional.of(argDiscrete));
       }
     }
     final ImmutableList<String> names = ctorNames.build();
@@ -187,7 +213,7 @@ public class Discretes {
       return new SumDiscrete(cmp, names, ctorDiscretes.build());
     }
 
-    throw new CompileException("not a discrete type: " + dt, false, pos);
+    return null;
   }
 
   private static final Comparator<Object> NATURAL = Comparators::compare;
@@ -230,6 +256,19 @@ public class Discretes {
     public Integer maxValue() {
       return Integer.MAX_VALUE;
     }
+
+    private static final BigInteger SIZE =
+        BigInteger.ONE.shiftLeft(Integer.SIZE);
+
+    @Override
+    public BigInteger size() {
+      return SIZE;
+    }
+
+    @Override
+    public BigInteger ordinal(Integer v) {
+      return BigInteger.valueOf((long) v - Integer.MIN_VALUE);
+    }
   }
 
   /** {@link Discrete} implementation for {@code char} (ordinals 0–255). */
@@ -258,6 +297,18 @@ public class Discretes {
     public Character maxValue() {
       return '\u00ff';
     }
+
+    private static final BigInteger SIZE = BigInteger.valueOf('\u00ff' + 1);
+
+    @Override
+    public BigInteger size() {
+      return SIZE;
+    }
+
+    @Override
+    public BigInteger ordinal(Character v) {
+      return BigInteger.valueOf(v);
+    }
   }
 
   /** {@link Discrete} implementation for {@code bool} (false &lt; true). */
@@ -285,6 +336,16 @@ public class Discretes {
     @Override
     public Boolean maxValue() {
       return Boolean.TRUE;
+    }
+
+    @Override
+    public BigInteger size() {
+      return BigInteger.valueOf(2);
+    }
+
+    @Override
+    public BigInteger ordinal(Boolean v) {
+      return v ? BigInteger.ONE : BigInteger.ZERO;
     }
   }
 
@@ -316,16 +377,32 @@ public class Discretes {
     public Unit maxValue() {
       return Unit.INSTANCE;
     }
+
+    @Override
+    public BigInteger size() {
+      return BigInteger.ONE;
+    }
+
+    @Override
+    public BigInteger ordinal(Unit v) {
+      return BigInteger.ZERO;
+    }
   }
 
   /** {@link Discrete} implementation for a tuple or record type. */
   private static final class TupleDiscrete implements Discrete<Object> {
     private final Comparator<Object> cmp;
     private final List<Discrete<Object>> components;
+    private final BigInteger size;
 
     TupleDiscrete(Comparator<Object> cmp, List<Discrete<Object>> components) {
       this.cmp = cmp;
       this.components = components;
+      BigInteger size = BigInteger.ONE;
+      for (Discrete<Object> component : components) {
+        size = size.multiply(component.size());
+      }
+      this.size = size;
     }
 
     @Override
@@ -351,6 +428,27 @@ public class Discretes {
     @Override
     public @Nullable Object maxValue() {
       return tupleExtreme(components, /* min= */ false);
+    }
+
+    @Override
+    public BigInteger size() {
+      return size;
+    }
+
+    @Override
+    public BigInteger ordinal(Object v) {
+      // Mixed radix, most significant component first, as the order is
+      // lexicographic.
+      final List<?> list = (List<?>) v;
+      BigInteger ordinal = BigInteger.ZERO;
+      for (int i = 0; i < components.size(); i++) {
+        final Discrete<Object> component = components.get(i);
+        ordinal =
+            ordinal
+                .multiply(component.size())
+                .add(component.ordinal(list.get(i)));
+      }
+      return ordinal;
     }
   }
 
@@ -398,18 +496,22 @@ public class Discretes {
       final Object min = inner.minValue();
       return min == null ? null : ImmutableList.of("DESC", min);
     }
+
+    @Override
+    public BigInteger size() {
+      return inner.size();
+    }
+
+    @Override
+    public BigInteger ordinal(Object v) {
+      // The order is reversed, so position is counted from the far end.
+      return inner
+          .size()
+          .subtract(BigInteger.ONE)
+          .subtract(inner.ordinal(((List<?>) v).get(1)));
+    }
   }
 
-  /**
-   * {@link Discrete} implementation for a sum DataType (all constructors are
-   * either nullary or wrap a discrete argument type).
-   *
-   * <p>Handles both pure enums (e.g., {@code order}) and mixed types (e.g.,
-   * {@code (order, bool) either}).
-   *
-   * <p>Runtime values: nullary constructor {@code C} is {@code ["C"]}; unary
-   * constructor {@code C of t} is {@code ["C", tValue]}.
-   */
   /**
    * {@link Discrete} implementation for a sum DataType (all constructors are
    * either nullary or wrap a discrete argument type).
@@ -482,6 +584,37 @@ public class Discretes {
     @Override
     public @Nullable Object maxValue() {
       return lastOf(ctorNames.size() - 1);
+    }
+
+    @Override
+    public BigInteger size() {
+      BigInteger size = BigInteger.ZERO;
+      for (Optional<Discrete<Object>> d : ctorDiscretes) {
+        size = size.add(sizeOf(d));
+      }
+      return size;
+    }
+
+    @Override
+    public BigInteger ordinal(Object v) {
+      // Constructors run in declaration order, so a value's position is the
+      // number of values under the constructors before its own, plus its
+      // position among its own constructor's arguments.
+      final List<?> list = (List<?>) v;
+      final int i = ctorNames.indexOf((String) list.get(0));
+      BigInteger ordinal = BigInteger.ZERO;
+      for (int j = 0; j < i; j++) {
+        ordinal = ordinal.add(sizeOf(ctorDiscretes.get(j)));
+      }
+      final Optional<Discrete<Object>> d = ctorDiscretes.get(i);
+      return d.isPresent()
+          ? ordinal.add(d.get().ordinal(list.get(1)))
+          : ordinal;
+    }
+
+    /** Returns how many values a constructor has; a nullary one has itself. */
+    private static BigInteger sizeOf(Optional<Discrete<Object>> d) {
+      return d.isPresent() ? d.get().size() : BigInteger.ONE;
     }
 
     /** Returns the minimum value starting at constructor index {@code i}. */
