@@ -126,7 +126,7 @@ public class Inliner extends EnvShuttle {
         final Type paramType = ((FnType) id.type).paramType;
         if (!(paramType instanceof TypeVar)) {
           final Macro macro = (Macro) binding.value;
-          final Core.Exp x = macro.expand(typeSystem, env, paramType);
+          final Core.Exp x = macro.expand(typeSystem, env, paramType, id.pos);
           if (x instanceof Core.Literal) {
             return x;
           }

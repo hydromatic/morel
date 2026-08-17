@@ -27,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.List;
+import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.compile.BuiltIn;
 import net.hydromatic.morel.compile.CompileException;
 import net.hydromatic.morel.eval.Discrete;
@@ -60,7 +61,8 @@ class DiscreteTest {
 
   @Test
   void testIntDiscrete() {
-    Discrete<Object> d = Discretes.discreteFor(typeSystem, PrimitiveType.INT);
+    Discrete<Object> d =
+        Discretes.discreteFor(typeSystem, PrimitiveType.INT, Pos.ZERO);
     assertThat(d.minValue(), is(Integer.MIN_VALUE));
     assertThat(d.maxValue(), is(Integer.MAX_VALUE));
     assertThat(d.next(0), is(1));
@@ -76,7 +78,8 @@ class DiscreteTest {
 
   @Test
   void testCharDiscrete() {
-    Discrete<Object> d = Discretes.discreteFor(typeSystem, PrimitiveType.CHAR);
+    Discrete<Object> d =
+        Discretes.discreteFor(typeSystem, PrimitiveType.CHAR, Pos.ZERO);
     assertThat(d.minValue(), is(CHR_0));
     assertThat(d.maxValue(), is(CHR_255));
     assertThat(d.next(CHR_0), is(CHR_1));
@@ -93,7 +96,8 @@ class DiscreteTest {
 
   @Test
   void testBoolDiscrete() {
-    Discrete<Object> d = Discretes.discreteFor(typeSystem, PrimitiveType.BOOL);
+    Discrete<Object> d =
+        Discretes.discreteFor(typeSystem, PrimitiveType.BOOL, Pos.ZERO);
     assertThat(d.minValue(), is(Boolean.FALSE));
     assertThat(d.maxValue(), is(Boolean.TRUE));
     assertThat(d.next(Boolean.FALSE), is(Boolean.TRUE));
@@ -107,7 +111,8 @@ class DiscreteTest {
 
   @Test
   void testUnitDiscrete() {
-    Discrete<Object> d = Discretes.discreteFor(typeSystem, PrimitiveType.UNIT);
+    Discrete<Object> d =
+        Discretes.discreteFor(typeSystem, PrimitiveType.UNIT, Pos.ZERO);
     assertThat(d.minValue(), is(Unit.INSTANCE));
     assertThat(d.maxValue(), is(Unit.INSTANCE));
     assertThat(d.next(Unit.INSTANCE), nullValue());
@@ -120,7 +125,8 @@ class DiscreteTest {
     // bool * int: lexicographic order, rightmost increments first
     final RecordLikeType boolIntType =
         typeSystem.tupleType(PrimitiveType.BOOL, PrimitiveType.INT);
-    final Discrete<Object> d = Discretes.discreteFor(typeSystem, boolIntType);
+    final Discrete<Object> d =
+        Discretes.discreteFor(typeSystem, boolIntType, Pos.ZERO);
 
     // min/max
     assertThat(d.minValue(), is(list(Boolean.FALSE, Integer.MIN_VALUE)));
@@ -146,7 +152,8 @@ class DiscreteTest {
     // bool * bool: fully bounded, can enumerate completely
     final RecordLikeType boolBoolType =
         typeSystem.tupleType(PrimitiveType.BOOL, PrimitiveType.BOOL);
-    final Discrete<Object> d = Discretes.discreteFor(typeSystem, boolBoolType);
+    final Discrete<Object> d =
+        Discretes.discreteFor(typeSystem, boolBoolType, Pos.ZERO);
 
     final List<Object> ff = ImmutableList.of(false, false);
     final List<Object> ft = ImmutableList.of(false, true);
@@ -171,7 +178,8 @@ class DiscreteTest {
     final Type descendingScheme = typeSystem.descending();
     final DataType descendingInt =
         (DataType) typeSystem.apply(descendingScheme, PrimitiveType.INT);
-    final Discrete<Object> d = Discretes.discreteFor(typeSystem, descendingInt);
+    final Discrete<Object> d =
+        Discretes.discreteFor(typeSystem, descendingInt, Pos.ZERO);
 
     // In descending order, min is the largest int, max is smallest.
     assertThat(d.minValue(), is(list("DESC", Integer.MAX_VALUE)));
@@ -197,7 +205,8 @@ class DiscreteTest {
   void testEnumDiscrete() {
     initBuiltIns();
     final Type orderType = typeSystem.order();
-    final Discrete<Object> d = Discretes.discreteFor(typeSystem, orderType);
+    final Discrete<Object> d =
+        Discretes.discreteFor(typeSystem, orderType, Pos.ZERO);
 
     // order has 3 constructors: LESS, EQUAL, GREATER
     final List<Object> less = ImmutableList.of("LESS");
@@ -221,14 +230,15 @@ class DiscreteTest {
   void testRealNotDiscrete() {
     assertThrows(
         CompileException.class,
-        () -> Discretes.discreteFor(typeSystem, PrimitiveType.REAL));
+        () -> Discretes.discreteFor(typeSystem, PrimitiveType.REAL, Pos.ZERO));
   }
 
   @Test
   void testStringNotDiscrete() {
     assertThrows(
         CompileException.class,
-        () -> Discretes.discreteFor(typeSystem, PrimitiveType.STRING));
+        () ->
+            Discretes.discreteFor(typeSystem, PrimitiveType.STRING, Pos.ZERO));
   }
 }
 

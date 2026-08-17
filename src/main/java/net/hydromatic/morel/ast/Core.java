@@ -775,8 +775,8 @@ public class Core {
     public final NamedPat idPat;
 
     /** Creates an Id. */
-    Id(NamedPat idPat) {
-      super(Pos.ZERO, Op.ID, idPat.type);
+    Id(Pos pos, NamedPat idPat) {
+      super(pos, Op.ID, idPat.type);
       this.idPat = requireNonNull(idPat);
     }
 
@@ -925,11 +925,12 @@ public class Core {
     public Object toBuiltIn(TypeSystem typeSystem, @Nullable Pos pos) {
       final BuiltIn builtIn = unwrap(BuiltIn.class);
       Object o = requireNonNull(Codes.BUILT_IN_VALUES.get(builtIn));
+      final Pos pos2 = first(pos, this.pos);
       if (o instanceof Codes.Typed) {
-        o = ((Codes.Typed) o).withType(typeSystem, type);
+        o = ((Codes.Typed) o).withType(typeSystem, type, pos2);
       }
       if (o instanceof Codes.Positioned) {
-        o = ((Codes.Positioned) o).withPos(first(pos, this.pos));
+        o = ((Codes.Positioned) o).withPos(pos2);
       }
       return o;
     }
@@ -1506,8 +1507,8 @@ public class Core {
     public final IdPat idPat;
     public final Exp exp;
 
-    Fn(FnType type, IdPat idPat, Exp exp) {
-      super(Pos.ZERO, Op.FN, type);
+    Fn(Pos pos, FnType type, IdPat idPat, Exp exp) {
+      super(pos, Op.FN, type);
       this.idPat = requireNonNull(idPat);
       this.exp = requireNonNull(exp);
     }

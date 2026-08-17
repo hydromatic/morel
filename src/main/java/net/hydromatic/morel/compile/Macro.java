@@ -19,6 +19,7 @@
 package net.hydromatic.morel.compile;
 
 import net.hydromatic.morel.ast.Core;
+import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 
@@ -29,9 +30,13 @@ import net.hydromatic.morel.type.TypeSystem;
  * <p>Currently, Macros are internal. Also, the macro is validated as if it were
  * a function. Its type is derived before expansion. Expansion must preserve the
  * type.
+ *
+ * <p>{@code pos} is the position of the expression being expanded, for an error
+ * message if {@code argType} is a type the macro has no instance for.
  */
 public interface Macro {
-  Core.Exp expand(TypeSystem typeSystem, Environment env, Type argType);
+  Core.Exp expand(
+      TypeSystem typeSystem, Environment env, Type argType, Pos pos);
 }
 
 // End Macro.java

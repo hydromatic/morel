@@ -803,7 +803,7 @@ public class Resolver {
     final Binding binding = env.getOpt(id.name);
     checkNotNull(binding, "not found", id);
     final Core.NamedPat idPat = getIdPat(id, binding.id);
-    return core.id(idPat);
+    return core.id(id.pos, idPat);
   }
 
   private Core.Exp toCore(Ast.OpSection opSection) {
@@ -813,7 +813,7 @@ public class Resolver {
     // Just return a reference to the operator binding
     // The operator is already defined as a function value
     final Core.NamedPat idPat = getIdPat(opSection, binding.id);
-    return core.id(idPat);
+    return core.id(opSection.pos, idPat);
   }
 
   private Core.Exp toCore(Ast.Current ignoredCurrent) {

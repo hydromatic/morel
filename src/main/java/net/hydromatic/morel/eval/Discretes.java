@@ -56,7 +56,8 @@ public class Discretes {
    * CompileException} if the type is not discrete.
    */
   @SuppressWarnings("unchecked")
-  public static Discrete<Object> discreteFor(TypeSystem typeSystem, Type type) {
+  public static Discrete<Object> discreteFor(
+      TypeSystem typeSystem, Type type, Pos pos) {
     if (type instanceof PrimitiveType) {
       switch ((PrimitiveType) type) {
         case INT:
@@ -69,26 +70,27 @@ public class Discretes {
           return (Discrete<Object>) (Discrete<?>) UNIT;
         default:
           throw new CompileException(
-              "not a discrete type: " + type, false, Pos.ZERO);
+              "not a discrete type: " + type, false, pos);
       }
     }
     if (type instanceof RecordLikeType) {
-      return tupleDiscrete(typeSystem, (RecordLikeType) type);
+      return tupleDiscrete(typeSystem, (RecordLikeType) type, pos);
     }
     if (type instanceof DataType) {
-      return dataTypeDiscrete(typeSystem, (DataType) type);
+      return dataTypeDiscrete(typeSystem, (DataType) type, pos);
     }
-    throw new CompileException("not a discrete type: " + type, false, Pos.ZERO);
+    throw new CompileException("not a discrete type: " + type, false, pos);
   }
 
   /** Creates a {@link Discrete} for a tuple or record type. */
   private static Discrete<Object> tupleDiscrete(
-      TypeSystem typeSystem, RecordLikeType type) {
+      TypeSystem typeSystem, RecordLikeType type, Pos pos) {
     final List<Discrete<Object>> components =
         type.argTypes().stream()
-            .map(t -> discreteFor(typeSystem, t))
+            .map(t -> discreteFor(typeSystem, t, pos))
             .collect(toImmutableList());
-    final Comparator<Object> cmp = Comparators.comparatorFor(typeSystem, type);
+    final Comparator<Object> cmp =
+        Comparators.comparatorFor(typeSystem, type, pos);
     return new TupleDiscrete(cmp, components);
   }
 
@@ -149,10 +151,11 @@ public class Discretes {
 
   /** Creates a {@link Discrete} for a DataType. */
   private static Discrete<Object> dataTypeDiscrete(
-      TypeSystem typeSystem, DataType dt) {
+      TypeSystem typeSystem, DataType dt, Pos pos) {
     if (dt.name.equals(BuiltIn.Datatype.DESCENDING.mlName())) {
-      final Discrete<Object> inner = discreteFor(typeSystem, dt.arg(0));
-      final Comparator<Object> cmp = Comparators.comparatorFor(typeSystem, dt);
+      final Discrete<Object> inner = discreteFor(typeSystem, dt.arg(0), pos);
+      final Comparator<Object> cmp =
+          Comparators.comparatorFor(typeSystem, dt, pos);
       return new DescendingDiscrete(inner, cmp);
     }
 
@@ -170,20 +173,21 @@ public class Discretes {
       } else {
         try {
           ctorDiscretes.add(
-              Optional.of(discreteFor(typeSystem, ctorTypes.get(e.getKey()))));
+              Optional.of(
+                  discreteFor(typeSystem, ctorTypes.get(e.getKey()), pos)));
         } catch (CompileException ex) {
-          throw new CompileException(
-              "not a discrete type: " + dt, false, Pos.ZERO);
+          throw new CompileException("not a discrete type: " + dt, false, pos);
         }
       }
     }
     final ImmutableList<String> names = ctorNames.build();
     if (!names.isEmpty()) {
-      final Comparator<Object> cmp = Comparators.comparatorFor(typeSystem, dt);
+      final Comparator<Object> cmp =
+          Comparators.comparatorFor(typeSystem, dt, pos);
       return new SumDiscrete(cmp, names, ctorDiscretes.build());
     }
 
-    throw new CompileException("not a discrete type: " + dt, false, Pos.ZERO);
+    throw new CompileException("not a discrete type: " + dt, false, pos);
   }
 
   private static final Comparator<Object> NATURAL = Comparators::compare;

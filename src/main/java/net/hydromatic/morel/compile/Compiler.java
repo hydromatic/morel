@@ -1125,7 +1125,7 @@ public class Compiler {
     // Sort key compiled with cxResult: all scope vars use StackCode.
     final Code code = compile(cxResult, order.exp);
     final Comparator comparator =
-        Comparators.comparatorFor(typeSystem, order.exp.type);
+        Comparators.comparatorFor(typeSystem, order.exp.type, order.exp.pos);
     // Downstream compiled with cxResult so StackCode offsets match the
     // push-back of all inSlots values (including formerly env-based vars).
     final Supplier<RowSink> nextFactory =
@@ -1419,7 +1419,7 @@ public class Compiler {
     }
     if (o instanceof Macro) {
       final Macro value = (Macro) o;
-      final Core.Exp exp = value.expand(typeSystem, cx.env, argType);
+      final Core.Exp exp = value.expand(typeSystem, cx.env, argType, pos);
       switch (exp.op) {
         case FN_LITERAL:
           final Core.Literal literal = (Core.Literal) exp;

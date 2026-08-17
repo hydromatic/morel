@@ -210,18 +210,18 @@ Range.discreteSetOf [CLOSED (1, 3), POINT 0, CLOSED (7, 8), POINT 10, CLOSED (4,
 
 (*) discreteSetOf requires a discrete element type; string is not discrete.
 Range.discreteSetOf [CLOSED ("a", "z")];
-> 0.0-0.0 Error: not a discrete type: string
->   raised at: 0.0-0.0
+> stdIn:1.1-1.40 Error: not a discrete type: string
+>   raised at: stdIn:1.1-1.40
 
 (*) real is not discrete.
 Range.discreteSetOf [CLOSED (1.0, 3.0)];
-> 0.0-0.0 Error: not a discrete type: real
->   raised at: 0.0-0.0
+> stdIn:1.1-1.40 Error: not a discrete type: real
+>   raised at: stdIn:1.1-1.40
 
 (*) A tuple containing a non-discrete component is not discrete.
 Range.discreteSetOf [CLOSED ((false, "a"), (true, "z"))];
-> 0.0-0.0 Error: not a discrete type: string
->   raised at: 0.0-0.0
+> stdIn:1.1-1.57 Error: not a discrete type: string
+>   raised at: stdIn:1.1-1.57
 
 (*) contains on continuous_set (postfix syntax).
 val cs = Range.continuousSetOf [CLOSED (1, 3), CLOSED (7, 9)];

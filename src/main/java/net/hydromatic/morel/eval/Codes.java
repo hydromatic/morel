@@ -131,6 +131,19 @@ public abstract class Codes {
     };
   }
 
+  /**
+   * Returns an exception to throw when an overloaded operator has no instance
+   * for the type of the argument it is applied to.
+   */
+  private static CompileException notDefined(
+      BuiltIn builtIn, Type argType, Pos pos) {
+    return new CompileException(
+        format(
+            "operator '%s' not defined for type '%s'", builtIn.mlName, argType),
+        false,
+        pos);
+  }
+
   // ---------------------------------------------------------------------------
   // The following section contains fields that implement built-in functions and
   // values. They are in alphabetical order.
@@ -141,17 +154,14 @@ public abstract class Codes {
 
   /** @see BuiltIn#ABS */
   private static final Macro ABS =
-      (typeSystem, env, argType) -> {
+      (typeSystem, env, argType, pos) -> {
         switch ((PrimitiveType) argType) {
           case INT:
             return core.functionLiteral(typeSystem, BuiltIn.INT_ABS);
           case REAL:
             return core.functionLiteral(typeSystem, BuiltIn.REAL_ABS);
           default:
-            throw new CompileException(
-                "operator not defined for type '" + argType + "'",
-                false,
-                Pos.ZERO);
+            throw notDefined(BuiltIn.ABS, argType, pos);
         }
       };
 
@@ -3383,7 +3393,7 @@ public abstract class Codes {
 
   /** @see BuiltIn#OP_DIV */
   private static final Macro OP_DIV =
-      (typeSystem, env, argType) -> {
+      (typeSystem, env, argType, pos) -> {
         final Type resultType = ((TupleType) argType).argTypes.get(0);
         switch ((PrimitiveType) resultType) {
           case INT:
@@ -3391,10 +3401,7 @@ public abstract class Codes {
           case WORD:
             return core.functionLiteral(typeSystem, BuiltIn.WORD_DIV);
           default:
-            throw new CompileException(
-                "operator not defined for type '" + argType + "'",
-                false,
-                Pos.ZERO);
+            throw notDefined(BuiltIn.OP_DIV, argType, pos);
         }
       };
 
@@ -3470,7 +3477,7 @@ public abstract class Codes {
 
   /** @see BuiltIn#OP_MINUS */
   private static final Macro OP_MINUS =
-      (typeSystem, env, argType) -> {
+      (typeSystem, env, argType, pos) -> {
         final Type resultType = ((TupleType) argType).argTypes.get(0);
         switch ((PrimitiveType) resultType) {
           case INT:
@@ -3480,16 +3487,13 @@ public abstract class Codes {
           case WORD:
             return core.functionLiteral(typeSystem, BuiltIn.WORD_OP_MINUS);
           default:
-            throw new CompileException(
-                "operator not defined for type '" + argType + "'",
-                false,
-                Pos.ZERO);
+            throw notDefined(BuiltIn.OP_MINUS, argType, pos);
         }
       };
 
   /** @see BuiltIn#OP_MOD */
   private static final Macro OP_MOD =
-      (typeSystem, env, argType) -> {
+      (typeSystem, env, argType, pos) -> {
         final Type resultType = ((TupleType) argType).argTypes.get(0);
         switch ((PrimitiveType) resultType) {
           case INT:
@@ -3497,10 +3501,7 @@ public abstract class Codes {
           case WORD:
             return core.functionLiteral(typeSystem, BuiltIn.WORD_MOD);
           default:
-            throw new CompileException(
-                "operator not defined for type '" + argType + "'",
-                false,
-                Pos.ZERO);
+            throw notDefined(BuiltIn.OP_MOD, argType, pos);
         }
       };
 
@@ -3515,7 +3516,7 @@ public abstract class Codes {
 
   /** @see BuiltIn#OP_NEGATE */
   private static final Macro OP_NEGATE =
-      (typeSystem, env, argType) -> {
+      (typeSystem, env, argType, pos) -> {
         switch ((PrimitiveType) argType) {
           case INT:
             return core.functionLiteral(typeSystem, BuiltIn.INT_OP_NEGATE);
@@ -3524,10 +3525,7 @@ public abstract class Codes {
           case WORD:
             return core.functionLiteral(typeSystem, BuiltIn.WORD_OP_NEGATE);
           default:
-            throw new CompileException(
-                "operator not defined for type '" + argType + "'",
-                false,
-                Pos.ZERO);
+            throw notDefined(BuiltIn.OP_NEGATE, argType, pos);
         }
       };
 
@@ -3542,7 +3540,7 @@ public abstract class Codes {
 
   /** @see BuiltIn#OP_PLUS */
   private static final Macro OP_PLUS =
-      (typeSystem, env, argType) -> {
+      (typeSystem, env, argType, pos) -> {
         final Type resultType = ((TupleType) argType).argTypes.get(0);
         switch ((PrimitiveType) resultType) {
           case INT:
@@ -3552,16 +3550,13 @@ public abstract class Codes {
           case WORD:
             return core.functionLiteral(typeSystem, BuiltIn.WORD_OP_PLUS);
           default:
-            throw new CompileException(
-                "operator not defined for type '" + argType + "'",
-                false,
-                Pos.ZERO);
+            throw notDefined(BuiltIn.OP_PLUS, argType, pos);
         }
       };
 
   /** @see BuiltIn#OP_TIMES */
   private static final Macro OP_TIMES =
-      (typeSystem, env, argType) -> {
+      (typeSystem, env, argType, pos) -> {
         final Type resultType = ((TupleType) argType).argTypes.get(0);
         switch ((PrimitiveType) resultType) {
           case INT:
@@ -3571,10 +3566,7 @@ public abstract class Codes {
           case WORD:
             return core.functionLiteral(typeSystem, BuiltIn.WORD_OP_TIMES);
           default:
-            throw new CompileException(
-                "operator not defined for type '" + argType + "'",
-                false,
-                Pos.ZERO);
+            throw notDefined(BuiltIn.OP_TIMES, argType, pos);
         }
       };
 
@@ -4868,7 +4860,7 @@ public abstract class Codes {
     }
 
     @Override
-    public Applicable withType(TypeSystem typeSystem, Type type) {
+    public Applicable withType(TypeSystem typeSystem, Type type, Pos pos) {
       // 'type' is 'elementType bag -> elementType' (perhaps wrapped in a
       // ForallType if the function is used as a value); its result type is the
       // element type.
@@ -4876,7 +4868,7 @@ public abstract class Codes {
           type instanceof ForallType ? ((ForallType) type).type : type;
       final Type elementType = ((FnType) fnType).resultType;
       final Comparator comparator =
-          Comparators.comparatorFor(typeSystem, elementType);
+          Comparators.comparatorFor(typeSystem, elementType, pos);
       return new RelationalMinMax(builtIn, pos, comparator);
     }
 
@@ -4935,18 +4927,21 @@ public abstract class Codes {
 
   /** @see BuiltIn#RELATIONAL_SUM */
   private static final Macro RELATIONAL_SUM =
-      (typeSystem, env, argType) -> {
+      (typeSystem, env, argType, pos) -> {
         if (argType.isCollection()) {
+          // The element type is not necessarily primitive; in "group i compute
+          // sum" it is a type variable, because nothing says what is summed.
           final Type resultType = argType.elementType();
-          switch ((PrimitiveType) resultType) {
-            case INT:
-              return core.functionLiteral(typeSystem, BuiltIn.Z_SUM_INT);
-            case REAL:
-              return core.functionLiteral(typeSystem, BuiltIn.Z_SUM_REAL);
+          if (resultType instanceof PrimitiveType) {
+            switch ((PrimitiveType) resultType) {
+              case INT:
+                return core.functionLiteral(typeSystem, BuiltIn.Z_SUM_INT);
+              case REAL:
+                return core.functionLiteral(typeSystem, BuiltIn.Z_SUM_REAL);
+            }
           }
         }
-        throw new CompileException(
-            "operator not defined for type '" + argType + "'", false, Pos.ZERO);
+        throw notDefined(BuiltIn.RELATIONAL_SUM, argType, pos);
       };
 
   /** @see BuiltIn#STRING_COLLATE */
@@ -5639,7 +5634,7 @@ public abstract class Codes {
 
   /** @see BuiltIn#SYS_ENV */
   private static Core.Exp sysEnv(
-      TypeSystem typeSystem, Environment env, Type argType) {
+      TypeSystem typeSystem, Environment env, Type argType, Pos pos) {
     final TupleType stringPairType =
         typeSystem.tupleType(PrimitiveType.STRING, PrimitiveType.STRING);
     final List<Core.Tuple> args =
@@ -5653,7 +5648,7 @@ public abstract class Codes {
                         core.stringLiteral(entry.getValue().id.type.moniker())))
             .collect(Collectors.toList());
     return core.apply(
-        Pos.ZERO,
+        pos,
         typeSystem.listType(argType),
         core.functionLiteral(typeSystem, BuiltIn.Z_LIST),
         core.tuple(typeSystem, null, args));
@@ -5805,7 +5800,7 @@ public abstract class Codes {
 
   /** @see BuiltIn#TEST_OVER_COUNT */
   private static final Macro TEST_OVER_COUNT =
-      (typeSystem, env, argType) -> {
+      (typeSystem, env, argType, pos) -> {
         if (argType instanceof ListType) {
           return core.functionLiteral(
               typeSystem, BuiltIn.Z_TEST_OVER_COUNT_LIST);
@@ -6147,7 +6142,7 @@ public abstract class Codes {
     }
 
     @Override
-    public Applicable withType(TypeSystem typeSystem, Type ignored) {
+    public Applicable withType(TypeSystem typeSystem, Type ignored, Pos pos) {
       return new VariantParser(requireNonNull(typeSystem));
     }
 
@@ -8878,7 +8873,12 @@ public abstract class Codes {
    * <p>This is useful for instances where the behavior depends on the type.
    */
   public interface Typed extends Applicable {
-    Applicable withType(TypeSystem typeSystem, Type type);
+    /**
+     * Returns a copy of this applicable specialized to {@code type}. {@code
+     * pos} is the position of the expression it was reached from, for an error
+     * message if {@code type} is one it has no implementation for.
+     */
+    Applicable withType(TypeSystem typeSystem, Type type, Pos pos);
   }
 
   /** Implementation of {@link Applicable} that stores a {@link BuiltIn}. */
@@ -9180,9 +9180,10 @@ public abstract class Codes {
     }
 
     @Override
-    public Applicable withType(TypeSystem typeSystem, Type type) {
+    public Applicable withType(TypeSystem typeSystem, Type type, Pos pos) {
       Type elemType = rangeElementType(type);
-      return new RangeContains(Comparators.comparatorFor(typeSystem, elemType));
+      return new RangeContains(
+          Comparators.comparatorFor(typeSystem, elemType, pos));
     }
 
     @Override
@@ -9251,10 +9252,10 @@ public abstract class Codes {
     }
 
     @Override
-    public Applicable withType(TypeSystem typeSystem, Type type) {
+    public Applicable withType(TypeSystem typeSystem, Type type, Pos pos) {
       Type elemType = rangeElementType(type);
       return new ContinuousSetOf(
-          Comparators.comparatorFor(typeSystem, elemType));
+          Comparators.comparatorFor(typeSystem, elemType, pos));
     }
 
     @Override
@@ -9279,11 +9280,11 @@ public abstract class Codes {
     }
 
     @Override
-    public Applicable withType(TypeSystem typeSystem, Type type) {
+    public Applicable withType(TypeSystem typeSystem, Type type, Pos pos) {
       Type elemType = rangeElementType(type);
       return new DiscreteSetOf(
-          Comparators.comparatorFor(typeSystem, elemType),
-          Discretes.discreteFor(typeSystem, elemType));
+          Comparators.comparatorFor(typeSystem, elemType, pos),
+          Discretes.discreteFor(typeSystem, elemType, pos));
     }
 
     @Override
@@ -9308,10 +9309,10 @@ public abstract class Codes {
     }
 
     @Override
-    public Applicable withType(TypeSystem typeSystem, Type type) {
+    public Applicable withType(TypeSystem typeSystem, Type type, Pos pos) {
       final Type elemType = rangeElementType(type);
       final Comparator comparator =
-          Comparators.comparatorFor(typeSystem, elemType);
+          Comparators.comparatorFor(typeSystem, elemType, pos);
       return new SetContains(builtIn, comparator);
     }
 
@@ -9355,13 +9356,13 @@ public abstract class Codes {
     }
 
     @Override
-    public Applicable withType(TypeSystem typeSystem, Type type) {
+    public Applicable withType(TypeSystem typeSystem, Type type, Pos pos) {
       if (discrete == null) {
         return this; // continuous: complement needs no type-specific logic
       }
       final Type elemType = rangeElementType(type);
       return new SetComplement(
-          builtIn, Discretes.discreteFor(typeSystem, elemType));
+          builtIn, Discretes.discreteFor(typeSystem, elemType, pos));
     }
 
     @Override
@@ -9391,10 +9392,10 @@ public abstract class Codes {
     }
 
     @Override
-    public Applicable withType(TypeSystem typeSystem, Type type) {
+    public Applicable withType(TypeSystem typeSystem, Type type, Pos pos) {
       Type elemType = rangeElementType(type);
       return new DiscreteSetEnumerate(
-          builtIn, Discretes.discreteFor(typeSystem, elemType));
+          builtIn, Discretes.discreteFor(typeSystem, elemType, pos));
     }
 
     @Override
@@ -9424,11 +9425,11 @@ public abstract class Codes {
     }
 
     @Override
-    public Applicable withType(TypeSystem typeSystem, Type type) {
+    public Applicable withType(TypeSystem typeSystem, Type type, Pos pos) {
       Type elemType = rangeElementType(type);
       Discrete<Object> d;
       try {
-        d = Discretes.discreteFor(typeSystem, elemType);
+        d = Discretes.discreteFor(typeSystem, elemType, pos);
       } catch (CompileException ex) {
         // Element type is not discrete (e.g. real). POINT items are still
         // finite; non-POINT items raise Size at runtime.
@@ -9476,7 +9477,7 @@ public abstract class Codes {
     }
 
     @Override
-    public Applicable withType(TypeSystem typeSystem, Type type) {
+    public Applicable withType(TypeSystem typeSystem, Type type, Pos pos) {
       checkArgument(type instanceof FnType);
       Type argType = ((FnType) type).paramType;
       checkArgument(argType instanceof TupleType);
@@ -9485,7 +9486,7 @@ public abstract class Codes {
       Type argType0 = argTypes.get(0);
       Type argType1 = argTypes.get(1);
       checkArgument(argType0.equals(argType1));
-      return new Comparer(Comparators.comparatorFor(typeSystem, argType0));
+      return new Comparer(Comparators.comparatorFor(typeSystem, argType0, pos));
     }
 
     @SuppressWarnings("unchecked")

@@ -20,6 +20,7 @@ package net.hydromatic.morel.ast;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.Maps.transformValues;
+import static java.lang.String.format;
 import static net.hydromatic.morel.type.RecordType.ORDERING;
 import static net.hydromatic.morel.util.Pair.forEach;
 import static net.hydromatic.morel.util.PairList.fromTransformed;
@@ -51,6 +52,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.function.ToIntFunction;
 import net.hydromatic.morel.compile.BuiltIn;
+import net.hydromatic.morel.compile.CompileException;
 import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.compile.Extents;
 import net.hydromatic.morel.compile.NameGenerator;
@@ -190,7 +192,7 @@ public enum CoreBuilder {
 
   /** Creates a function literal, possibly overloaded. */
   public Core.Literal functionLiteral(
-      TypeSystem typeSystem, BuiltIn builtIn, List<Core.Exp> argList) {
+      TypeSystem typeSystem, BuiltIn builtIn, List<Core.Exp> argList, Pos pos) {
     Type type = builtIn.typeFunction.apply(typeSystem);
     if (type instanceof MultiType) {
       final Type arg0Type =
@@ -199,6 +201,17 @@ public enum CoreBuilder {
               : typeSystem.tupleType(transform(argList, Core.Exp::type));
       final List<Type> applicableTypes =
           filterEager(((MultiType) type).types, t -> t.canCallArgOf(arg0Type));
+      if (applicableTypes.isEmpty()) {
+        // No instance of the overloaded name takes this argument type. The
+        // user is at fault; "from i in [1] compute sum" gets here, because
+        // nothing says what is summed and the argument stays a type variable.
+        throw new CompileException(
+            format(
+                "operator '%s' not defined for type '%s'",
+                builtIn.mlName, arg0Type),
+            false,
+            pos);
+      }
       checkArgument(
           applicableTypes.size() == 1,
           "expected one overload for arguments %s, got %s %s",
@@ -229,9 +242,18 @@ public enum CoreBuilder {
     return apply(Pos.ZERO, desc.type, desc, exp);
   }
 
-  /** Creates a reference to a value. */
+  /**
+   * Creates a reference to a value, at a given position. Use this where the
+   * reference comes from the user's source, so that an error about it can say
+   * where it is.
+   */
+  public Core.Id id(Pos pos, Core.NamedPat idPat) {
+    return new Core.Id(pos, idPat);
+  }
+
+  /** Creates a reference to a value that the compiler synthesized. */
   public Core.Id id(Core.NamedPat idPat) {
-    return new Core.Id(idPat);
+    return new Core.Id(Pos.ZERO, idPat);
   }
 
   /** Creates a reference to a constructor. */
@@ -241,7 +263,7 @@ public enum CoreBuilder {
     DataType dataType = (DataType) typeSystem.unqualified(type);
     Type x = dataType.typeConstructors(typeSystem).get(constructor.constructor);
     Core.IdPat idPat = idPat(x, constructor.constructor, 0);
-    return new Core.Id(idPat);
+    return new Core.Id(Pos.ZERO, idPat);
   }
 
   public Core.RecordSelector recordSelector(
@@ -573,7 +595,7 @@ public enum CoreBuilder {
   }
 
   public Core.Fn fn(FnType type, Core.IdPat idPat, Core.Exp exp) {
-    return new Core.Fn(type, idPat, exp);
+    return new Core.Fn(exp.pos, type, idPat, exp);
   }
 
   public Core.Fn fn(
@@ -585,21 +607,22 @@ public enum CoreBuilder {
       final Core.Match match = matchList.get(0);
       if (match.pat instanceof Core.IdPat) {
         // Simple function, "fn x => exp". Does not need 'case'.
-        return fn(type, (Core.IdPat) match.pat, match.exp);
+        return new Core.Fn(pos, type, (Core.IdPat) match.pat, match.exp);
       }
       if (match.pat instanceof Core.TuplePat
           && ((Core.TuplePat) match.pat).args.isEmpty()) {
         // Simple function with unit arg, "fn () => exp";
         // needs a new variable, but doesn't need case, "fn (v0: unit) => exp"
         final Core.IdPat idPat = idPat(type.paramType, "v", nameGenerator);
-        return fn(type, idPat, match.exp);
+        return new Core.Fn(pos, type, idPat, match.exp);
       }
     }
     // Complex function, "fn (x, y) => exp";
     // needs intermediate variable and case, "fn v => case v of (x, y) => exp"
     final Core.IdPat idPat = idPat(type.paramType, "v", nameGenerator);
     final Core.Id id = id(idPat);
-    return fn(type, idPat, caseOf(pos, type.resultType, id, matchList));
+    return new Core.Fn(
+        pos, type, idPat, caseOf(pos, type.resultType, id, matchList));
   }
 
   /** Creates a {@link Core.Apply}. */
@@ -1089,7 +1112,7 @@ public enum CoreBuilder {
       Pos pos,
       Core.Exp... args) {
     final Core.Literal forallLiteral =
-        functionLiteral(typeSystem, builtIn, ImmutableList.copyOf(args));
+        functionLiteral(typeSystem, builtIn, ImmutableList.copyOf(args), pos);
     final ForallType forallType = (ForallType) forallLiteral.type;
     final FnType fnType = (FnType) typeSystem.apply(forallType, type);
     // Use the concrete FnType for the literal so that Typed.withType can

@@ -40,6 +40,7 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
@@ -904,18 +905,32 @@ public class TypeResolver {
    */
   static void checkTypeConstructorArities(
       TypeSystem typeSystem, Ast.Type type) {
+    checkTypeConstructorArities(typeSystem, type, ImmutableSet.of());
+  }
+
+  /**
+   * As {@link #checkTypeConstructorArities(TypeSystem, Ast.Type)}, but treats
+   * each name in {@code declaring} as bound. A {@code datatype} may be
+   * recursive, and a group joined by {@code and} mutually so, so the names the
+   * declaration itself is introducing are in scope in its constructors'
+   * argument types although the type system does not hold them yet.
+   */
+  static void checkTypeConstructorArities(
+      TypeSystem typeSystem, Ast.Type type, Set<String> declaring) {
     type.accept(
         new Visitor() {
           @Override
           protected void visit(Ast.NamedType namedType) {
-            final Type resolved = typeSystem.lookupOpt(namedType.name);
-            if (resolved == null) {
-              throw new CompileException(
-                  "unbound type constructor: " + namedType.name,
-                  false,
-                  namedType.pos);
+            if (!declaring.contains(namedType.name)) {
+              final Type resolved = typeSystem.lookupOpt(namedType.name);
+              if (resolved == null) {
+                throw new CompileException(
+                    "unbound type constructor: " + namedType.name,
+                    false,
+                    namedType.pos);
+              }
+              checkTypeConstructorArity(namedType, resolved);
             }
-            checkTypeConstructorArity(namedType, resolved);
             super.visit(namedType);
           }
         });
@@ -950,6 +965,23 @@ public class TypeResolver {
               expectedArity),
           false,
           namedType.pos);
+    }
+  }
+
+  /**
+   * Verifies that a type constructor is bound. {@code type} is the registered
+   * type for {@code namedType.name}, or null if the name is not bound.
+   *
+   * <p>An unbound name reaches unification as a term that no type can be made
+   * from, and unification finds a conflict for it only sometimes -- as it does
+   * for the "true" in "val b: true = false" -- so it is checked here rather
+   * than left to {@link TypeMap}.
+   */
+  private static void checkTypeConstructorBound(
+      Ast.NamedType namedType, @Nullable Type type) {
+    if (type == null) {
+      throw new CompileException(
+          "unbound type constructor: " + namedType.name, false, namedType.pos);
     }
   }
 
@@ -4269,6 +4301,10 @@ public class TypeResolver {
       Ast.DatatypeDecl datatypeDecl,
       PairList<Ast.IdPat, Term> termMap) {
     final List<Keys.DataTypeKey> keys = new ArrayList<>();
+    final Set<String> declaring = new HashSet<>();
+    for (Ast.DatatypeBind bind : datatypeDecl.binds) {
+      declaring.add(bind.name.name);
+    }
     for (Ast.DatatypeBind bind : datatypeDecl.binds) {
       // A constructor's argument type may not use a type variable that is not
       // in the head.
@@ -4279,6 +4315,11 @@ public class TypeResolver {
         }
       }
       checkBoundTyVars(bind.tyVars, bodyTypes);
+      // Check that every type-constructor reference in a constructor's
+      // argument type is bound and has the right number of arguments.
+      for (Ast.Type bodyType : bodyTypes) {
+        checkTypeConstructorArities(typeSystem, bodyType, declaring);
+      }
 
       final KeyBuilder keyBuilder = new KeyBuilder();
       bind.tyVars.forEach(keyBuilder::toTypeKey);
@@ -4573,6 +4614,7 @@ public class TypeResolver {
           final Ast.NamedType namedType = (Ast.NamedType) type;
           final Type aliasType = typeSystem.lookupOpt(namedType.name);
           checkTypeConstructorArity(namedType, aliasType);
+          checkTypeConstructorBound(namedType, aliasType);
           if (aliasType instanceof AliasType) {
             // An alias is a type function: substitute the use-site arguments
             // for the head type variables, then expand the body. For example,
@@ -4965,7 +5007,13 @@ public class TypeResolver {
         final @Nullable TypeCon typeCon1 =
             typeSystem.lookupTyCon(conPat.tyCon.name);
         if (typeCon1 == null) {
-          throw new AssertionError("not found: " + conPat.tyCon.name);
+          // The parser reads "Foo x" in a pattern as a constructor applied to
+          // an argument, whatever "Foo" turns out to be, so an unbound name
+          // arrives here rather than being caught as an unbound variable.
+          throw new CompileException(
+              "unbound constructor: " + conPat.tyCon.name,
+              false,
+              conPat.tyCon.pos);
         }
         final DataType dataType = typeCon1.dataType;
         final Type argType = typeCon1.argTypeKey.toType(typeSystem);

@@ -3676,6 +3676,23 @@ from i in [3, 2, 1] join j in (from k in [4, 6, 5] order k);
 >   [{i=3,j=4},{i=3,j=5},{i=3,j=6},{i=2,j=4},{i=2,j=5},{i=2,j=6},{i=1,j=4},
 >    {i=1,j=5},{i=1,j=6}] : {i:int, j:int} list
 
+(*) There is no order on functions.
+from i in [1] order (fn x => x);
+> stdIn:1.21-1.32 Error: comparison not defined for type ''a -> 'a'
+>   raised at: stdIn:1.21-1.32
+from i in [{a = fn x => x}] order i;
+> stdIn:1.35 Error: comparison not defined for type ''a -> 'a'
+>   raised at: stdIn:1.35
+
+(* "compute sum" says nothing about what is summed, so the element type
+ * stays a variable, and no instance of the aggregate takes it. *)
+from i in [1] group i compute sum;
+> stdIn:1.31-1.34 Error: operator 'sum' not defined for type ''a bag'
+>   raised at: stdIn:1.31-1.34
+from i in [1] compute sum;
+> stdIn:1.23-1.26 Error: operator 'only' not defined for type '('a bag -> 'a) list'
+>   raised at: stdIn:1.23-1.26
+
 (*) dummy
 from message in ["the end"];
 > val it = ["the end"] : string list

@@ -1556,4 +1556,46 @@ val w = [1] : my_list;
 > stdIn:1.15-1.22 Error: type constructor my_list given 0 arguments, wants 1
 >   raised at: stdIn:1.15-1.22
 
+(* An unbound name in a type annotation is an error. Such a name reaches
+ * unification as a term that no type can be made from, and unification
+ * finds a conflict for it only sometimes -- as it does for the "true" in
+ * "val b: true = false" -- so the name is checked where the annotation
+ * becomes a term. *)
+from {b: true, c: char};
+> stdIn:1.10-1.14 Error: unbound type constructor: true
+>   raised at: stdIn:1.10-1.14
+from x: true;
+> stdIn:1.9-1.13 Error: unbound type constructor: true
+>   raised at: stdIn:1.9-1.13
+fn x: true => x;
+> stdIn:1.7-1.11 Error: unbound type constructor: true
+>   raised at: stdIn:1.7-1.11
+val b: true = false;
+> stdIn:1.8-1.12 Error: unbound type constructor: true
+>   raised at: stdIn:1.8-1.12
+from {b: nosuchtype};
+> stdIn:1.10-1.20 Error: unbound type constructor: nosuchtype
+>   raised at: stdIn:1.10-1.20
+
+(*) The same, in the argument type of a datatype constructor.
+datatype d = D of nosuch;
+> stdIn:1.19-1.25 Error: unbound type constructor: nosuch
+>   raised at: stdIn:1.19-1.25
+
+(* A datatype may be recursive, and a group joined by "and" mutually so,
+ * so the names that the declaration itself introduces are in scope in
+ * its constructors' argument types. *)
+datatype tree = LEAF | NODE of tree * tree;
+> datatype tree = LEAF | NODE of tree * tree
+datatype a = A of b and b = B of a;
+> datatype a = A of b
+> datatype b = B of a
+
+(* The parser reads "Foo x" in a pattern as a constructor applied to an
+ * argument, whatever "Foo" turns out to be, so an unbound name arrives
+ * at deducePatType rather than being caught as an unbound variable. *)
+fn NOSUCHCON x => x;
+> stdIn:1.4-1.13 Error: unbound constructor: NOSUCHCON
+>   raised at: stdIn:1.4-1.13
+
 (*) End type.smli
