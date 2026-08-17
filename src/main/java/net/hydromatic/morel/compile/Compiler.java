@@ -1256,6 +1256,10 @@ public class Compiler {
     final RowHandoff handoff = cx.handoff(stepEnv.bindings, true, true);
     final ImmutableList<String> names =
         transformEager(handoff.order, b -> b.id.name);
+    // Whether each element of an argument is a value (an atom) or a record.
+    // A record has one field per name; note that a one-name row may be either
+    // an atom or a one-field record.
+    final boolean atom = stepEnv.atom;
     final ImmutablePairList<String, Code> inSlots =
         buildInSlots(handoff.cx, allScopeBindings.values());
     final ImmutableList<Code> codes;
@@ -1286,13 +1290,13 @@ public class Compiler {
       switch (op) {
         case EXCEPT:
           return handoff.finish(
-              RowSinks.except(distinct, codes, names, inSlots, next));
+              RowSinks.except(distinct, codes, names, atom, inSlots, next));
         case INTERSECT:
           return handoff.finish(
-              RowSinks.intersect(distinct, codes, names, inSlots, next));
+              RowSinks.intersect(distinct, codes, names, atom, inSlots, next));
         case UNION:
           return handoff.finish(
-              RowSinks.union(distinct, codes, names, inSlots, next));
+              RowSinks.union(distinct, codes, names, atom, inSlots, next));
         default:
           throw new AssertionError(op);
       }

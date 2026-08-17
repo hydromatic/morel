@@ -66,11 +66,12 @@ public abstract class RowSinks {
       boolean distinct,
       ImmutableList<Code> codes,
       ImmutableList<String> names,
+      boolean atom,
       ImmutablePairList<String, Code> inSlots,
       RowSink rowSink) {
     return distinct
-        ? new ExceptDistinctRowSink(codes, names, inSlots, rowSink)
-        : new ExceptAllRowSink(codes, names, inSlots, rowSink);
+        ? new ExceptDistinctRowSink(codes, names, atom, inSlots, rowSink)
+        : new ExceptAllRowSink(codes, names, atom, inSlots, rowSink);
   }
 
   /** Creates a {@link RowSink} for a {@code group} step. */
@@ -97,11 +98,12 @@ public abstract class RowSinks {
       boolean distinct,
       ImmutableList<Code> codes,
       ImmutableList<String> names,
+      boolean atom,
       ImmutablePairList<String, Code> inSlots,
       RowSink rowSink) {
     return distinct
-        ? new IntersectDistinctRowSink(codes, names, inSlots, rowSink)
-        : new IntersectAllRowSink(codes, names, inSlots, rowSink);
+        ? new IntersectDistinctRowSink(codes, names, atom, inSlots, rowSink)
+        : new IntersectAllRowSink(codes, names, atom, inSlots, rowSink);
   }
 
   /** Creates a {@link RowSink} for an {@code order} step. */
@@ -170,9 +172,10 @@ public abstract class RowSinks {
       boolean distinct,
       ImmutableList<Code> codes,
       ImmutableList<String> names,
+      boolean atom,
       ImmutablePairList<String, Code> inSlots,
       RowSink rowSink) {
-    return new UnionRowSink(distinct, codes, names, inSlots, rowSink);
+    return new UnionRowSink(distinct, codes, names, atom, inSlots, rowSink);
   }
 
   /** Creates a {@link RowSink} for a {@code where} step. */
@@ -716,6 +719,14 @@ public abstract class RowSinks {
     final ImmutableList<Code> codes;
     final ImmutableList<String> names;
     /**
+     * Whether the row is an atom, that is, a single value rather than a record.
+     * An atom row has one name, but a row with one name is not necessarily an
+     * atom: a record with one field also has one name, and its runtime value is
+     * a one-element {@link List}.
+     */
+    final boolean atom;
+
+    /**
      * (Name, code) slots to capture scope variables during {@code
      * accept(Stack)}.
      */
@@ -730,6 +741,7 @@ public abstract class RowSinks {
         boolean distinct,
         ImmutableList<Code> codes,
         ImmutableList<String> names,
+        boolean atom,
         ImmutablePairList<String, Code> inSlots,
         RowSink rowSink) {
       super(rowSink);
@@ -741,10 +753,12 @@ public abstract class RowSinks {
           isInOrder(names, RecordType.ORDERING),
           "names not in record order: %s",
           names);
+      checkArgument(!atom || names.size() == 1, "atom row must have one name");
       this.op = op;
       this.distinct = distinct;
       this.codes = requireNonNull(codes);
       this.names = requireNonNull(names);
+      this.atom = atom;
       this.inSlots = requireNonNull(inSlots);
       this.values = new Object[names.size()];
       if (op == Op.UNION && !distinct) {
@@ -774,19 +788,24 @@ public abstract class RowSinks {
     /**
      * Returns the map key for {@code element}.
      *
-     * <p>For a single-name row, the key is the element itself. For a multi-name
-     * row, the element is a record, represented at runtime as a {@link List}
-     * (see {@link Codes.TupleCode}) with its fields in {@link
-     * RecordType#ORDERING} order. Because {@code names} is in that same order,
-     * the value's fields are the key directly, matching the key built by {@link
-     * #computeKey(Stack)} for the left-hand side, so the two sides probe the
-     * same map entries.
+     * <p>For an atom row, the key is the element itself. Otherwise the element
+     * is a record, represented at runtime as a {@link List} (see {@link
+     * Codes.TupleCode}) with its fields in {@link RecordType#ORDERING} order.
+     * Because {@code names} is in that same order, the value's fields are the
+     * key directly, matching the key built by {@link #computeKey(Stack)} for
+     * the left-hand side, so the two sides probe the same map entries. A
+     * one-field record is unwrapped, because {@code computeKey} makes the field
+     * value, not a one-element list, the key of a single-name row.
      */
     Object elementKey(Object element) {
-      if (names.size() == 1) {
+      if (atom) {
         return element;
       }
-      return ImmutableList.copyOf((List<Object>) element);
+      final List<Object> list = (List<Object>) element;
+      if (names.size() == 1) {
+        return list.get(0);
+      }
+      return ImmutableList.copyOf(list);
     }
 
     /**
@@ -918,9 +937,10 @@ public abstract class RowSinks {
     ExceptAllRowSink(
         ImmutableList<Code> codes,
         ImmutableList<String> names,
+        boolean atom,
         ImmutablePairList<String, Code> inSlots,
         RowSink rowSink) {
-      super(Op.EXCEPT, false, codes, names, inSlots, rowSink);
+      super(Op.EXCEPT, false, codes, names, atom, inSlots, rowSink);
     }
 
     @Override
@@ -956,9 +976,10 @@ public abstract class RowSinks {
     ExceptDistinctRowSink(
         ImmutableList<Code> codes,
         ImmutableList<String> names,
+        boolean atom,
         ImmutablePairList<String, Code> inSlots,
         RowSink rowSink) {
-      super(Op.EXCEPT, true, codes, names, inSlots, rowSink);
+      super(Op.EXCEPT, true, codes, names, atom, inSlots, rowSink);
     }
 
     @Override
@@ -1010,9 +1031,10 @@ public abstract class RowSinks {
     IntersectAllRowSink(
         ImmutableList<Code> codes,
         ImmutableList<String> names,
+        boolean atom,
         ImmutablePairList<String, Code> inSlots,
         RowSink rowSink) {
-      super(Op.INTERSECT, false, codes, names, inSlots, rowSink);
+      super(Op.INTERSECT, false, codes, names, atom, inSlots, rowSink);
     }
 
     @Override
@@ -1076,9 +1098,10 @@ public abstract class RowSinks {
     IntersectDistinctRowSink(
         ImmutableList<Code> codes,
         ImmutableList<String> names,
+        boolean atom,
         ImmutablePairList<String, Code> inSlots,
         RowSink rowSink) {
-      super(Op.INTERSECT, true, codes, names, inSlots, rowSink);
+      super(Op.INTERSECT, true, codes, names, atom, inSlots, rowSink);
     }
 
     @Override
@@ -1126,9 +1149,10 @@ public abstract class RowSinks {
         boolean distinct,
         ImmutableList<Code> codes,
         ImmutableList<String> names,
+        boolean atom,
         ImmutablePairList<String, Code> inSlots,
         RowSink rowSink) {
-      super(Op.UNION, distinct, codes, names, inSlots, rowSink);
+      super(Op.UNION, distinct, codes, names, atom, inSlots, rowSink);
     }
 
     @Override
@@ -1147,8 +1171,11 @@ public abstract class RowSinks {
       for (Code code : codes) {
         final Iterable<Object> elements = (Iterable<Object>) code.eval(stack);
         for (Object element : elements) {
-          if (!distinct || addElement(element)) {
-            rowSink.accept(withRowFromKey(s, element));
+          // Convert the element to key form, which is what withRowFromKey
+          // expects; for a one-field record they differ.
+          final Object key = elementKey(element);
+          if (!distinct || map.put(key, ZERO) == null) {
+            rowSink.accept(withRowFromKey(s, key));
             s.restore(savedTop);
           }
         }

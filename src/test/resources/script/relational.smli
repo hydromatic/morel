@@ -2319,6 +2319,34 @@ from i in [1, 2, 3]
   yield {a = i, b = i + 1}
   intersect [{a = 2, b = 3}];
 > val it = [{a=2,b=3}] : {a:int, b:int} list
+
+(* A record with one field is a record, not an atom, even though its row
+ * has just one variable. Its runtime value is a one-element list, and a set
+ * operation once used it, rather than the field value, as the key; the
+ * mismatch gave wrong results and a ClassCastException. *)
+from i in [1, 2] yield {j = i} union (from k in [3] yield {j = k});
+> val it = [{j=1},{j=2},{j=3}] : {j:int} list
+from i in [1, 2, 2] yield {j = i} union distinct [{j = 2}, {j = 3}];
+> val it = [{j=1},{j=2},{j=3}] : {j:int} list
+from i in [1, 2, 2] yield {j = i} intersect [{j = 2}, {j = 2}];
+> val it = [{j=2},{j=2}] : {j:int} list
+from i in [1, 2, 2] yield {j = i} intersect distinct [{j = 2}, {j = 2}];
+> val it = [{j=2}] : {j:int} list
+from i in [1, 2, 2] yield {j = i} except [{j = 2}];
+> val it = [{j=1},{j=2}] : {j:int} list
+from i in [1, 2, 2] yield {j = i} except distinct [{j = 2}];
+> val it = [{j=1}] : {j:int} list
+from i in bag [1, 2] yield {j = i} union (bag [{j = 3}]);
+> val it = [{j=1},{j=2},{j=3}] : {j:int} bag
+
+(*) The sole field of a one-field record may itself be a record.
+from i in [1, 2] yield {j = {k = i}} union [{j = {k = 3}}];
+> val it = [{j={k=1}},{j={k=2}},{j={k=3}}] : {j:{k:int}} list
+
+(*) A one-field record row that comes from a scan, not a yield.
+from r in [{j = 1}, {j = 2}] except [{j = 1}];
+> val it = [{j=2}] : {j:int} list
+
 from e in scott.emps
   group e.deptno compute {c = count over ()}
   except [{c = 3, deptno = 10}]
