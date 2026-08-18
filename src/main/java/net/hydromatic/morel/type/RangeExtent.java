@@ -31,8 +31,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import net.hydromatic.morel.ast.Op;
+import net.hydromatic.morel.eval.Unit;
 import org.apache.calcite.runtime.FlatLists;
-import org.apache.calcite.runtime.Unit;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** A type and a range set. */

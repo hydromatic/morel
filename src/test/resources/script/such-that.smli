@@ -829,16 +829,16 @@ type pair = {b: bool, u: unit};
 from p: pair;
 > b     u
 > ----- --
-> false {}
-> true  {}
+> false ()
+> true  ()
 >
 > val it : {b:bool, u:unit} list
 from i in [1, 2], p: pair where p.b;
 > i p
 >   b    u
 > - ---- --
-> 1 true {}
-> 2 true {}
+> 1 true ()
+> 2 true ()
 >
 > val it : {i:int, p:{b:bool, u:unit}} list
 exists p: pair where p.b;
@@ -1009,10 +1009,27 @@ from ob where Option.getOpt (ob, false) orelse true;
 from bc where bc = (true, ()) orelse true;
 > 1     2
 > ----- --
-> false {}
-> true  {}
+> false ()
+> true  ()
 >
 > val it : (bool * unit) list
+
+(* The 'unit' extent yields the same value that '()' evaluates
+ * to, so it compares equal and prints as '()'. Classic mode prints a
+ * 'unit' from its type and so hid a wrong value; tabular mode prints the
+ * value, and showed it as '{}'. *)
+from u: unit;
+> val it = [()] : unit list
+(from u: unit) = [()];
+> val it = true : bool
+(from u: unit * unit) = [((), ())];
+> val it = true : bool
+from u: unit * unit;
+> 1  2
+> -- --
+> () ()
+>
+> val it : (unit * unit) list
 
 (*) A quantifier over a finite extent.
 exists b where b;
