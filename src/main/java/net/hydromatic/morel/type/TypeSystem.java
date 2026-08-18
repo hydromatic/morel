@@ -216,6 +216,17 @@ public class TypeSystem {
             ImmutableList.of(elementType.key())));
   }
 
+  /**
+   * Creates a collection type: a list or a bag, whichever the use decides.
+   *
+   * @see BuiltIn.Eqtype#COLLECTION
+   */
+  public Type collectionType(Type elementType) {
+    // The type is internal, and so can be reached only by its enum, not by
+    // name.
+    return apply(lookup(BuiltIn.Eqtype.COLLECTION), elementType);
+  }
+
   /** Creates a list type. */
   public ListType listType(Type elementType) {
     return (ListType) typeFor(Keys.list(elementType.key()));
@@ -486,6 +497,10 @@ public class TypeSystem {
 
           public Type bag(int i) {
             return bagType(get(i));
+          }
+
+          public Type collection(int i) {
+            return collectionType(get(i));
           }
 
           public Type either(int i, int j) {
@@ -858,6 +873,8 @@ public class TypeSystem {
     TypeVar get(int i);
     /** Creates type {@code `i bag}. */
     Type bag(int i);
+    /** Creates type {@code `i $collection}. */
+    Type collection(int i);
     /** Creates type {@code (`i, `j) either}. */
     Type either(int i, int j);
     /** Creates type {@code `i list}. */

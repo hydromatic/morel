@@ -3718,7 +3718,7 @@ from i in [1] group i compute sum;
 > stdIn:1.31-1.34 Error: operator 'sum' not defined for type ''a bag'
 >   raised at: stdIn:1.31-1.34
 from i in [1] compute sum;
-> stdIn:1.23-1.26 Error: operator 'only' not defined for type '('a bag -> 'a) list'
+> stdIn:1.23-1.26 Error: operator 'sum' not defined for type ''a bag'
 >   raised at: stdIn:1.23-1.26
 
 (*) dummy

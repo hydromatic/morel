@@ -880,6 +880,11 @@ public class SignatureChecker {
         case DATA_TYPE:
           DataType dataType = (DataType) t;
           switch (dataType.name) {
+            case "$collection":
+              // A signature says "bag" where the built-in takes a collection
+              // of either orderedness; the internal name is not written in
+              // Morel, and not shown.
+              return format("ts.bag(%s)", str(dataType.arguments.get(0)));
             case "option":
               return format("ts.option(%s)", str(dataType.arguments.get(0)));
             case "order":

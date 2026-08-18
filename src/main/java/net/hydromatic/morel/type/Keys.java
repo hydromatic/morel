@@ -36,6 +36,7 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.function.UnaryOperator;
 import net.hydromatic.morel.ast.Op;
+import net.hydromatic.morel.compile.BuiltIn;
 
 /** Type keys. */
 public class Keys {
@@ -224,6 +225,12 @@ public class Keys {
 
   static StringBuilder describeParameterized(
       StringBuilder buf, String name, List<Type.Key> arguments) {
+    if (name.equals(BuiltIn.Eqtype.COLLECTION.mlName())) {
+      // A collection whose orderedness nothing has decided reads back as a
+      // bag, so that is what it is called; its internal name is not something
+      // to show anyone.
+      name = BuiltIn.Eqtype.BAG.mlName();
+    }
     if (arguments.isEmpty()) {
       return buf.append(name);
     }

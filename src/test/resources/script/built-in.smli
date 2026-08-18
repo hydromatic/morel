@@ -533,7 +533,7 @@ Relational.nonEmpty;
 
 (* "only" is a Morel alias for "Relational.only". *)
 only;
-> val it = fn : 'a list -> 'a
+> val it = fn : 'a bag -> 'a
 Relational.only;
 > val it = fn : 'a bag -> 'a
 

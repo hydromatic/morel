@@ -144,32 +144,28 @@ public enum BuiltIn {
               1, h -> ts.fnType(ts.tupleType(h.get(0), h.get(0)), BOOL))),
 
   /**
-   * Overloaded infix operator "elem", of type "&alpha; * &alpha; bag &rarr;
-   * bool" and "&alpha; * &alpha; list &rarr; bool".
+   * Infix operator "elem", of type "&alpha; * &alpha; collection &rarr; bool";
+   * the collection is a list or a bag, whichever the argument is.
    */
   OP_ELEM(
       "Top",
       "op elem",
       ts ->
-          ts.multi(
-              ts.forallType(
-                  1, h -> ts.fnType(ts.tupleType(h.get(0), h.bag(0)), BOOL)),
-              ts.forallType(
-                  1, h -> ts.fnType(ts.tupleType(h.get(0), h.list(0)), BOOL)))),
+          ts.forallType(
+              1,
+              h -> ts.fnType(ts.tupleType(h.get(0), h.collection(0)), BOOL))),
 
   /**
-   * Overloaded infix operator "notelem", of type "&alpha; * &alpha; bag &rarr;
-   * bool". and "&alpha; * &alpha; list &rarr; bool".
+   * Infix operator "notelem", of type "&alpha; * &alpha; collection &rarr;
+   * bool"; the collection is a list or a bag, whichever the argument is.
    */
   OP_NOT_ELEM(
       "Top",
       "op notelem",
       ts ->
-          ts.multi(
-              ts.forallType(
-                  1, h -> ts.fnType(ts.tupleType(h.get(0), h.bag(0)), BOOL)),
-              ts.forallType(
-                  1, h -> ts.fnType(ts.tupleType(h.get(0), h.list(0)), BOOL)))),
+          ts.forallType(
+              1,
+              h -> ts.fnType(ts.tupleType(h.get(0), h.collection(0)), BOOL))),
 
   /**
    * Infix operator "-", of type "&alpha; * &alpha; &rarr; &alpha;" (where
@@ -3814,7 +3810,8 @@ public enum BuiltIn {
               1, h -> ts.fnType(ts.tupleType(h.get(0), h.get(0)), ts.order()))),
 
   /**
-   * Function "Relational.count", aka "count", of type "&alpha; bag &rarr; int".
+   * Function "Relational.count", aka "count", of type "&alpha; collection
+   * &rarr; int"; the collection is a list or a bag, whichever the argument is.
    *
    * <p>Often used with {@code group}:
    *
@@ -3828,11 +3825,11 @@ public enum BuiltIn {
       "Relational",
       "count",
       true,
-      ts -> ts.forallType(1, h -> ts.fnType(h.bag(0), INT))),
+      ts -> ts.forallType(1, h -> ts.fnType(h.collection(0), INT))),
 
   /**
-   * Function "Relational.empty", aka "empty", of type "&alpha; bag &rarr;
-   * bool".
+   * Function "Relational.empty", aka "empty", of type "&alpha; collection
+   * &rarr; bool"; the collection is a list or a bag, whichever the argument is.
    *
    * <p>For example,
    *
@@ -3853,18 +3850,21 @@ public enum BuiltIn {
    *   andalso e.job = "CLERK")
    * }</pre>
    *
-   * <p>{@code empty bag} is equivalent to {@code not (exists bag)}, but the
-   * former may be more convenient, because it requires fewer parentheses.
+   * <p>{@code empty collection} is equivalent to {@code not (exists
+   * collection)}, but the former may be more convenient, because it requires
+   * fewer parentheses.
    */
   RELATIONAL_EMPTY(
       "Relational",
       "empty",
       true,
-      ts -> ts.forallType(1, h -> ts.fnType(h.bag(0), BOOL))),
+      ts -> ts.forallType(1, h -> ts.fnType(h.collection(0), BOOL))),
 
   /**
-   * Function "Relational.iterate", aka "iterate", of type "&alpha; bag &rarr;
-   * (&alpha; bag * &alpha; bag &rarr; &alpha; bag) &rarr; &alpha; bag".
+   * Function "Relational.iterate", aka "iterate", overloaded with both "&alpha;
+   * bag &rarr; (&alpha; bag * &alpha; bag &rarr; &alpha; bag) &rarr; &alpha;
+   * bag" and "&alpha; list &rarr; (&alpha; list * &alpha; list &rarr; &alpha;
+   * list) &rarr; &alpha; list".
    *
    * <p>"iterate initialList listUpdate" computes a fixed point, starting with a
    * list and iterating by passing it to a function.
@@ -3892,27 +3892,30 @@ public enum BuiltIn {
                           h.list(0))))),
 
   /**
-   * Function "Relational.max", aka "max", of type "&alpha; bag &rarr; &alpha;"
-   * (where &alpha; must be comparable).
+   * Function "Relational.max", aka "max", of type "&alpha; collection &rarr;
+   * &alpha;" (where &alpha; must be comparable); the collection is a list or a
+   * bag, whichever the argument is.
    */
   RELATIONAL_MAX(
       "Relational",
       "max",
       true,
-      ts -> ts.forallType(1, h -> ts.fnType(h.bag(0), h.get(0)))),
+      ts -> ts.forallType(1, h -> ts.fnType(h.collection(0), h.get(0)))),
 
   /**
-   * Function "Relational.min", aka "min", of type "&alpha; bag &rarr; &alpha;"
-   * (where &alpha; must be comparable).
+   * Function "Relational.min", aka "min", of type "&alpha; collection &rarr;
+   * &alpha;" (where &alpha; must be comparable); the collection is a list or a
+   * bag, whichever the argument is.
    */
   RELATIONAL_MIN(
       "Relational",
       "min",
       true,
-      ts -> ts.forallType(1, h -> ts.fnType(h.bag(0), h.get(0)))),
+      ts -> ts.forallType(1, h -> ts.fnType(h.collection(0), h.get(0)))),
 
   /**
-   * Function "Relational.nonEmpty", of type "&alpha; bag &rarr; bool".
+   * Function "Relational.nonEmpty", of type "&alpha; collection &rarr; bool";
+   * the collection is a list or a bag, whichever the argument is.
    *
    * <p>For example,
    *
@@ -3937,11 +3940,11 @@ public enum BuiltIn {
       "Relational",
       "nonEmpty",
       true,
-      ts -> ts.forallType(1, h -> ts.fnType(h.bag(0), BOOL))),
+      ts -> ts.forallType(1, h -> ts.fnType(h.collection(0), BOOL))),
 
   /**
-   * Function "Relational.only", aka "only", of type "&alpha; bag &rarr;
-   * &alpha;" or "&alpha; list &rarr; &alpha;".
+   * Function "Relational.only", aka "only", of type "&alpha; collection &rarr;
+   * &alpha;"; the collection is a list or a bag, whichever the argument is.
    *
    * <p>"only collection" returns the only element of {@code collection}. It
    * raises {@link BuiltInExn#EMPTY Empty} if {@code collection} is nil, {@link
@@ -3960,14 +3963,12 @@ public enum BuiltIn {
       "Relational",
       "only",
       true,
-      ts ->
-          ts.multi(
-              ts.forallType(1, h -> ts.fnType(h.bag(0), h.get(0))),
-              ts.forallType(1, h -> ts.fnType(h.list(0), h.get(0))))),
+      ts -> ts.forallType(1, h -> ts.fnType(h.collection(0), h.get(0)))),
 
   /**
-   * Function "Relational.sum", aka "sum", of type "&alpha; bag &rarr; &alpha;"
-   * (where &alpha; must be numeric).
+   * Function "Relational.sum", aka "sum", of type "&alpha; collection &rarr;
+   * &alpha;" (where &alpha; must be numeric); the collection is a list or a
+   * bag, whichever the argument is.
    *
    * <p>Often used with {@code group}:
    *
@@ -3981,7 +3982,7 @@ public enum BuiltIn {
       "Relational",
       "sum",
       true,
-      ts -> ts.forallType(1, h -> ts.fnType(h.bag(0), h.get(0)))),
+      ts -> ts.forallType(1, h -> ts.fnType(h.collection(0), h.get(0)))),
 
   /**
    * Function "String.collate", of type "(char * char &rarr; order) &rarr;
@@ -5686,8 +5687,16 @@ public enum BuiltIn {
 
     int varCount();
 
+    /**
+     * Whether this type is internal, that is, used only for internal purposes
+     * and not available from within programs.
+     *
+     * <p>Internal types are named with a leading '$' so that no program can
+     * write their name. (See also {@link Datatype#structure}, which is "$" for
+     * internal datatypes.)
+     */
     default boolean isInternal() {
-      return false;
+      return mlName().startsWith("$");
     }
 
     default List<Constructor> constructors() {
@@ -5722,14 +5731,12 @@ public enum BuiltIn {
     CONTINUOUS_SET(
         "Range",
         "continuous_set",
-        false,
         1,
         h -> h.tyCon(Constructor.CONTINUOUS_SET_CONTINUOUS_SET)),
 
     DATE_MONTH(
         "Date",
         "month",
-        false,
         0,
         h ->
             h.tyCon(Constructor.DATE_MONTH_JAN)
@@ -5748,7 +5755,6 @@ public enum BuiltIn {
     DATE_WEEKDAY(
         "Date",
         "weekday",
-        false,
         0,
         h ->
             h.tyCon(Constructor.DATE_WEEKDAY_MON)
@@ -5762,31 +5768,26 @@ public enum BuiltIn {
     DESCENDING(
         "Relational",
         "descending",
-        false,
         1,
         h -> h.tyCon(Constructor.DESCENDING_DESC)),
 
     DISCRETE_SET(
         "Range",
         "discrete_set",
-        false,
         1,
         h -> h.tyCon(Constructor.DISCRETE_SET_DISCRETE_SET)),
 
-    /** The type of a pretty-printer document, {@code PP.doc}. */
-    DOC("PP", "doc", false, 0, h -> h),
+    DOC("PP", "doc", 0, h -> h),
 
     EITHER(
         "Either",
         "either",
-        false,
         2,
         h -> h.tyCon(Constructor.EITHER_INL).tyCon(Constructor.EITHER_INR)),
 
     EXN(
         "General",
         "exn",
-        false,
         0,
         h ->
             h.tyCon(Constructor.EXN_BIND)
@@ -5806,14 +5807,12 @@ public enum BuiltIn {
     OPTION(
         "Option",
         "option",
-        false,
         1,
         h -> h.tyCon(Constructor.OPTION_NONE).tyCon(Constructor.OPTION_SOME)),
 
     ORDER(
         "General",
         "order",
-        false,
         0,
         h ->
             h.tyCon(Constructor.ORDER_LESS)
@@ -5826,7 +5825,7 @@ public enum BuiltIn {
      * <p>After "{@code o}", {@code o} has type {@code overload}. The type
      * system will then allow subsequent {@code val inst o} declarations.
      */
-    OVERLOAD("$", "$overload", true, 0, h -> h),
+    OVERLOAD("$", "$overload", 0, h -> h),
 
     /**
      * Analog of {@code bool} for checking that matches are exhaustive. Owns the
@@ -5835,7 +5834,6 @@ public enum BuiltIn {
     PSEUDO_BOOL(
         "$",
         "$bool",
-        true,
         0,
         h -> h.tyCon(Constructor.BOOL_FALSE).tyCon(Constructor.BOOL_TRUE)),
 
@@ -5846,14 +5844,12 @@ public enum BuiltIn {
     PSEUDO_LIST(
         "$",
         "$list",
-        true,
         1,
         h -> h.tyCon(Constructor.LIST_NIL).tyCon(Constructor.LIST_CONS)),
 
     RANGE(
         "Range",
         "range",
-        false,
         1,
         h ->
             h.tyCon(Constructor.RANGE_ALL)
@@ -5870,7 +5866,6 @@ public enum BuiltIn {
     STRING_CVT_RADIX(
         "StringCvt",
         "radix",
-        false,
         0,
         h ->
             h.tyCon(Constructor.STRING_CVT_RADIX_BIN)
@@ -5881,7 +5876,6 @@ public enum BuiltIn {
     STRING_CVT_REALFMT(
         "StringCvt",
         "realfmt",
-        false,
         0,
         h ->
             h.tyCon(Constructor.STRING_CVT_REALFMT_EXACT)
@@ -5913,7 +5907,6 @@ public enum BuiltIn {
     VARIANT(
         "Variant",
         "variant",
-        false,
         0,
         h ->
             h.tyCon(Constructor.VARIANT_UNIT)
@@ -5933,19 +5926,16 @@ public enum BuiltIn {
 
     public final String structure;
     private final String mlName;
-    private final boolean internal;
     private final int varCount;
     private final UnaryOperator<DataTypeHelper> transform;
 
     Datatype(
         String structure,
         String mlName,
-        boolean internal,
         int varCount,
         UnaryOperator<DataTypeHelper> transform) {
       this.structure = requireNonNull(structure, "structure");
       this.mlName = requireNonNull(mlName, "mlName");
-      this.internal = internal;
       this.varCount = varCount;
       this.transform = requireNonNull(transform, "transform");
     }
@@ -5958,11 +5948,6 @@ public enum BuiltIn {
     @Override
     public int varCount() {
       return varCount;
-    }
-
-    @Override
-    public boolean isInternal() {
-      return internal;
     }
 
     @Override
@@ -5990,6 +5975,14 @@ public enum BuiltIn {
     // lint: sort until '##private ' where '##[A-Z]'
 
     BAG("bag", 1),
+    /**
+     * A collection whose orderedness is not yet decided. The parameter type of
+     * a built-in that works on a list and on a bag alike, such as {@code
+     * Relational.count} or {@code Relational.only}: at a use it unifies with
+     * whichever the argument is, and where nothing constrains it, it is read
+     * back as a bag. Internal, and named so that no program can write it.
+     */
+    COLLECTION("$collection", 1),
     DATE("date", 0),
     LIST("list", 1),
     TIME("time", 0),

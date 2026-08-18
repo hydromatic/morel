@@ -847,6 +847,12 @@ public class TypeResolver {
     POLYMORPHIC,
     /** The function's parameter type is a bag. */
     BAG,
+    /**
+     * The function's parameter type is a collection, so it works on a list and
+     * on a bag alike; leave the orderedness free, as {@link #USER_UNKNOWN}
+     * does, and let the input or the function's own type decide it.
+     */
+    COLLECTION,
     /** The function's parameter type is a list. */
     LIST
   }
@@ -998,9 +1004,14 @@ public class TypeResolver {
       if (paramType instanceof ListType) {
         return AggKind.LIST;
       }
-      if (paramType instanceof DataType
-          && ((DataType) paramType).name.equals(BAG_TY_CON)) {
-        return AggKind.BAG;
+      if (paramType instanceof DataType) {
+        final String name = ((DataType) paramType).name;
+        if (name.equals(BAG_TY_CON)) {
+          return AggKind.BAG;
+        }
+        if (name.equals(COLLECTION_TY_CON)) {
+          return AggKind.COLLECTION;
+        }
       }
     }
     return AggKind.POLYMORPHIC;
@@ -1630,9 +1641,11 @@ public class TypeResolver {
     final Variable rv = unifier.variable();
     final Ast.Exp intoExp;
     switch (aggKind(p.rootEnv, into.exp)) {
+      case COLLECTION:
       case USER_UNKNOWN:
-        // User-defined function whose type is not yet available.
-        // Link directly to p.c to preserve record type propagation.
+        // A collection parameter, or a user-defined function whose type is not
+        // yet available. Link directly to p.c to preserve record type
+        // propagation.
         intoExp =
             deduceExpType(p.rootEnv, into.exp, toVariable(fnTerm(p.c, rv)));
         break;
@@ -3057,8 +3070,7 @@ public class TypeResolver {
     }
     if (op != null) {
       for (BuiltIn b : candidates) {
-        String bOp = firstParamReceiverTypeOp(b);
-        if (bOp.equals(op)) {
+        if (receiverTypeOpIs(b, op)) {
           return b;
         }
       }
@@ -3092,9 +3104,7 @@ public class TypeResolver {
     // Accept only when exactly one candidate has this receiver type,
     // to avoid false disambiguation.
     long matches =
-        candidates.stream()
-            .filter(b -> firstParamReceiverTypeOp(b).equals(op))
-            .count();
+        candidates.stream().filter(b -> receiverTypeOpIs(b, op)).count();
     return matches == 1 ? op : null;
   }
 
@@ -3152,7 +3162,7 @@ public class TypeResolver {
     } else {
       best =
           candidates.stream()
-              .filter(b -> firstParamReceiverTypeOp(b).equals(innerHint))
+              .filter(b -> receiverTypeOpIs(b, innerHint))
               .findFirst()
               .orElse(null);
       if (best == null) {
@@ -3221,7 +3231,7 @@ public class TypeResolver {
           } else {
             best =
                 candidates.stream()
-                    .filter(b -> firstParamReceiverTypeOp(b).equals(innerHint))
+                    .filter(b -> receiverTypeOpIs(b, innerHint))
                     .findFirst()
                     .orElse(null);
             if (best == null) {
@@ -3279,6 +3289,19 @@ public class TypeResolver {
    * returns "int". For tuple-splicing forms (e.g. {@code List.drop}), the first
    * element of the tuple is the receiver.
    */
+  /**
+   * Whether a method's receiver type is {@code op}. A built-in whose parameter
+   * is a collection, such as {@code Relational.count}, takes a list receiver
+   * and a bag receiver alike.
+   */
+  private boolean receiverTypeOpIs(BuiltIn b, String op) {
+    final String paramOp = firstParamReceiverTypeOp(b);
+    if (paramOp.equals(COLLECTION_TY_CON)) {
+      return op.equals(LIST_TY_CON) || op.equals(BAG_TY_CON);
+    }
+    return paramOp.equals(op);
+  }
+
   private String firstParamReceiverTypeOp(BuiltIn b) {
     Type type = b.typeFunction.apply(typeSystem);
     if (type instanceof ForallType) {
@@ -3850,6 +3873,7 @@ public class TypeResolver {
     equiv(vAgg, fnType);
 
     switch (aggKind(p.env, aggregate.aggregate)) {
+      case COLLECTION:
       case USER_UNKNOWN:
         isCollectionOf(cArg, vArg);
         break;
@@ -5215,6 +5239,14 @@ public class TypeResolver {
         if (dataType.name.equals(BAG_TY_CON)) {
           assert dataType.arguments.size() == 1;
           return bagTerm(toTerm(dataType.elementType(), subst));
+        }
+        if (dataType.name.equals(COLLECTION_TY_CON)) {
+          // The orderedness is a fresh variable, so the use decides whether
+          // the collection is a list or a bag. Where nothing decides, reading
+          // the term back gives a bag.
+          assert dataType.arguments.size() == 1;
+          return collectionTerm(
+              toTerm(dataType.elementType(), subst), unifier.variable());
         }
         // A term identifies a datatype by name, so a datatype whose name now
         // belongs to something else could not be recovered from the term.

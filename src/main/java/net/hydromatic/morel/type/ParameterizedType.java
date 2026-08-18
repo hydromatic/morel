@@ -23,6 +23,7 @@ import static net.hydromatic.morel.util.Ord.forEachIndexed;
 
 import java.util.List;
 import net.hydromatic.morel.ast.Op;
+import net.hydromatic.morel.compile.BuiltIn;
 import net.hydromatic.morel.util.MapList;
 
 /**
@@ -60,6 +61,12 @@ public abstract class ParameterizedType extends BaseType implements NamedType {
   }
 
   static String computeMoniker(String name, List<? extends Type> typeVars) {
+    if (name.equals(BuiltIn.Eqtype.COLLECTION.mlName())) {
+      // A collection whose orderedness nothing has decided reads back as a
+      // bag, so that is what it is called; its internal name is not something
+      // to show anyone.
+      name = BuiltIn.Eqtype.BAG.mlName();
+    }
     if (typeVars.isEmpty()) {
       return name;
     }

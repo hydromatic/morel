@@ -72,7 +72,8 @@ public class DataType extends ParameterizedType {
 
   @Override
   public boolean isCollection() {
-    return name.equals(BuiltIn.Eqtype.BAG.mlName());
+    return name.equals(BuiltIn.Eqtype.BAG.mlName())
+        || name.equals(BuiltIn.Eqtype.COLLECTION.mlName());
   }
 
   @Override
