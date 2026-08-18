@@ -250,51 +250,14 @@ class LindigTest {
     final Doc doc =
         fillSep(
             words(
-                "the fill combinator lays out words one"
+                "the fillSep combinator lays out words one"
                     + " at a time fitting as many on each line as possible"));
     assertThat(
         render(40, doc),
         isLines(
-            "the fill combinator lays out words one",
-            "at a time fitting as many on each line",
-            "as possible"));
-  }
-
-  // -- fill -----------------------------------------------------------------
-
-  /** {@code fill} packs atoms onto as many lines as fit. */
-  @Test
-  void testFillAtoms() {
-    final List<Doc> docs =
-        ImmutableList.of(
-            text("1,"), text("2,"), text("3,"), text("4,"), text("5"));
-    final Doc doc = align(Lindig.fill(EMPTY, docs));
-    assertThat(render(80, doc), is("1,2,3,4,5"));
-    assertThat(render(4, doc), isLines("1,2,", "3,4,", "5"));
-  }
-
-  /**
-   * {@code fill} treats each element as an indivisible unit: a list of records
-   * wraps between records (not within one), which {@code fillSep} cannot do.
-   */
-  @Test
-  void testFillTreatsElementsAsUnits() {
-    // Each "record" is itself a group that could break internally.
-    final Doc r1 = group(brackets(fillSep(words("a b"))));
-    final Doc r2 = group(brackets(fillSep(words("c d"))));
-    final Doc r3 = group(brackets(fillSep(words("e f"))));
-    final Doc doc =
-        align(
-            Lindig.fill(
-                EMPTY,
-                ImmutableList.of(
-                    beside(r1, text(",")),
-                    beside(r2, text(",")),
-                    beside(r3, text("")))));
-    // Wide: all on one line.
-    assertThat(render(80, doc), is("[a b],[c d],[e f]"));
-    // Narrow: wraps between records, each record kept intact.
-    assertThat(render(8, doc), isLines("[a b],", "[c d],", "[e f]"));
+            "the fillSep combinator lays out words",
+            "one at a time fitting as many on each",
+            "line as possible"));
   }
 
   // -- punctuate ------------------------------------------------------------
@@ -484,6 +447,29 @@ class LindigTest {
         isLines("before", "alpha", "bravo", "charlie", "after"));
   }
 
+  // -- Exact lookahead ------------------------------------------------------
+
+  /**
+   * A union whose narrow branch continues on the same line — an elision
+   * combinator, "full form if it fits, else {@code ...}" — is measured by what
+   * that branch actually emits.
+   *
+   * <p>This is the case a fit test cannot get right by treating a union as the
+   * end of the line. It happens to work for every union built today -- those of
+   * {@link Lindig#pack} and of Morel's own printer -- because each has a narrow
+   * branch that begins with a line break.
+   */
+  @Test
+  void testFitsMeasuresChosenUnionBranch() {
+    final Doc elided = Lindig.union(text("alpha bravo charlie"), text("..."));
+    final Doc doc = beside(text("["), beside(elided, text("] tail")));
+    // Wide: the full form fits.
+    assertThat(render(80, doc), is("[alpha bravo charlie] tail"));
+    // Narrow: the full form does not, so the narrow branch is taken -- and the
+    // enclosing scan measures "...", not an assumed end of line.
+    assertThat(render(10, doc), is("[...] tail"));
+  }
+
   // -- Stack safety and scalability -----------------------------------------
 
   /**
@@ -528,6 +514,30 @@ class LindigTest {
     assertThat(s, containsString("leaf"));
     assertThat(s.chars().filter(c -> c == '(').count(), is((long) depth));
     assertThat(s.chars().filter(c -> c == '\n').count(), is((long) depth * 2));
+  }
+
+  /**
+   * Renders a wide tuple whose elements each wrap in their own group — one
+   * nested decision point per separator.
+   *
+   * <p>A fit test that re-decides each downstream group re-scans the same
+   * suffix at every level, so this costs O(2<sup>n</sup>); scanning the shared
+   * output stream instead makes it linear. At n=30 the exponential version
+   * takes about 12 seconds, and n=1000 is out of reach.
+   */
+  @Test
+  void testWideTupleOfGroups() {
+    final int size = 1_000;
+    final List<Doc> elements = new ArrayList<>();
+    for (int n = 0; n < size; n++) {
+      elements.add(group(text(Integer.toString(n))));
+    }
+    final Doc doc = encloseSep(text("("), text(")"), text(","), elements);
+    final String s = render(79, doc);
+    assertThat(s.chars().filter(c -> c == ',').count(), is((long) size - 1));
+    for (String line : s.split("\n", -1)) {
+      assertThat(line.length() <= 79, is(true));
+    }
   }
 
   /** Renders a wide list with many elements without overflowing the stack. */

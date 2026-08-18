@@ -72,6 +72,7 @@ val <a id='vcat' href="#vcat-impl">vcat</a> : doc list -> doc
 val <a id='cat' href="#cat-impl">cat</a> : doc list -> doc
 val <a id='fillSep' href="#fillSep-impl">fillSep</a> : doc list -> doc
 val <a id='fillCat' href="#fillCat-impl">fillCat</a> : doc list -> doc
+val <a id='pack' href="#pack-impl">pack</a> : doc * doc list -> doc
 val <a id='punctuate' href="#punctuate-impl">punctuate</a> : doc * doc list -> doc list
 val <a id='encloseSep' href="#encloseSep-impl">encloseSep</a> : doc * doc * doc * doc list -> doc
 val <a id='parens' href="#parens-impl">parens</a> : doc -> doc
@@ -198,6 +199,15 @@ inserting a line break whenever the next document does not fit.
 
 `fillCat ds` concatenates the documents `ds` with nothing between them, inserting a
 line break whenever the next document does not fit.
+
+<a id="pack-impl"></a>
+<h3><code>pack</code></h3>
+
+`pack (glue, ds)` packs the documents `ds` onto as many lines as needed, putting as many as
+fit on each line, joined by `glue` when they share a line and by a line
+break otherwise. Unlike `fillSep` and `fillCat`, each document is an
+indivisible unit even if it contains its own line breaks, so a list of
+records wraps between records rather than within one.
 
 <a id="punctuate-impl"></a>
 <h3><code>punctuate</code></h3>

@@ -138,6 +138,15 @@ sig
   val fillCat : doc list -> doc [@@prototype "fillCat ds"]
 
   (**
+   * packs the documents `ds` onto as many lines as needed, putting as many as
+   * fit on each line, joined by `glue` when they share a line and by a line
+   * break otherwise. Unlike `fillSep` and `fillCat`, each document is an
+   * indivisible unit even if it contains its own line breaks, so a list of
+   * records wraps between records rather than within one.
+   *)
+  val pack : doc * doc list -> doc [@@prototype "pack (glue, ds)"]
+
+  (**
    * inserts the separator `sep` between each of the documents `ds`,
    * returning the resulting list of documents.
    *)

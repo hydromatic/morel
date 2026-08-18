@@ -43,10 +43,17 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * Nesting}, and {@code FlatAlt} extensions (which enable {@link #align(Doc)}).
  * The class is named after Christian Lindig, whose <a
  * href="https://lindig.github.io/papers/strictly-pretty-2000.pdf">"Strictly
- * Pretty"</a> (2000) gives the strict, iterative rendering algorithm used here:
- * {@link #render(int, Doc)} makes a single pass over an explicit work list,
- * running in time linear in the size of the document and using constant Java
- * stack however deeply the document nests.
+ * Pretty"</a> (2000) gives the iterative work-list formulation of the layout
+ * algorithm used here.
+ *
+ * <p>{@link #render(int, Doc)} lays the document out as a lazy stream of {@link
+ * Out} chunks (Leijen's {@code SimpleDoc}), produced on demand by {@link Thunk}
+ * and memoized. The fit test, {@link #fits}, scans that stream rather than
+ * re-deciding the document, so each layout decision is computed once and shared
+ * by every scan that passes over it. A strict {@code fits} that re-decides
+ * downstream groups costs O(2<sup>n</sup>) in the number of nested decision
+ * points; scanning the stream makes the lookahead both affordable and exact,
+ * because what it measures is the text that will actually be emitted.
  *
  * <p>This class has no dependency on Morel's AST.
  */
@@ -182,7 +189,7 @@ public class Lindig {
    *
    * <p>Unlike {@link Group}, the two alternatives may have different structure;
    * {@code wide} is typically more flattened than {@code narrow}. This is what
-   * {@link #fill} needs: each gap lays the following element out flat for the
+   * {@link #pack} needs: each gap lays the following element out flat for the
    * fit-test but leaves it free to break in the real layout.
    */
   static final class Union extends Doc {
@@ -320,7 +327,7 @@ public class Lindig {
    * flat layout. The caller must ensure {@code wide} is at least as flat as
    * {@code narrow} (typically {@code wide} is {@link #flatten(Doc) flattened}),
    * so that "fits" implies "is a valid layout". This is the primitive behind
-   * {@link #fill}.
+   * {@link #pack}.
    */
   public static Doc union(Doc wide, Doc narrow) {
     return new Union(wide, narrow);
@@ -431,7 +438,7 @@ public class Lindig {
    *     (often a space, or {@link #EMPTY})
    * @param docs documents to pack
    */
-  public static Doc fill(Doc glue, List<Doc> docs) {
+  public static Doc pack(Doc glue, List<Doc> docs) {
     if (docs.isEmpty()) {
       return EMPTY;
     }
@@ -554,8 +561,36 @@ public class Lindig {
    */
   public static String render(int width, Doc doc) {
     final StringBuilder b = new StringBuilder();
-    int k = 0; // current column
-    Item item = new Item(0, Mode.BREAK, doc, null);
+    Thunk thunk = new Thunk(width, 0, new Item(0, Mode.BREAK, doc, null));
+    for (; ; ) {
+      final Out out = thunk.force();
+      if (out instanceof OutEnd) {
+        return b.toString();
+      } else if (out instanceof OutText) {
+        final OutText t = (OutText) out;
+        b.append(t.text);
+        thunk = t.rest;
+      } else {
+        final OutLine line = (OutLine) out;
+        b.append('\n').append(Spaces.of(line.indent));
+        thunk = line.rest;
+      }
+    }
+  }
+
+  /**
+   * Lays out the work list until it produces the next output chunk.
+   *
+   * <p>Each chunk carries a {@link Thunk} for the rest of the stream, so the
+   * layout is produced on demand; {@link #fits} forces only as much of it as
+   * the fit test needs, and {@link Thunk} memoizes what has been forced so that
+   * a later pass does not redo the work.
+   *
+   * @param width page width
+   * @param col current column
+   * @param item work list to lay out
+   */
+  private static Out best(int width, int col, @Nullable Item item) {
     while (item != null) {
       final int i = item.indent;
       final Mode mode = item.mode;
@@ -565,9 +600,10 @@ public class Lindig {
         item = next;
       } else if (d instanceof Text) {
         final Text t = (Text) d;
-        b.append(t.text);
-        k += t.text.length();
-        item = t.doc instanceof Empty ? next : new Item(i, mode, t.doc, next);
+        final Item rest =
+            t.doc instanceof Empty ? next : new Item(i, mode, t.doc, next);
+        return new OutText(
+            t.text, new Thunk(width, col + t.text.length(), rest));
       } else if (d instanceof Cat) {
         final Cat cat = (Cat) d;
         item = new Item(i, mode, cat.a, new Item(i, mode, cat.b, next));
@@ -575,36 +611,53 @@ public class Lindig {
         final Nest nest = (Nest) d;
         item = new Item(i + nest.indent, mode, nest.doc, next);
       } else if (d instanceof Line) {
+        // A bare line cannot be flattened, so one that survives into a flat
+        // layout still emits a line break but marks the layout as not fitting;
+        // that is what makes a group containing HARD_LINE always break.
         final Doc rest = ((Line) d).doc;
-        b.append('\n').append(Spaces.of(i));
-        k = i;
-        item = rest instanceof Empty ? next : new Item(i, mode, rest, next);
+        final Item r =
+            rest instanceof Empty ? next : new Item(i, mode, rest, next);
+        return new OutLine(i, mode == Mode.FLAT, new Thunk(width, i, r));
       } else if (d instanceof FlatAlt) {
         final FlatAlt f = (FlatAlt) d;
         item = new Item(i, mode, mode == Mode.FLAT ? f.flat : f.primary, next);
       } else if (d instanceof Group) {
+        // Inside a flat layout every group is flat too, and needs no decision.
+        // Otherwise the group is flat if its flattened layout, followed by
+        // whatever comes after it, reaches the end of the line within the page
+        // width. The lookahead is exact: it measures the stream that rendering
+        // would emit, including the text that a downstream group contributes
+        // to this line before it breaks.
         final Doc inner = ((Group) d).doc;
         final Item flat = new Item(i, Mode.FLAT, inner, next);
-        item =
-            fits(width, k, flat) ? flat : new Item(i, Mode.BREAK, inner, next);
+        if (mode == Mode.FLAT) {
+          item = flat;
+          continue;
+        }
+        final Thunk thunk = new Thunk(width, col, flat);
+        if (fits(width - col, thunk)) {
+          return thunk.force();
+        }
+        item = new Item(i, Mode.BREAK, inner, next);
       } else if (d instanceof Union) {
         // A union always makes its own decision (it is not forced flat by an
         // enclosing flat layout), so the gaps of a fill break independently.
         final Union u = (Union) d;
-        final Item wide = new Item(i, Mode.FLAT, u.wide, next);
-        item =
-            fits(width, k, wide)
-                ? wide
-                : new Item(i, Mode.BREAK, u.narrow, next);
+        final Thunk thunk =
+            new Thunk(width, col, new Item(i, Mode.FLAT, u.wide, next));
+        if (fits(width - col, thunk)) {
+          return thunk.force();
+        }
+        item = new Item(i, Mode.BREAK, u.narrow, next);
       } else if (d instanceof Column) {
-        item = new Item(i, mode, ((Column) d).fn.apply(k), next);
+        item = new Item(i, mode, ((Column) d).fn.apply(col), next);
       } else if (d instanceof Nesting) {
         item = new Item(i, mode, ((Nesting) d).fn.apply(i), next);
       } else {
         throw new AssertionError("unknown Doc: " + d);
       }
     }
-    return b.toString();
+    return OutEnd.INSTANCE;
   }
 
   // -- Private helpers ------------------------------------------------------
@@ -653,75 +706,112 @@ public class Lindig {
   }
 
   /**
-   * Returns whether the work list fits in the remaining space on the current
-   * line. Scans forward until the first line break (which ends the current
-   * line, so what precedes it fits) or until the page width is exceeded.
+   * Returns whether the rest of the layout fits in the remaining space on the
+   * current line. Scans the output stream forward until the first line break
+   * (which ends the current line, so what precedes it fits) or until the
+   * remaining space runs out.
    *
-   * @param width page width
-   * @param col current column
-   * @param item work list to measure
+   * <p>Because the scan consumes the chunks that rendering will emit, the
+   * layout decisions it passes over have already been made — and are memoized,
+   * so the caller that commits to this stream, and any later scan over it, gets
+   * them for free.
+   *
+   * @param remaining space left on the current line
+   * @param thunk rest of the output stream
    */
-  private static boolean fits(int width, int col, Item item) {
+  private static boolean fits(int remaining, Thunk thunk) {
     for (; ; ) {
-      if (col > width) {
+      if (remaining < 0) {
         return false;
       }
-      if (item == null) {
+      final Out out = thunk.force();
+      if (out instanceof OutEnd) {
         return true;
-      }
-      final int i = item.indent;
-      final Mode mode = item.mode;
-      final Doc d = item.doc;
-      final Item next = item.next;
-      if (d instanceof Empty) {
-        item = next;
-      } else if (d instanceof Text) {
-        final Text t = (Text) d;
-        col += t.text.length();
-        item = t.doc instanceof Empty ? next : new Item(i, mode, t.doc, next);
-      } else if (d instanceof Cat) {
-        final Cat cat = (Cat) d;
-        item = new Item(i, mode, cat.a, new Item(i, mode, cat.b, next));
-      } else if (d instanceof Nest) {
-        final Nest nest = (Nest) d;
-        item = new Item(i + nest.indent, mode, nest.doc, next);
-      } else if (d instanceof Line) {
-        // In a broken layout a line break ends the current line, so what
-        // precedes it fits. In a flat layout a bare (hard) line cannot be
-        // flattened, so this layout does not fit and the group must break.
-        return mode == Mode.BREAK;
-      } else if (d instanceof FlatAlt) {
-        final FlatAlt f = (FlatAlt) d;
-        item = new Item(i, mode, mode == Mode.FLAT ? f.flat : f.primary, next);
-      } else if (d instanceof Group) {
-        // Inside a flat layout every group is flat too. A downstream group in a
-        // broken layout makes its own break decision: it breaks when its
-        // flattened form (with what follows) does not fit, and the resulting
-        // line break ends the current line. This is what lets adjacent groups
-        // in a fill wrap independently rather than all-or-nothing.
-        final Item flat = new Item(i, Mode.FLAT, ((Group) d).doc, next);
-        if (mode == Mode.BREAK && !fits(width, col, flat)) {
-          return true;
-        }
-        item = flat;
-      } else if (d instanceof Union) {
-        // A union always makes its own decision, even inside a flat layout: it
-        // takes its wide branch only if that branch's first line fits, and
-        // otherwise its narrow branch breaks, ending the current line. This is
-        // what makes a fill greedy: each gap is decided by whether the next
-        // element fits, independently of the elements that follow it.
-        final Item wide = new Item(i, Mode.FLAT, ((Union) d).wide, next);
-        if (!fits(width, col, wide)) {
-          return true;
-        }
-        item = wide;
-      } else if (d instanceof Column) {
-        item = new Item(i, mode, ((Column) d).fn.apply(col), next);
-      } else if (d instanceof Nesting) {
-        item = new Item(i, mode, ((Nesting) d).fn.apply(i), next);
+      } else if (out instanceof OutText) {
+        final OutText t = (OutText) out;
+        remaining -= t.text.length();
+        thunk = t.rest;
       } else {
-        throw new AssertionError("unknown Doc: " + d);
+        // A line break ends the current line, so what precedes it fits --
+        // unless it is a bare line that a flat layout could not flatten, in
+        // which case the layout is invalid and the group must break.
+        return !((OutLine) out).flat;
       }
+    }
+  }
+
+  // -- Output stream --------------------------------------------------------
+
+  /**
+   * A chunk of laid-out output: literal text, a line break, or the end of the
+   * stream. Leijen calls this a {@code SimpleDoc}: a document from which every
+   * layout choice has been removed.
+   */
+  private abstract static class Out {
+    private Out() {}
+  }
+
+  /** End of the output stream. */
+  private static final class OutEnd extends Out {
+    static final OutEnd INSTANCE = new OutEnd();
+  }
+
+  /** Literal text, followed by the rest of the stream. */
+  private static final class OutText extends Out {
+    final String text;
+    final Thunk rest;
+
+    OutText(String text, Thunk rest) {
+      this.text = text;
+      this.rest = rest;
+    }
+  }
+
+  /**
+   * A line break and the indent of the following line, followed by the rest of
+   * the stream.
+   *
+   * <p>{@code flat} means the break came from a bare {@link Line} that a flat
+   * layout could not flatten. Rendering emits it like any other break, but
+   * {@link #fits} rejects the layout that contains it.
+   */
+  private static final class OutLine extends Out {
+    final int indent;
+    final boolean flat;
+    final Thunk rest;
+
+    OutLine(int indent, boolean flat, Thunk rest) {
+      this.indent = indent;
+      this.flat = flat;
+      this.rest = rest;
+    }
+  }
+
+  /**
+   * The unevaluated rest of an output stream: a work list plus the column it
+   * starts at, which {@link #force()} lays out into the next {@link Out} chunk.
+   *
+   * <p>The chunk is computed at most once, however many scans pass over it.
+   * That sharing is what keeps the lookahead in {@link #fits} affordable.
+   */
+  private static final class Thunk {
+    private final int width;
+    private final int col;
+    private @Nullable Item item;
+    private @Nullable Out out;
+
+    Thunk(int width, int col, @Nullable Item item) {
+      this.width = width;
+      this.col = col;
+      this.item = item;
+    }
+
+    Out force() {
+      if (out == null) {
+        out = best(width, col, item);
+        item = null; // let the work list be collected
+      }
+      return out;
     }
   }
 

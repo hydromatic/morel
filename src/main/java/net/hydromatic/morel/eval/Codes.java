@@ -3917,6 +3917,15 @@ public abstract class Codes {
         }
       };
 
+  /** @see BuiltIn#PP_PACK */
+  private static final Applicable PP_PACK =
+      new BaseApplicable2<Lindig.Doc, Lindig.Doc, List>(BuiltIn.PP_PACK) {
+        @Override
+        public Lindig.Doc apply(Lindig.Doc glue, List docs) {
+          return Lindig.pack(glue, docs);
+        }
+      };
+
   /** @see BuiltIn#PP_PARENS */
   private static final Applicable PP_PARENS =
       new BaseApplicable1<Lindig.Doc, Lindig.Doc>(BuiltIn.PP_PARENS) {
@@ -7545,6 +7554,7 @@ public abstract class Codes {
     b.add(BuiltIn.PP_LINE, PP_LINE);
     b.add(BuiltIn.PP_LINE_BREAK, PP_LINE_BREAK);
     b.add(BuiltIn.PP_NEST, PP_NEST);
+    b.add(BuiltIn.PP_PACK, PP_PACK);
     b.add(BuiltIn.PP_PARENS, PP_PARENS);
     b.add(BuiltIn.PP_PUNCTUATE, PP_PUNCTUATE);
     b.add(BuiltIn.PP_RENDER, PP_RENDER);

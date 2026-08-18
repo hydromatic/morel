@@ -3151,6 +3151,15 @@ public enum BuiltIn {
         return ts.fnType(ts.tupleType(INT, doc), doc);
       }),
 
+  /** Function "PP.pack", of type "doc * doc list &rarr; doc". */
+  PP_PACK(
+      "PP",
+      "pack",
+      ts -> {
+        final Type doc = ts.lookup(Datatype.DOC);
+        return ts.fnType(ts.tupleType(doc, ts.listType(doc)), doc);
+      }),
+
   /** Function "PP.parens", of type "doc &rarr; doc". */
   PP_PARENS(
       "PP",

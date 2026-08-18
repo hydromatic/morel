@@ -25,10 +25,10 @@ import static net.hydromatic.morel.util.Lindig.HARD_LINE;
 import static net.hydromatic.morel.util.Lindig.LINE;
 import static net.hydromatic.morel.util.Lindig.align;
 import static net.hydromatic.morel.util.Lindig.beside;
-import static net.hydromatic.morel.util.Lindig.fill;
 import static net.hydromatic.morel.util.Lindig.flatten;
 import static net.hydromatic.morel.util.Lindig.group;
 import static net.hydromatic.morel.util.Lindig.nest;
+import static net.hydromatic.morel.util.Lindig.pack;
 import static net.hydromatic.morel.util.Lindig.render;
 import static net.hydromatic.morel.util.Lindig.text;
 import static net.hydromatic.morel.util.Lindig.union;
@@ -422,7 +422,7 @@ class Pretty {
       items.add(
           i < docs.size() - 1 ? beside(docs.get(i), text(",")) : docs.get(i));
     }
-    return beside(text(open), beside(align(fill(EMPTY, items)), text(close)));
+    return beside(text(open), beside(align(pack(EMPTY, items)), text(close)));
   }
 
   /**
@@ -469,7 +469,7 @@ class Pretty {
         }
         // Continuation lines indent one column past the first element, as
         // SML/NJ does (the same "+1" offset as a record type).
-        return align(nest(1, fill(text(" "), productItems)));
+        return align(nest(1, pack(text(" "), productItems)));
 
       case RECORD_TYPE:
       case PROGRESSIVE_RECORD_TYPE:
@@ -495,7 +495,7 @@ class Pretty {
                   ? beside(fields.get(i), text(","))
                   : fields.get(i));
         }
-        final Doc fieldsDoc = fill(text(" "), fieldItems);
+        final Doc fieldsDoc = pack(text(" "), fieldItems);
         return beside(text("{"), beside(align(nest(1, fieldsDoc)), text("}")));
 
       case FUNCTION_TYPE:
