@@ -390,7 +390,7 @@ val eitherSet = Range.discreteSetOf [CLOSED (INL LESS, INR true)];
 >   : (order,bool) either discrete_set
 
 eitherSet.toList ();
-> val it = [INL (LESS),INL (EQUAL),INL (GREATER),INR false,INR true]
+> val it = [INL LESS,INL EQUAL,INL GREATER,INR false,INR true]
 >   : (order,bool) either list
 
 (*) Apply f to each value in the set.

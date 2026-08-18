@@ -97,6 +97,29 @@ Char.ord #"A";
 #"A".ord ();
 > val it = 65 : int
 
+(* A character is a byte, and a "\ddd" escape denotes that byte,
+ * whatever its value. *)
+ord #"\127";
+> val it = 127 : int
+ord #"\128";
+> val it = 128 : int
+ord #"\253";
+> val it = 253 : int
+ord #"\255";
+> val it = 255 : int
+#"\253";
+> val it = #"\253" : char
+[#"\001", #"\128", #"\255"];
+> val it = [#"\^A",#"\128",#"\255"] : char list
+
+(*) The escape survives a round trip through a pattern.
+case #"\200" of #"\200" => "yes" | _ => "no";
+> val it = "yes" : string
+
+(*) A character written as itself.
+ord #"e";
+> val it = 101 : int
+
 (* [succ c] returns the character immediately following c, or raises
  * Chr if c = maxChar. *)
 Char.succ;
