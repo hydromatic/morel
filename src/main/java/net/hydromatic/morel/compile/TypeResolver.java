@@ -140,6 +140,18 @@ public class TypeResolver {
   private final Deque<AggFrame> aggregateTripleStack = new ArrayDeque<>();
 
   /**
+   * The solve that last typed a postfix method receiver, and the number of
+   * constraints it was made from ({@code -1} for no solve yet, and a null
+   * substitution for one that failed). A receiver resolves the same way as long
+   * as no constraint has been added, so consecutive calls share a solve.
+   *
+   * @see #solvedTermOperatorOf
+   */
+  private @Nullable Substitution receiverSubstitution;
+
+  private int receiverSubstitutionAt = -1;
+
+  /**
    * Datatypes encountered whose name has since been taken over by a later
    * declaration. A unifier term identifies a datatype only by name, so without
    * these the type could not be recovered from the term.
@@ -3040,13 +3052,21 @@ public class TypeResolver {
    * <ol>
    *   <li>Scan recently-added type constraints ({@link #termOperatorOf}) — fast
    *       for literals and bound variables.
-   *   <li>Inspect the receiver AST ({@link #receiverTypeHint}) — handles {@code
-   *       Apply} nodes such as {@code bag [1,2]}.
+   *   <li>Solve the constraints ({@link #solvedTermOperatorOf}) — exact, and
+   *       the only strategy that sees through a decomposition, as a query
+   *       variable requires.
+   *   <li>Inspect the receiver AST ({@link #receiverTypeHint}) — handles a
+   *       receiver the solve leaves polymorphic.
    *   <li>Inspect the argument type ({@link #argTypeHint}) — handles chains
    *       through polymorphic functions such as {@code getOpt}, where the
    *       receiver type equals the argument type (e.g. {@code compare}, {@code
    *       max}, {@code min}, {@code rem}).
    * </ol>
+   *
+   * <p>The exact strategies come first because the AST hints are only guesses:
+   * {@link #receiverTypeHint} looks a receiver's name up in the environment,
+   * which is the wrong type when a query variable shadows it, as {@code xs}
+   * does in {@code postfix.smli}.
    *
    * <p>If only one candidate exists, or we cannot determine the receiver's type
    * operator, we return the first candidate (which may still fail type-checking
@@ -3062,6 +3082,9 @@ public class TypeResolver {
       return candidates.iterator().next();
     }
     String op = termOperatorOf(vReceiver);
+    if (op == null) {
+      op = solvedTermOperatorOf(vReceiver);
+    }
     if (op == null) {
       op = receiverTypeHint(env, receiver);
     }
@@ -3353,6 +3376,69 @@ public class TypeResolver {
    */
   private @Nullable String termOperatorOf(Variable v) {
     return termOperatorOf(v, new HashSet<>());
+  }
+
+  /**
+   * Returns the type-term operator of a variable according to a solve of the
+   * constraints accumulated so far, or null if they have no solution or leave
+   * the variable without a type constructor.
+   *
+   * <p>Answers where {@link #termOperatorOf} cannot. That method scans the
+   * constraints for a term named alongside the variable, and a query variable
+   * is never named alongside its type: {@code from i in [1, 2, 3]} constrains
+   * the source to {@code collection(int, ordered)} and to {@code collection(v,
+   * ord)}, and only decomposing the two puts {@code v} and {@code int}
+   * together. Unification decomposes; a scan does not. So without this, {@code
+   * from i in [1, 2, 3] yield i.toString ()} reaches the fallback and picks
+   * whichever {@code toString} happens to come first.
+   *
+   * <p>Solving is affordable here because it is side-effect free (actions
+   * affect only the local solve) and because consecutive receivers, having
+   * added no constraints between them, share one solve.
+   */
+  private @Nullable String solvedTermOperatorOf(Variable v) {
+    if (receiverSubstitutionAt != terms.size()) {
+      receiverSubstitutionAt = terms.size();
+      receiverSubstitution = solve();
+    }
+    return receiverSubstitution == null
+        ? null
+        : resolvedTermOperator(receiverSubstitution.resolve(v));
+  }
+
+  /**
+   * Returns the type-term operator of a term that a substitution has resolved,
+   * or null if it is a variable or one of the structural operators — function,
+   * tuple, record — which are not type constructors.
+   */
+  private static @Nullable String resolvedTermOperator(Term t) {
+    if (!(t instanceof Sequence)) {
+      return null;
+    }
+    final Sequence seq = (Sequence) t;
+    final String op = seq.operator;
+    if (op.equals(COLLECTION_TY_CON)) {
+      // Resolve a collection term to "list" or "bag" by its orderedness, as
+      // termOperatorOf does, so that dispatch tells the two apart.
+      final Term ord = seq.terms.get(1);
+      if (ord instanceof Sequence) {
+        switch (((Sequence) ord).operator) {
+          case ORDERED:
+            return LIST_TY_CON;
+          case UNORDERED:
+            return BAG_TY_CON;
+          default:
+            break;
+        }
+      }
+      return null;
+    }
+    if (op.equals(FN_TY_CON)
+        || op.equals(TUPLE_TY_CON)
+        || op.startsWith(RECORD_TY_CON)) {
+      return null;
+    }
+    return op;
   }
 
   private @Nullable String termOperatorOf(Variable v, Set<Variable> visited) {

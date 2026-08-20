@@ -186,6 +186,27 @@ let val n = 42     in n.toString () end;
 let val r = 3.14   in r.toString () end;
 > val it = "3.14" : string
 
+(* A query variable is a receiver too. Its type is not named by any one
+ * constraint -- "from i in [1, 2, 3]" says the source is a collection of int
+ * and a collection of i's type, and only decomposing the two relates i to int
+ * -- so picking a candidate takes a solve, not a scan. *)
+from i in [1, 2, 3] yield i.toString ();
+> val it = ["1","2","3"] : string list
+
+from i in bag [1, 2, 3] yield i.toString ();
+> val it = ["1","2","3"] : string bag
+
+from s in ["a", "bb"] yield s.size ();
+> val it = [1,2] : int list
+
+(* Dispatch on a query variable tells a list from a bag, so "length", declared
+ * over both, reaches the right one. *)
+from xs in [[1, 2], [3]] yield xs.length ();
+> val it = [2,1] : int list
+
+from xs in [bag [1, 2], bag [3]] yield xs.length ();
+> val it = [2,1] : int list
+
 (* The following would work if the limitation were lifted: a top-level
  * function definition followed by a postfix call in a separate statement. *)
 (*
