@@ -104,6 +104,7 @@ class Bound {
       Bound lo,
       Bound hi,
       BigInteger maxLength,
+      Pos pos,
       Consumer<Object> out) {
     // An endpoint left unbounded is the end of the domain. The domain is
     // finite, so "AT_LEAST #\"\253\"" yields the last three characters, even
@@ -127,7 +128,7 @@ class Bound {
         start = discrete.next(lo.value);
         if (start == null) {
           throw new Codes.MorelRuntimeException(
-              Codes.BuiltInExn.SIZE, Pos.ZERO); // empty range
+              Codes.BuiltInExn.SIZE, pos); // empty range
         }
       }
     }
@@ -137,7 +138,7 @@ class Bound {
     final BigInteger count =
         discrete.ordinal(end).subtract(discrete.ordinal(start));
     if (count.compareTo(maxLength) >= 0) {
-      throw new Codes.MorelRuntimeException(Codes.BuiltInExn.SIZE, Pos.ZERO);
+      throw new Codes.MorelRuntimeException(Codes.BuiltInExn.SIZE, pos);
     }
 
     Comparator<Object> cmp = discrete.comparator();

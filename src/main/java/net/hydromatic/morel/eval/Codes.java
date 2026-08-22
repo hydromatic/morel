@@ -4037,16 +4037,16 @@ public abstract class Codes {
   /** @see BuiltIn#RANGE_DISCRETE_SET_TO_BAG */
   private static final Applicable RANGE_DISCRETE_SET_TO_BAG =
       new DiscreteSetEnumerate(
-          BuiltIn.RANGE_DISCRETE_SET_TO_BAG, Discretes.dummy());
+          BuiltIn.RANGE_DISCRETE_SET_TO_BAG, Discretes.dummy(), Pos.ZERO);
 
   /** @see BuiltIn#RANGE_DISCRETE_SET_TO_LIST */
   private static final Applicable RANGE_DISCRETE_SET_TO_LIST =
       new DiscreteSetEnumerate(
-          BuiltIn.RANGE_DISCRETE_SET_TO_LIST, Discretes.dummy());
+          BuiltIn.RANGE_DISCRETE_SET_TO_LIST, Discretes.dummy(), Pos.ZERO);
 
   /** @see BuiltIn#RANGE_FLATTEN */
   private static final Applicable RANGE_FLATTEN =
-      new RangeFlatten(Discretes.dummy());
+      new RangeFlatten(Discretes.dummy(), Pos.ZERO);
 
   /** @see BuiltIn#REAL_ABS */
   private static final Applicable REAL_ABS =
@@ -9404,17 +9404,20 @@ public abstract class Codes {
   private static class DiscreteSetEnumerate extends BaseApplicable1<List, List>
       implements Typed {
     private final Discrete<Object> discrete;
+    /** Position of the call, which a range too long to expand reports. */
+    private final Pos pos;
 
-    DiscreteSetEnumerate(BuiltIn builtIn, Discrete<Object> discrete) {
+    DiscreteSetEnumerate(BuiltIn builtIn, Discrete<Object> discrete, Pos pos) {
       super(builtIn);
       this.discrete = requireNonNull(discrete);
+      this.pos = requireNonNull(pos);
     }
 
     @Override
     public Applicable withType(TypeSystem typeSystem, Type type, Pos pos) {
       Type elemType = rangeElementType(type);
       return new DiscreteSetEnumerate(
-          builtIn, Discretes.discreteFor(typeSystem, elemType, pos));
+          builtIn, Discretes.discreteFor(typeSystem, elemType, pos), pos);
     }
 
     @Override
@@ -9435,24 +9438,29 @@ public abstract class Codes {
       final ImmutableList.Builder<Object> result = ImmutableList.builder();
       ranges.forEach(
           (lo, hi) ->
-              Bound.enumerate(discrete, lo, hi, maxLength, result::add));
+              Bound.enumerate(discrete, lo, hi, maxLength, pos, result::add));
       return result.build();
     }
   }
 
   /** Implementation of {@link BuiltIn#RANGE_FLATTEN}. */
   @SuppressWarnings("rawtypes")
-  private static class RangeFlatten extends BaseApplicable1<List, List>
-      implements Typed {
+  private static class RangeFlatten
+      extends BasePositionedApplicable1<List, List> implements Typed {
     /**
      * Discrete instance for the element type, or null if not discrete (e.g.
      * {@code real}). When null, only POINT items are finite at runtime.
      */
     private final @Nullable Discrete<Object> discrete;
 
-    RangeFlatten(@Nullable Discrete<Object> discrete) {
-      super(BuiltIn.RANGE_FLATTEN);
+    RangeFlatten(@Nullable Discrete<Object> discrete, Pos pos) {
+      super(BuiltIn.RANGE_FLATTEN, pos);
       this.discrete = discrete;
+    }
+
+    @Override
+    public Applicable withPos(Pos pos) {
+      return new RangeFlatten(discrete, pos);
     }
 
     @Override
@@ -9462,7 +9470,7 @@ public abstract class Codes {
       // items are still finite; non-POINT items raise Size at runtime.
       final Discrete<Object> d =
           Discretes.discreteForOrNull(typeSystem, elemType, pos);
-      return new RangeFlatten(d);
+      return new RangeFlatten(d, pos);
     }
 
     @Override
@@ -9486,13 +9494,13 @@ public abstract class Codes {
           // Only POINT items are finite over a non-discrete element type.
           if (!BuiltIn.Constructor.RANGE_POINT.constructor.equals(
               range.get(0))) {
-            throw new MorelRuntimeException(BuiltInExn.SIZE, Pos.ZERO);
+            throw new MorelRuntimeException(BuiltInExn.SIZE, pos);
           }
           result.add(Bound.lowerBound(range).value);
         } else {
           final Bound lo = Bound.lowerBound(range);
           final Bound hi = Bound.upperBound(range);
-          Bound.enumerate(discrete, lo, hi, maxLength, result::add);
+          Bound.enumerate(discrete, lo, hi, maxLength, pos, result::add);
         }
       }
       return result.build();

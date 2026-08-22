@@ -476,13 +476,13 @@ Range.flatten [ALL] : unit list;
  * limit. *)
 Range.flatten [AT_LEAST 3];
 > uncaught exception Size [size]
->   raised at: 0.0-0.0
+>   raised at: stdIn:1.1-1.27
 Range.flatten [AT_MOST (false, 1)];
 > uncaught exception Size [size]
->   raised at: 0.0-0.0
+>   raised at: stdIn:1.1-1.35
 Range.flatten [AT_LEAST (DESC 3)];
 > uncaught exception Size [size]
->   raised at: 0.0-0.0
+>   raised at: stdIn:1.1-1.34
 
 (* A nine-character word has 256^9 = 2^72 values, more than a machine
  * integer can number. Counting them is exact all the same, so how many a
@@ -510,14 +510,14 @@ List.length (Range.flatten
   [LESS_THAN (#"\000", #"\000", #"\004", #"\000", #"\000", #"\000",
      #"\000", #"\000", #"\000")]);
 > uncaught exception Size [size]
->   raised at: 0.0-0.0
+>   raised at: stdIn:1.13-3.34
 
 (*) 2^65 words: the first character is worth 256^8 = 2^64, and reaches 2.
 List.length (Range.flatten
   [LESS_THAN (#"\002", #"\000", #"\000", #"\000", #"\000", #"\000",
      #"\000", #"\000", #"\000")]);
 > uncaught exception Size [size]
->   raised at: 0.0-0.0
+>   raised at: stdIn:1.13-3.34
 
 (* How many values are too many is the "rangeMaxLength" property. Lower
  * it and a range that was short enough no longer is. *)
@@ -525,7 +525,7 @@ Sys.set ("rangeMaxLength", 4);
 > val it = () : unit
 Range.flatten [CLOSED (1, 10)];
 > uncaught exception Size [size]
->   raised at: 0.0-0.0
+>   raised at: stdIn:1.1-1.31
 Range.flatten [CLOSED (1, 3)];
 > val it = [1,2,3] : int list
 
@@ -637,12 +637,12 @@ from x in [1, 2, 3] where x < 2;
 (*) AT_LEAST is unbounded above; enumeration raises Size.
 [5 ..] : int list;
 > uncaught exception Size [size]
->   raised at: 0.0-0.0
+>   raised at: stdIn:1.1-1.7
 
 (*) Similar for GREATER_THAN.
 [5 ^..] : int list;
 > uncaught exception Size [size]
->   raised at: 0.0-0.0
+>   raised at: stdIn:1.1-1.8
 
 (* Membership in infinite range-lists ----------------------------- *)
 
@@ -710,7 +710,7 @@ Range.flatten [POINT 1.0, POINT 3.0, POINT 1.0];
 (*) Non-POINT ranges over real are infinite.
 [0.0 .. 1.0];
 > uncaught exception Size [size]
->   raised at: 0.0-0.0
+>   raised at: stdIn:1.1-1.13
 
 (*) Same for string.
 ["a"];
@@ -718,6 +718,6 @@ Range.flatten [POINT 1.0, POINT 3.0, POINT 1.0];
 
 ["a" .. "z"];
 > uncaught exception Size [size]
->   raised at: 0.0-0.0
+>   raised at: stdIn:1.1-1.13
 
 (*) End range.smli
