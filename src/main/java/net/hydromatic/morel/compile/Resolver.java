@@ -45,13 +45,16 @@ import java.util.Collection;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.AstNode;
@@ -890,13 +893,205 @@ public class Resolver {
         transformEager(tuple.args, this::toCore));
   }
 
-  /**
-   * Converts a record expression. It has no modifiers; {@link TypeResolver}
-   * replaces a record that has them with the {@code let}s they desugar to.
-   */
-  private Core.Tuple toCore(Ast.Record record) {
+  private Core.Exp toCore(Ast.Record record) {
+    if (record.base != null) {
+      return toCoreModified(record);
+    }
     final RecordLikeType type = (RecordLikeType) typeMap.getType(record);
     return core.tuple(type, transformEager(record.args(), this::toCore));
+  }
+
+  /**
+   * Converts a record that has modifiers into the {@code let}s it means: one
+   * per modifier, each binding the fields of the record the modifier before it
+   * produced, and ending in a record built from those fields.
+   *
+   * <p>{@link TypeResolver} types the record as it is written, and leaves it to
+   * be built here, where the types are settled. Building it earlier would lose
+   * the type of the record being modified.
+   */
+  private Core.Exp toCoreModified(Ast.Record record) {
+    // The base, and the argument of each 'all' modifier, are evaluated outside
+    // the modifiers -- in this environment, which does not have their fields
+    // -- and in the order they are written.
+    final List<Ast.Exp> operandExps = new ArrayList<>();
+    operandExps.add(requireNonNull(record.base));
+    record.modifiers.forEach(
+        modifier -> {
+          if (modifier instanceof Ast.AllModifier) {
+            operandExps.add(((Ast.AllModifier) modifier).exp);
+          }
+        });
+    return bindOperands(record, operandExps, 0, new IdentityHashMap<>());
+  }
+
+  /** Binds the operands of a modified record, then applies its modifiers. */
+  private Core.Exp bindOperands(
+      Ast.Record record,
+      List<Ast.Exp> exps,
+      int i,
+      Map<Ast.Exp, Core.Id> operands) {
+    if (i == exps.size()) {
+      return modify(
+          record.modifiers,
+          0,
+          requireNonNull(operands.get(record.base)),
+          operands,
+          record.pos);
+    }
+    final Ast.Exp exp = exps.get(i);
+    return letValue(
+        toCore(exp),
+        exp.pos,
+        id -> {
+          operands.put(exp, id);
+          return bindOperands(record, exps, i + 1, operands);
+        });
+  }
+
+  /** Applies the modifiers of a record, from {@code i} onwards. */
+  private Core.Exp modify(
+      List<Ast.Modifier> modifiers,
+      int i,
+      Core.Exp value,
+      Map<Ast.Exp, Core.Id> operands,
+      Pos pos) {
+    if (i == modifiers.size()) {
+      return value;
+    }
+    final Ast.Modifier modifier = modifiers.get(i);
+    final Core.Id allId =
+        modifier instanceof Ast.AllModifier
+            ? requireNonNull(operands.get(((Ast.AllModifier) modifier).exp))
+            : null;
+    return letValue(
+        value,
+        pos,
+        id -> {
+          final RecordLikeType recordType = (RecordLikeType) id.type;
+          final PairList<String, RecordModifiers.Source> sources =
+              RecordModifiers.apply(
+                  modifier,
+                  ImmutableList.copyOf(recordType.argNameTypes().keySet()),
+                  allId == null
+                      ? null
+                      : ImmutableList.copyOf(
+                          ((RecordLikeType) allId.type)
+                              .argNameTypes()
+                              .keySet()));
+          // Only an assignment has expressions, and only they can refer to the
+          // fields by name.
+          final List<String> bound =
+              modifier.op == Op.ASSIGN_MODIFIER
+                  ? ImmutableList.copyOf(recordType.argNameTypes().keySet())
+                  : ImmutableList.of();
+          return bindFields(
+              id,
+              bound,
+              0,
+              pos,
+              r ->
+                  r.modify(
+                      modifiers,
+                      i + 1,
+                      r.build(sources, id, allId, pos),
+                      operands,
+                      pos));
+        });
+  }
+
+  /**
+   * Binds an expression to a name and applies {@code body} to it.
+   *
+   * <p>The {@code let} is what stops the expression being evaluated twice, once
+   * to read its type and once for the result.
+   */
+  private Core.Exp letValue(
+      Core.Exp coreExp, Pos pos, Function<Core.Id, Core.Exp> body) {
+    if (coreExp instanceof Core.Id) {
+      // Already a variable, so reading it twice costs nothing.
+      return body.apply((Core.Id) coreExp);
+    }
+    final Core.IdPat idPat =
+        core.idPat(coreExp.type, () -> nameGenerator.getPrefixed("v"));
+    final Core.Exp exp = body.apply(core.id(idPat));
+    return core.let(core.nonRecValDecl(pos, idPat, null, coreExp), exp);
+  }
+
+  /**
+   * Binds each field of a record to its own name, so that the expressions a
+   * modifier assigns can refer to it, and applies {@code body} in the
+   * environment that results.
+   *
+   * <p>The names shadow the enclosing environment, which is what lets {@code {r
+   * replace i = j, j = i}} mean what it looks like.
+   */
+  private Core.Exp bindFields(
+      Core.Id record,
+      List<String> fields,
+      int i,
+      Pos pos,
+      Function<Resolver, Core.Exp> body) {
+    if (i == fields.size()) {
+      return body.apply(this);
+    }
+    final String field = fields.get(i);
+    final Core.Exp value = select(record, field, pos);
+    final Core.IdPat idPat = core.idPat(value.type, field, nameGenerator::inc);
+    final Core.Exp exp =
+        withEnv(ImmutableList.of(Binding.of(idPat)))
+            .bindFields(record, fields, i + 1, pos, body);
+    return core.let(core.nonRecValDecl(pos, idPat, null, value), exp);
+  }
+
+  /**
+   * Builds the record that a modifier produces.
+   *
+   * <p>Its type is derived from the fields, rather than read from the type map,
+   * because only the last modifier has an entry there, and because that entry
+   * is the type as the user would see it, whereas Core needs the type erased.
+   */
+  private Core.Exp build(
+      PairList<String, RecordModifiers.Source> sources,
+      Core.Id record,
+      Core.@Nullable Id allRecord,
+      Pos pos) {
+    final PairList<String, Core.Exp> args = PairList.of();
+    sources.forEach(
+        (label, source) -> {
+          if (source instanceof RecordModifiers.Kept) {
+            args.add(
+                label,
+                select(record, ((RecordModifiers.Kept) source).field, pos));
+          } else if (source instanceof RecordModifiers.Taken) {
+            args.add(
+                label,
+                select(
+                    requireNonNull(allRecord),
+                    ((RecordModifiers.Taken) source).field,
+                    pos));
+          } else {
+            args.add(label, toCore(((RecordModifiers.Assigned) source).exp));
+          }
+        });
+    final SortedMap<String, Core.Exp> sortedArgs =
+        new TreeMap<>(RecordType.ORDERING);
+    args.forEach(sortedArgs::put);
+    final SortedMap<String, Type> argTypes = new TreeMap<>(RecordType.ORDERING);
+    sortedArgs.forEach((label, exp) -> argTypes.put(label, exp.type));
+    return core.tuple(
+        (RecordLikeType) typeMap.typeSystem.recordType(argTypes),
+        ImmutableList.copyOf(sortedArgs.values()));
+  }
+
+  /** Returns an expression that selects a field of a record. */
+  private Core.Exp select(Core.Id record, String field, Pos pos) {
+    final RecordLikeType recordType = (RecordLikeType) record.type;
+    return core.apply(
+        pos,
+        requireNonNull(recordType.argNameTypes().get(field)),
+        core.recordSelector(typeMap.typeSystem, recordType, field),
+        record);
   }
 
   private Core.Exp toCore(Ast.ListExp list) {
@@ -2145,9 +2340,9 @@ public class Resolver {
       final Core.Exp exp = r.toCore(yield.exp);
       final String binder = yield.binder == null ? null : yield.binder.name;
       // The step binds the fields of the record it yields. The record may be
-      // wrapped in 'let's -- 'TypeResolver.desugarModifiers' puts it there --
-      // and 'exp' is then a 'let' or 'case', so ask the Ast, as TypeResolver
-      // did when it deduced the bindings.
+      // wrapped in 'let's the user wrote, or -- if it has modifiers -- in the
+      // 'let's they mean, and 'exp' is then a 'let' or 'case', so ask the Ast,
+      // as TypeResolver did when it deduced the bindings.
       final boolean record = TypeResolver.letBody(yield.exp).op == Op.RECORD;
       fromBuilder.yield_(binder, exp, record);
     }

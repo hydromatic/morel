@@ -346,6 +346,15 @@ val v = {x=1,y=2};
 {{i=1} remove or skip j};
 > val it = {i=1} : {i:int}
 
+(* A value that 'skip' discards is still type-checked. Nothing takes it,
+ * but the user wrote it, so it must mean something. *)
+{{i=1} replace or skip j = 1 + "a"};
+> stdIn:1.1-1.36 Error: Cannot deduce type: conflict: int vs string
+>   raised at: stdIn:1.1-1.36
+{{i=1} extend or skip i = nosuch};
+> stdIn:1.27-1.33 Error: unbound variable or constructor: nosuch
+>   raised at: stdIn:1.27-1.33
+
 (* 'replace' preserves a field's type; 'lenient' relaxes that, and is
  * allowed only where a field can be assigned. *)
 {{i=1,j="a"} replace lenient i="b"};
