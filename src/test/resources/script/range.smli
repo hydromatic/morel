@@ -386,7 +386,7 @@ evens.toList ();
 
 (*) toList on (order, bool) either enumerates all 5 values.
 val eitherSet = Range.discreteSetOf [CLOSED (INL LESS, INR true)];
-> val eitherSet = DISCRETE_SET [CLOSED (INL LESS,INR true)]
+> val eitherSet = DISCRETE_SET [CLOSED (INL #,INR #)]
 >   : (order,bool) either discrete_set
 
 eitherSet.toList ();

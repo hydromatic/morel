@@ -374,13 +374,15 @@ class Pretty {
     }
     final Type argType = dataType.typeConstructors(typeSystem).get(tyConName);
     // Parens disambiguate when the arg is itself a multi-token constructor
-    // (e.g. "SOME (INL x)"). The arg is at the same conceptual level as the
-    // constructor, so its depth is not incremented.
+    // (e.g. "SOME (INL x)").
     final boolean needParentheses =
         argType.op() == Op.DATA_TYPE
             && arg instanceof List
             && ((List<?>) arg).size() > 1;
-    Doc argDoc = valueDoc(argType, arg, depth);
+    // The argument is one level below the constructor, as SML/NJ counts it:
+    // at "printDepth" 5, "SOME (SOME (SOME (SOME (SOME 1))))" prints its
+    // fifth SOME and elides what that one wraps.
+    Doc argDoc = valueDoc(argType, arg, depth + 1);
     if (needParentheses) {
       argDoc = beside(text("("), beside(argDoc, text(")")));
     }

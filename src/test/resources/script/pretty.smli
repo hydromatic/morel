@@ -176,7 +176,7 @@ from t in [CIRCLE 1, SQUARE] yield {t, i = 0};
  * tabulated -- 'NONE' would be indistinguishable from a 'SOME' whose every
  * field is 'NONE' -- so it prints normally (not as a table). *)
 [{id=1, addr=SOME {zip=SOME 94705}}, {id=2, addr=NONE}];
-> val it = [{addr=SOME {zip=SOME 94705},id=1},{addr=NONE,id=2}]
+> val it = [{addr=SOME {zip=SOME #},id=1},{addr=NONE,id=2}]
 >   : {addr:{zip:int option} option, id:int} list
 
 (* A doubly-'option' field (e.g. from a right join of a right join) is not
