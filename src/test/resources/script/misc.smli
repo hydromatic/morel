@@ -77,9 +77,9 @@ Sys.set ("output", "CLASSIC");
 Sys.set ("output", "ClasSic");
 > val it = () : unit
 Sys.set ("output", "classic ");
-> java.lang.RuntimeException: value must be one of: 'CLASSIC', 'TABULAR'
+> java.lang.RuntimeException: value for property 'output' must be one of: 'CLASSIC', 'TABULAR'
 Sys.set ("output", "bad");
-> java.lang.RuntimeException: value must be one of: 'CLASSIC', 'TABULAR'
+> java.lang.RuntimeException: value for property 'output' must be one of: 'CLASSIC', 'TABULAR'
 
 (*) After you unset a property with a default value, it reverts to the default.
 Sys.unset "output";
@@ -91,7 +91,7 @@ Sys.show "output";
 Sys.show "optionalInt";
 > val it = NONE : string option
 Sys.set ("optionalInt", "foo");
-> java.lang.RuntimeException: value for property must have type class java.lang.Integer
+> java.lang.RuntimeException: value for property 'optionalInt' must have type 'int'
 Sys.set ("optionalInt", 12);
 > val it = () : unit
 Sys.show "optionalInt";
@@ -100,6 +100,28 @@ Sys.unset "optionalInt";
 > val it = () : unit
 Sys.show "optionalInt";
 > val it = NONE : string option
+
+(* A value of the wrong type is refused, and the message names the property
+ * and the Morel type the property will take. It does not name the value it
+ * rejected, nor any Java type. *)
+Sys.set ("hybrid", 1);
+> java.lang.RuntimeException: value for property 'hybrid' must have type 'bool'
+Sys.set ("scriptDirectory", true);
+> java.lang.RuntimeException: value for property 'scriptDirectory' must have type 'file'
+Sys.set ("now", 0);
+> java.lang.RuntimeException: value for property 'now' must have type 'string'
+
+(* "rangeMaxLength" takes an "IntInf.int": an "int", or a numeral in a
+ * string where the value does not fit one. A string that is not a numeral
+ * is refused like any other wrong value. *)
+Sys.set ("rangeMaxLength", "4722366482869645213696");
+> val it = () : unit
+Sys.set ("rangeMaxLength", "banana");
+> java.lang.RuntimeException: value for property 'rangeMaxLength' must have type 'IntInf.int'
+Sys.set ("rangeMaxLength", true);
+> java.lang.RuntimeException: value for property 'rangeMaxLength' must have type 'IntInf.int'
+Sys.unset "rangeMaxLength";
+> val it = () : unit
 
 (*) Setting the "output" property is case-insensitive
 Sys.set ("output", "classic");

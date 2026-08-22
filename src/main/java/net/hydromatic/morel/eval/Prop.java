@@ -19,6 +19,7 @@
 package net.hydromatic.morel.eval;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.base.CaseFormat;
@@ -466,19 +467,25 @@ public enum Prop {
     return null;
   }
 
-  /** Returns the message to give for a value this property cannot take. */
-  private String invalidValueMessage(Object value) {
+  /**
+   * Returns the message to give for a value this property cannot take.
+   *
+   * <p>The message names the property, and describes what it will take in
+   * Morel's terms: the name of a Morel type, or, for an enumerated property,
+   * the values themselves. It does not name the value it rejected, nor any Java
+   * type.
+   */
+  private String invalidValueMessage() {
     if (type.isEnum()) {
       String values =
           Arrays.stream((Enum[]) type.getEnumConstants())
               .map(Enum::name)
               .collect(Collectors.joining("', '", "'", "'"));
-      return "value must be one of: " + values;
+      return format(
+          "value for property '%s' must be one of: %s", camelName, values);
     }
-    if (type == BigInteger.class) {
-      return "value must be a number: " + value;
-    }
-    return "value for property must have type " + type;
+    return format(
+        "value for property '%s' must have type '%s'", camelName, typeName());
   }
 
   /** Looks up a property by name. Throws if not found; never returns null. */
@@ -564,7 +571,7 @@ public enum Prop {
     if (value != null && !type.isInstance(value)) {
       @Nullable Object converted = convert(value);
       if (converted == null) {
-        throw new RuntimeException(invalidValueMessage(value));
+        throw new RuntimeException(invalidValueMessage());
       }
       value = converted;
     }
@@ -580,7 +587,7 @@ public enum Prop {
       map.remove(this);
     } else {
       if (!type.isInstance(value)) {
-        throw new RuntimeException("value for property must have type " + type);
+        throw new RuntimeException(invalidValueMessage());
       }
       map.put(this, value);
     }

@@ -953,7 +953,7 @@ public class UtilTest {
         assertThrows(
                 RuntimeException.class, () -> Prop.LINE_WIDTH.set(map, "80"))
             .getMessage(),
-        is("value for property must have type class java.lang.Integer"));
+        is("value for property 'lineWidth' must have type 'int'"));
 
     // Removing restores the default; a required property may not be set to
     // null, and an optional one may.
@@ -998,13 +998,13 @@ public class UtilTest {
                 RuntimeException.class,
                 () -> Prop.RANGE_MAX_LENGTH.setLenient(map, "many"))
             .getMessage(),
-        is("value must be a number: many"));
+        is("value for property 'rangeMaxLength' must have type 'IntInf.int'"));
     assertThat(
         assertThrows(
                 RuntimeException.class,
                 () -> Prop.OUTPUT.setLenient(map, "nosuch"))
             .getMessage(),
-        is("value must be one of: 'CLASSIC', 'TABULAR'"));
+        is("value for property 'output' must be one of: 'CLASSIC', 'TABULAR'"));
   }
 
   /**
