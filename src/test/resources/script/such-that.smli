@@ -1614,6 +1614,42 @@ from x, y where tuPair (x, y);
 > stdIn:1.6 Error: pattern 'x' is not grounded
 >   raised at: stdIn:1.6
 
+(* A record variable is grounded by constraining every one of its
+ * fields. Each field yields a generator of its own, and they are
+ * assembled into one generator for the record. The forms may be
+ * mixed, and there may be more than two fields. *)
+from p: {i: int, j: int, k: int}
+  where p.i elem [0,1] andalso p.j elem [2] andalso p.k elem [3..4];
+> i j k
+> - - -
+> 0 2 3
+> 0 2 4
+> 1 2 3
+> 1 2 4
+>
+> val it : {i:int, j:int, k:int} list
+
+(*) A tuple is grounded the same way, by its components.
+from p: int * int where #1 p elem [0,1] andalso #2 p elem [2,3];
+> 1 2
+> - -
+> 0 2
+> 0 3
+> 1 2
+> 1 3
+>
+> val it : (int * int) list
+
+(* A record with one field is grounded by constraining that field.
+ * There is no join to do, and the row is the field. *)
+from p: {i: int} where p.i elem [0,1];
+> i
+> -
+> 0
+> 1
+>
+> val it : {i:int} list
+
 (* Joe's bar ---------------------------------------------------------
  *
  * See http://infolab.stanford.edu/~ullman/fcdb/aut07/slides/dlog.pdf.

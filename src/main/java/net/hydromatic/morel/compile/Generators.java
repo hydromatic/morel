@@ -69,35 +69,37 @@ class Generators {
   static boolean maybeGenerator(
       Cache cache, Core.Pat pat, boolean ordered, Context context) {
     // Phase A: Classify leaf constraints (single loop)
-    Core.Exp elemMatch = null;
+    //
+    // A collection constraint is collected per value it generates, not one per
+    // pattern. A record variable is grounded only when every one of its fields
+    // is, so 'p.i elem [0, 1] andalso p.j elem [2, 3]' has to yield a generator
+    // for each field, which 'deriveFieldGenerators' then assembles into one for
+    // 'p'. Two constraints on the same value keep the first, as before.
+    final Map<Core.Pat, Core.Exp> elemMatches = new LinkedHashMap<>();
+    final Map<Core.Pat, Core.Exp> rangeMatches = new LinkedHashMap<>();
     Core.Exp pointMatch = null;
     Core.Exp pointValue = null;
     boolean hasBounds = false;
     Core.Exp prefixMatch = null;
     Core.Exp prefixString = null;
-    Core.Exp rangeContainsMatch = null;
-    Core.Exp rangeContainsValue = null;
-    Core.Exp rangeContainsRange = null;
 
     for (Core.Exp c : context.constraints) {
-      if (elemMatch == null
-          && c.isCallTo(BuiltIn.OP_ELEM)
-          && containsRef(c.arg(0), pat)) {
-        elemMatch = c;
+      if (c.isCallTo(BuiltIn.OP_ELEM) && containsRef(c.arg(0), pat)) {
+        elemMatches.putIfAbsent(cache.patForExp(c.arg(0)), c);
       }
       // 'pat elem [a..b]' is rewritten to 'Range.contains (a..b) pat'. If the
-      // range is finite and 'pat' is discrete, it is a finite generator for
-      // 'pat', equivalent to 'pat in Range.flatten [a..b]'.
-      if (rangeContainsMatch == null
-          && c.op == Op.APPLY
+      // range is finite and the value is discrete, it is a finite generator for
+      // that value, equivalent to 'pat in Range.flatten [a..b]'.
+      if (c.op == Op.APPLY
           && ((Core.Apply) c).fn.isCallTo(BuiltIn.RANGE_CONTAINS)
-          && references(((Core.Apply) c).arg, pat)
-          && pat.type.isDiscrete(cache.typeSystem)) {
+          && isPatOrField(((Core.Apply) c).arg, pat)) {
+        // Discreteness is asked of the value being generated. Where the
+        // constraint selects a field, that is the field: a record is not
+        // discrete, but its fields may be.
+        final Core.Exp value = ((Core.Apply) c).arg;
         final Core.Exp range = ((Core.Apply) ((Core.Apply) c).fn).arg;
-        if (isFiniteRange(range)) {
-          rangeContainsMatch = c;
-          rangeContainsValue = ((Core.Apply) c).arg;
-          rangeContainsRange = range;
+        if (value.type.isDiscrete(cache.typeSystem) && isFiniteRange(range)) {
+          rangeMatches.putIfAbsent(cache.patForExp(value), c);
         }
       }
       if (pointMatch == null && c.isCallTo(BuiltIn.OP_EQ)) {
@@ -128,37 +130,35 @@ class Generators {
     }
 
     // Phase B: Synthesize leaf generators (priority order)
-    if (elemMatch != null) {
-      final Core.Exp collection = elemMatch.arg(1);
-      final Core.Pat elemPat = cache.patForExp(elemMatch.arg(0));
-      CollectionGenerator.create(
-          cache, ordered, elemPat, collection, ImmutableSet.of(elemMatch));
-      cache.deriveFieldGenerators(ordered);
-      return true;
-    }
-    if (rangeContainsMatch != null) {
-      final TypeSystem typeSystem = cache.typeSystem;
-      final Type elementType = pat.type;
-      final Core.Exp rangeListExp =
-          core.list(
-              typeSystem,
-              typeSystem.range(elementType),
-              ImmutableList.of(requireNonNull(rangeContainsRange)));
-      final Core.Exp collection =
-          core.call(
-              typeSystem,
-              BuiltIn.RANGE_FLATTEN,
-              elementType,
-              Pos.ZERO,
-              rangeListExp);
-      final Core.Pat elemPat =
-          cache.patForExp(requireNonNull(rangeContainsValue));
-      CollectionGenerator.create(
-          cache,
-          ordered,
-          elemPat,
-          collection,
-          ImmutableSet.of(rangeContainsMatch));
+    if (!elemMatches.isEmpty() || !rangeMatches.isEmpty()) {
+      elemMatches.forEach(
+          (elemPat, c) ->
+              CollectionGenerator.create(
+                  cache, ordered, elemPat, c.arg(1), ImmutableSet.of(c)));
+      rangeMatches.forEach(
+          (elemPat, c) -> {
+            if (elemMatches.containsKey(elemPat)) {
+              // An 'elem' on the same value was found, and takes priority.
+              return;
+            }
+            final TypeSystem typeSystem = cache.typeSystem;
+            final Type elementType = ((Core.Apply) c).arg.type;
+            final Core.Exp range = ((Core.Apply) ((Core.Apply) c).fn).arg;
+            final Core.Exp rangeListExp =
+                core.list(
+                    typeSystem,
+                    typeSystem.range(elementType),
+                    ImmutableList.of(range));
+            final Core.Exp collection =
+                core.call(
+                    typeSystem,
+                    BuiltIn.RANGE_FLATTEN,
+                    elementType,
+                    Pos.ZERO,
+                    rangeListExp);
+            CollectionGenerator.create(
+                cache, ordered, elemPat, collection, ImmutableSet.of(c));
+          });
       cache.deriveFieldGenerators(ordered);
       return true;
     }
@@ -3623,6 +3623,21 @@ class Generators {
   }
 
   /**
+   * Returns whether an expression is a pattern, or one of its fields.
+   *
+   * <p>Narrower than {@link #containsRef}, which is true of any expression the
+   * pattern occurs in. Only these two shapes name a value a generator can be
+   * built for: {@link Cache#patForExp} gives the pattern itself, or the pattern
+   * that stands for that field.
+   */
+  private static boolean isPatOrField(Core.Exp exp, Core.Pat pat) {
+    return references(exp, pat)
+        || exp.op == Op.APPLY
+            && ((Core.Apply) exp).fn.op == Op.RECORD_SELECTOR
+            && references(((Core.Apply) exp).arg, pat);
+  }
+
+  /**
    * Extracts the offset from an expression relative to a pattern.
    *
    * <p>Returns the integer offset if exp is pat, pat + k, or pat - k where k is
@@ -4333,7 +4348,12 @@ class Generators {
                 }
               }
             }
-            final Core.Pat scanPat = core.tuplePat(typeSystem, freshPats);
+            // A scan over one variable binds it directly. There is no
+            // one-element tuple to wrap it in, and asking for one throws.
+            final Core.Pat scanPat =
+                freshPats.size() == 1
+                    ? freshPats.get(0)
+                    : core.tuplePat(typeSystem, freshPats);
             fromBuilder.scan(scanPat, fieldGen.exp);
             for (Core.Exp eq : eqConstraints) {
               fromBuilder.where(eq);
@@ -4352,8 +4372,10 @@ class Generators {
         for (Core.IdPat fp : fieldPatList) {
           fieldExps.add(core.id(fp));
         }
-        final Core.Exp tupleExp =
-            core.tuple(typeSystem, fieldExps.toArray(new Core.Exp[0]));
+        // Build the value at the base pattern's own type. A record is a Tuple
+        // in Core, so deriving the type from the fields would give 'int * int'
+        // where the pattern is '{i:int, j:int}'.
+        final Core.Exp tupleExp = core.tuple(recordType, fieldExps);
         final Core.IdPat resultPat = core.idPat(basePat.type, basePat.name, 0);
         final ImmutableSortedMap<Core.IdPat, Core.Exp> groupExps =
             ImmutableSortedMap.of(resultPat, tupleExp);
