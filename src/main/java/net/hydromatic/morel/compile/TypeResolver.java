@@ -3305,14 +3305,6 @@ public class TypeResolver {
   }
 
   /**
-   * Returns the type-term operator of the receiver type for a method.
-   *
-   * <p>For example, {@code List.length} has first-param type {@code list('a)},
-   * so this returns "list"; {@code Bag.length} returns "bag"; {@code Int.abs}
-   * returns "int". For tuple-splicing forms (e.g. {@code List.drop}), the first
-   * element of the tuple is the receiver.
-   */
-  /**
    * Whether a method's receiver type is {@code op}. A built-in whose parameter
    * is a collection, such as {@code Relational.count}, takes a list receiver
    * and a bag receiver alike.
@@ -3325,6 +3317,14 @@ public class TypeResolver {
     return paramOp.equals(op);
   }
 
+  /**
+   * Returns the type-term operator of the receiver type for a method.
+   *
+   * <p>For example, {@code List.length} has first-param type {@code list('a)},
+   * so this returns "list"; {@code Bag.length} returns "bag"; {@code Int.abs}
+   * returns "int". For tuple-splicing forms (e.g. {@code List.drop}), the first
+   * element of the tuple is the receiver.
+   */
   private String firstParamReceiverTypeOp(BuiltIn b) {
     Type type = b.typeFunction.apply(typeSystem);
     if (type instanceof ForallType) {

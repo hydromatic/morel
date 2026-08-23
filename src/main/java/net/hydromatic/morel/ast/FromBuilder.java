@@ -380,18 +380,6 @@ public class FromBuilder {
   }
 
   /**
-   * Returns whether the last step of {@code from} leaves behind the bindings
-   * that inlining will refer to.
-   *
-   * <p>Inlining a subquery drops its last step if that step is a {@code yield},
-   * and pairs the components of a tuple or record pattern with the bindings of
-   * that step. Those bindings are what the dropped {@code yield} produced, so
-   * nothing binds them afterwards, and the inlined query refers to a variable
-   * that does not exist. It makes no difference whether the {@code yield}
-   * produces a tuple, "{@code yield (k, k + 1)}", or a record, "{@code yield {a
-   * = k, b = k}}", whose bindings are the right number but the wrong ones.
-   */
-  /**
    * Returns whether the last step of {@code from} is a {@code yield} of a
    * record.
    *
@@ -404,6 +392,18 @@ public class FromBuilder {
     return last.op == Op.YIELD && ((Core.Yield) last).exp.op == Op.RECORD;
   }
 
+  /**
+   * Returns whether the last step of {@code from} leaves behind the bindings
+   * that inlining will refer to.
+   *
+   * <p>Inlining a subquery drops its last step if that step is a {@code yield},
+   * and pairs the components of a tuple or record pattern with the bindings of
+   * that step. Those bindings are what the dropped {@code yield} produced, so
+   * nothing binds them afterwards, and the inlined query refers to a variable
+   * that does not exist. It makes no difference whether the {@code yield}
+   * produces a tuple, "{@code yield (k, k + 1)}", or a record, "{@code yield {a
+   * = k, b = k}}", whose bindings are the right number but the wrong ones.
+   */
   private static boolean endsWithBindings(Core.From from) {
     return !from.steps.isEmpty() && last(from.steps).op != Op.YIELD;
   }

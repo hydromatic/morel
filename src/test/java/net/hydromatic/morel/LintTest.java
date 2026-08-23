@@ -390,6 +390,22 @@ public class LintTest {
                 && line.matches("^ *\\* [^<@].*"),
         line -> line.state().message(line, "missing '<p>'"));
 
+    // A javadoc comment followed by another documents nothing. Must precede
+    // the two rules below, which move javadocStartLine and javadocEndLine on
+    // to the current line; a one-line javadoc does both on this line.
+    b.add(
+        line -> !line.line().trim().isEmpty(),
+        line -> {
+          final FileState f = line.state();
+          if (line.matches("^ */\\*\\*.*")
+              // Only blank lines separate it from the comment before.
+              && f.lastJavadocEndLine > 0
+              && f.lastJavadocEndLine == f.lastNonBlankLine) {
+            f.message(line, "Dangling Javadoc comment");
+          }
+          f.lastNonBlankLine = line.fnr();
+        });
+
     // The first "@param" of a javadoc block must be preceded by a blank
     // line.
     b.add(
@@ -403,7 +419,15 @@ public class LintTest {
 
     b.add(
         line -> line.matches(".*\\*/"),
-        line -> line.state().javadocEndLine = line.fnr());
+        line -> {
+          final FileState f = line.state();
+          if (f.javadocStartLine > f.javadocEndLine) {
+            // A javadoc opened since the last comment closed, so this ends a
+            // javadoc, not a '/*' block such as the license header.
+            f.lastJavadocEndLine = line.fnr();
+          }
+          f.javadocEndLine = line.fnr();
+        });
     b.add(
         line -> line.matches("^ *\\* @.*"),
         line -> {
@@ -1986,6 +2010,11 @@ public class LintTest {
     int atLine;
     int javadocStartLine;
     int javadocEndLine;
+    /** Last line (1-based) that was not blank, ignoring the current one. */
+    int lastNonBlankLine;
+    /** Last line (1-based) on which a javadoc comment ended. */
+    int lastJavadocEndLine;
+
     int blockquoteCount;
     int ulCount;
     int lintEnableLine;

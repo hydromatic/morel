@@ -258,7 +258,6 @@ public class ShellTest {
                     + "- \r\n"));
   }
 
-  /** Tests {@link Shell} with a single-line comment. */
   /**
    * Tests that a statement followed, on the same line, by a comment does not
    * swallow the statement that comes after it. The line does not end with
@@ -358,6 +357,7 @@ public class ShellTest {
     fixture().withInputString(in).assertOutput(is(expected));
   }
 
+  /** Tests {@link Shell} with a single-line comment. */
   @Test
   void testSingleLineComment() {
     final String in =

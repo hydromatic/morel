@@ -685,12 +685,6 @@ public enum BuiltIn {
       "Bool", "orelse", ts -> ts.fnType(ts.tupleType(BOOL, BOOL), BOOL)),
 
   /**
-   * Function "Bool.toString", of type "bool &rarr; string".
-   *
-   * <p>"toString b" returns the string representation of <em>b</em>, either
-   * "true" or "false".
-   */
-  /**
    * Function "Bool.scan", of type "(char, &alpha;) reader &rarr; (bool,
    * &alpha;) reader".
    *
@@ -707,6 +701,12 @@ public enum BuiltIn {
                   ts.fnType(
                       ts.reader(CHAR, h.get(0)), ts.reader(BOOL, h.get(0))))),
 
+  /**
+   * Function "Bool.toString", of type "bool &rarr; string".
+   *
+   * <p>"toString b" returns the string representation of <em>b</em>, either
+   * "true" or "false".
+   */
   BOOL_TO_STRING("Bool", "toString", true, ts -> ts.fnType(BOOL, STRING)),
 
   /**
@@ -4037,14 +4037,6 @@ public enum BuiltIn {
       ts -> ts.fnType(STRING, ts.listType(STRING), STRING)),
 
   /**
-   * Function "StringCvt.padLeft", of type "char &rarr; int &rarr; string &rarr;
-   * string".
-   *
-   * <p>{@code padLeft c i s} returns {@code s} padded on the left with {@code
-   * c} characters so that the result has length at least {@code i}. If {@code
-   * s} is already at least {@code i} characters long, it is returned unchanged.
-   */
-  /**
    * Function "StringCvt.dropl", of type "(char &rarr; bool) &rarr; (char,
    * &alpha;) reader &rarr; &alpha; &rarr; &alpha;".
    *
@@ -4064,6 +4056,14 @@ public enum BuiltIn {
                       h.get(0),
                       h.get(0)))),
 
+  /**
+   * Function "StringCvt.padLeft", of type "char &rarr; int &rarr; string &rarr;
+   * string".
+   *
+   * <p>{@code padLeft c i s} returns {@code s} padded on the left with {@code
+   * c} characters so that the result has length at least {@code i}. If {@code
+   * s} is already at least {@code i} characters long, it is returned unchanged.
+   */
   STRING_CVT_PAD_LEFT(
       "StringCvt", "padLeft", ts -> ts.fnType(CHAR, INT, STRING, STRING)),
 
