@@ -915,10 +915,7 @@ public class UtilTest {
       assertThat(Prop.lookup(prop.camelName), is(prop));
       assertThat(Prop.lookup(prop.name()), is(prop));
     }
-    assertThrows(
-        RuntimeException.class,
-        () -> Prop.lookup("nosuch"),
-        "property nosuch not found");
+    assertThat(Prop.lookup("nosuch"), nullValue());
 
     // A property whose value is not in the map has its default value.
     final Map<Prop, Object> map = new LinkedHashMap<>();
@@ -971,13 +968,15 @@ public class UtilTest {
     // A property of arbitrary precision takes an "int", and holds a
     // BigInteger; a Morel "int" stops at 2^31 - 1, so a larger value is
     // written as a numeral in a string.
-    Prop.RANGE_MAX_LENGTH.setLenient(map, 100);
+    assertThat(Prop.RANGE_MAX_LENGTH.setLenient(map, 100), nullValue());
     assertThat(map.get(Prop.RANGE_MAX_LENGTH), is(BigInteger.valueOf(100)));
-    Prop.RANGE_MAX_LENGTH.setLenient(map, "4722366482869645213696");
+    assertThat(
+        Prop.RANGE_MAX_LENGTH.setLenient(map, "4722366482869645213696"),
+        nullValue());
     assertThat(
         Prop.RANGE_MAX_LENGTH.bigIntegerValue(map),
         is(BigInteger.ONE.shiftLeft(72)));
-    Prop.OUTPUT.setLenient(map, "tabular");
+    assertThat(Prop.OUTPUT.setLenient(map, "tabular"), nullValue());
     assertThat(
         Prop.OUTPUT.enumValue(map, Prop.Output.class), is(Prop.Output.TABULAR));
 
@@ -992,19 +991,18 @@ public class UtilTest {
     assertThat(Prop.LINE_WIDTH.isValid("80", true), is(false));
     assertThat(Prop.LINE_WIDTH.isValid(80), is(true));
 
-    // A value it cannot read is refused, and says why.
+    // A value it cannot read is refused, and says why. "setLenient" gives the
+    // message rather than throwing, because "Sys.set" raises it as "Fail".
     assertThat(
-        assertThrows(
-                RuntimeException.class,
-                () -> Prop.RANGE_MAX_LENGTH.setLenient(map, "many"))
-            .getMessage(),
+        Prop.RANGE_MAX_LENGTH.setLenient(map, "many"),
         is("value for property 'rangeMaxLength' must have type 'IntInf.int'"));
     assertThat(
-        assertThrows(
-                RuntimeException.class,
-                () -> Prop.OUTPUT.setLenient(map, "nosuch"))
-            .getMessage(),
+        Prop.OUTPUT.setLenient(map, "nosuch"),
         is("value for property 'output' must be one of: 'CLASSIC', 'TABULAR'"));
+
+    // A refused value leaves the property as it was.
+    assertThat(
+        Prop.OUTPUT.enumValue(map, Prop.Output.class), is(Prop.Output.TABULAR));
   }
 
   /**

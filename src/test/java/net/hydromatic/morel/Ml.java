@@ -27,6 +27,7 @@ import static net.hydromatic.morel.util.Static.anyMatch;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.number.OrderingComparison.greaterThan;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -627,7 +628,7 @@ class Ml {
     // the property says it holds. An "int" will do for a property of
     // arbitrary precision, as it will in "Sys.set".
     final Map<Prop, Object> map = new LinkedHashMap<>(propMap);
-    prop.setLenient(map, value);
+    assertThat(prop.setLenient(map, value), nullValue());
     return new Ml(ml, pos, dataSetMap, map, tracer);
   }
 

@@ -5734,31 +5734,75 @@ public abstract class Codes {
         }
       };
 
+  /**
+   * Looks up a property by name, raising {@code Fail} if there is no such
+   * property.
+   *
+   * @param fnName Name of the function that is looking up the property, for
+   *     example "set"; it appears in the error message
+   */
+  private static Prop lookupProp(String fnName, String propName, Pos pos) {
+    final @Nullable Prop prop = Prop.lookup(propName);
+    if (prop == null) {
+      throw new MorelRuntimeException(
+          BuiltInExn.FAIL,
+          format("%s: unknown property '%s'", fnName, propName),
+          pos);
+    }
+    return prop;
+  }
+
   /** @see BuiltIn#SYS_SET */
-  private static final Applicable SYS_SET =
-      new ApplicableImpl(BuiltIn.SYS_SET) {
-        @Override
-        public Object apply(Stack stack, Object arg) {
-          final List list = (List) arg;
-          final String propName = (String) list.get(0);
-          final Object value = list.get(1);
-          final Prop prop = Prop.lookup(propName);
+  private static final Applicable SYS_SET = new SysSet(Pos.ZERO);
+
+  /** Implements {@link #SYS_SET}. */
+  private static class SysSet extends BasePositionedApplicable {
+    SysSet(Pos pos) {
+      super(BuiltIn.SYS_SET, pos);
+    }
+
+    @Override
+    public Applicable withPos(Pos pos) {
+      return new SysSet(pos);
+    }
+
+    @Override
+    public Object apply(Stack stack, Object arg) {
+      final List list = (List) arg;
+      final String propName = (String) list.get(0);
+      final Object value = list.get(1);
+      final Prop prop = lookupProp("set", propName, pos);
+      final @Nullable String message =
           prop.setLenient(stack.session.map, value);
-          return Unit.INSTANCE;
-        }
-      };
+      if (message != null) {
+        throw new MorelRuntimeException(BuiltInExn.FAIL, message, pos);
+      }
+      return Unit.INSTANCE;
+    }
+  }
 
   /** @see BuiltIn#SYS_SHOW */
-  private static final Applicable SYS_SHOW =
-      new ApplicableImpl(BuiltIn.SYS_SHOW) {
-        @Override
-        public Object apply(Stack stack, Object arg) {
-          final String propName = (String) arg;
-          final Prop prop = Prop.lookup(propName);
-          final Object value = prop.get(stack.session.map);
-          return value == null ? OPTION_NONE : optionSome(value.toString());
-        }
-      };
+  private static final Applicable SYS_SHOW = new SysShow(Pos.ZERO);
+
+  /** Implements {@link #SYS_SHOW}. */
+  private static class SysShow extends BasePositionedApplicable {
+    SysShow(Pos pos) {
+      super(BuiltIn.SYS_SHOW, pos);
+    }
+
+    @Override
+    public Applicable withPos(Pos pos) {
+      return new SysShow(pos);
+    }
+
+    @Override
+    public Object apply(Stack stack, Object arg) {
+      final String propName = (String) arg;
+      final Prop prop = lookupProp("show", propName, pos);
+      final Object value = prop.get(stack.session.map);
+      return value == null ? OPTION_NONE : optionSome(value.toString());
+    }
+  }
 
   /** @see BuiltIn#SYS_SHOW_ALL */
   private static final Applicable SYS_SHOW_ALL =
@@ -5779,18 +5823,29 @@ public abstract class Codes {
       };
 
   /** @see BuiltIn#SYS_UNSET */
-  private static final Applicable SYS_UNSET =
-      new ApplicableImpl(BuiltIn.SYS_UNSET) {
-        @Override
-        public Object apply(Stack stack, Object arg) {
-          final String propName = (String) arg;
-          final Prop prop = Prop.lookup(propName);
-          final Session session = stack.session;
-          @SuppressWarnings("unused")
-          final Object value = prop.remove(session.map);
-          return Unit.INSTANCE;
-        }
-      };
+  private static final Applicable SYS_UNSET = new SysUnset(Pos.ZERO);
+
+  /** Implements {@link #SYS_UNSET}. */
+  private static class SysUnset extends BasePositionedApplicable {
+    SysUnset(Pos pos) {
+      super(BuiltIn.SYS_UNSET, pos);
+    }
+
+    @Override
+    public Applicable withPos(Pos pos) {
+      return new SysUnset(pos);
+    }
+
+    @Override
+    public Object apply(Stack stack, Object arg) {
+      final String propName = (String) arg;
+      final Prop prop = lookupProp("unset", propName, pos);
+      final Session session = stack.session;
+      @SuppressWarnings("unused")
+      final Object value = prop.remove(session.map);
+      return Unit.INSTANCE;
+    }
+  }
 
   /** @see BuiltIn#TEST_BAG_SUM */
   private static final Macro TEST_BAG_SUM = RELATIONAL_SUM;

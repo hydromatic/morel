@@ -548,4 +548,79 @@ Sys.unset "optionalInt";
 Sys.plan ();
 > val it = "apply(fnValue Sys.unset, argCode constant(optionalInt))" : string
 
+(* [MOREL-458] "set" of an unknown property raises "Fail", rather than
+ * throwing an internal error. *)
+Sys.set ("bogusProp", 5);
+> uncaught exception Fail [Fail: set: unknown property 'bogusProp']
+>   raised at: stdIn:1.1-1.25
+set ("bogusProp", 5);
+> uncaught exception Fail [Fail: set: unknown property 'bogusProp']
+>   raised at: stdIn:1.1-1.21
+
+(* "unset" and "show" of an unknown property raise in the same way, naming
+ * the function that was called. *)
+Sys.unset "bogusProp";
+> uncaught exception Fail [Fail: unset: unknown property 'bogusProp']
+>   raised at: stdIn:1.1-1.22
+Sys.show "bogusProp";
+> uncaught exception Fail [Fail: show: unknown property 'bogusProp']
+>   raised at: stdIn:1.1-1.21
+
+(* Property names are case-sensitive. A property has two names, the
+ * camelCase name and the UPPER_CASE name; other spellings are unknown. *)
+Sys.show "printLength";
+> val it = SOME "999" : string option
+Sys.show "PRINT_LENGTH";
+> val it = SOME "999" : string option
+Sys.show "printlength";
+> uncaught exception Fail [Fail: show: unknown property 'printlength']
+>   raised at: stdIn:1.1-1.23
+
+(* "show" returns the value that "set" assigned; after "unset" it returns
+ * the property's default value. *)
+Sys.set ("printLength", 3);
+> val it = () : unit
+Sys.show "printLength";
+> val it = SOME "3" : string option
+Sys.unset "printLength";
+> val it = () : unit
+Sys.show "printLength";
+> val it = SOME "12" : string option
+
+(*) Ditto the other properties that control how the shell prints values.
+Sys.set ("printDepth", 2);
+> val it = () : unit
+Sys.show "printDepth";
+> val it = SOME "2" : string option
+Sys.set ("output", "tabular");
+> val it = () : unit
+Sys.show "output";
+> val it = SOME "TABULAR" : string option
+Sys.set ("stringDepth", 4);
+> val it = () : unit
+Sys.show "stringDepth";
+> val it = SOME "4" : string option
+Sys.set ("matchStrict", true);
+> val it = () : unit
+Sys.show "matchStrict";
+> val it = SOME "true" : string option
+Sys.set ("lineWidth", 40);
+> val it = () : unit
+Sys.show "lineWidth";
+> val it = SOME "40" : string option
+
+(*) Restore the values that this script set at the start.
+Sys.unset "printDepth";
+> val it = () : unit
+Sys.unset "output";
+> val it = () : unit
+Sys.unset "matchStrict";
+> val it = () : unit
+Sys.set ("printLength", 999);
+> val it = () : unit
+Sys.set ("stringDepth", ~1);
+> val it = () : unit
+Sys.set ("lineWidth", 78);
+> val it = () : unit
+
 (*) End sys.smli

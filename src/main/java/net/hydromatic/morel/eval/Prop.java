@@ -488,13 +488,11 @@ public enum Prop {
         "value for property '%s' must have type '%s'", camelName, typeName());
   }
 
-  /** Looks up a property by name. Throws if not found; never returns null. */
-  public static Prop lookup(String propName) {
-    Prop prop = BY_NAME.get(propName);
-    if (prop == null) {
-      throw new RuntimeException("property " + propName + " not found");
-    }
-    return prop;
+  /**
+   * Looks up a property by name, returning null if there is no such property.
+   */
+  public static @Nullable Prop lookup(String propName) {
+    return BY_NAME.get(propName);
   }
 
   /** Returns the value of a property. */
@@ -566,16 +564,34 @@ public enum Prop {
     return (T) o;
   }
 
-  /** Sets the value of a property, allowing strings for enum types. */
-  public void setLenient(Map<Prop, Object> map, @Nullable Object value) {
-    if (value != null && !type.isInstance(value)) {
-      @Nullable Object converted = convert(value);
+  /**
+   * Sets the value of a property, allowing strings for enum types, and returns
+   * null; or, if the property will not take the value, leaves the property
+   * unchanged and returns the message saying why.
+   *
+   * <p>It returns the message rather than throwing because its caller is {@code
+   * Sys.set}, which raises a Morel {@code Fail} exception at the call site. Use
+   * {@link #set} where the value comes from the command line rather than from a
+   * Morel program, and a value the property will not take is a bug.
+   */
+  public @Nullable String setLenient(
+      Map<Prop, Object> map, @Nullable Object value) {
+    if (value == null) {
+      if (required) {
+        return "property is required";
+      }
+      map.remove(this);
+      return null;
+    }
+    if (!type.isInstance(value)) {
+      final @Nullable Object converted = convert(value);
       if (converted == null) {
-        throw new RuntimeException(invalidValueMessage());
+        return invalidValueMessage();
       }
       value = converted;
     }
-    set(map, value);
+    map.put(this, value);
+    return null;
   }
 
   /** Sets the value of a property. Checks that its type is valid. */

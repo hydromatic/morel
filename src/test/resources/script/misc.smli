@@ -77,9 +77,11 @@ Sys.set ("output", "CLASSIC");
 Sys.set ("output", "ClasSic");
 > val it = () : unit
 Sys.set ("output", "classic ");
-> java.lang.RuntimeException: value for property 'output' must be one of: 'CLASSIC', 'TABULAR'
+> uncaught exception Fail [Fail: value for property 'output' must be one of: 'CLASSIC', 'TABULAR']
+>   raised at: stdIn:1.1-1.31
 Sys.set ("output", "bad");
-> java.lang.RuntimeException: value for property 'output' must be one of: 'CLASSIC', 'TABULAR'
+> uncaught exception Fail [Fail: value for property 'output' must be one of: 'CLASSIC', 'TABULAR']
+>   raised at: stdIn:1.1-1.26
 
 (*) After you unset a property with a default value, it reverts to the default.
 Sys.unset "output";
@@ -91,7 +93,8 @@ Sys.show "output";
 Sys.show "optionalInt";
 > val it = NONE : string option
 Sys.set ("optionalInt", "foo");
-> java.lang.RuntimeException: value for property 'optionalInt' must have type 'int'
+> uncaught exception Fail [Fail: value for property 'optionalInt' must have type 'int']
+>   raised at: stdIn:1.1-1.31
 Sys.set ("optionalInt", 12);
 > val it = () : unit
 Sys.show "optionalInt";
@@ -105,11 +108,14 @@ Sys.show "optionalInt";
  * and the Morel type the property will take. It does not name the value it
  * rejected, nor any Java type. *)
 Sys.set ("hybrid", 1);
-> java.lang.RuntimeException: value for property 'hybrid' must have type 'bool'
+> uncaught exception Fail [Fail: value for property 'hybrid' must have type 'bool']
+>   raised at: stdIn:1.1-1.22
 Sys.set ("scriptDirectory", true);
-> java.lang.RuntimeException: value for property 'scriptDirectory' must have type 'file'
+> uncaught exception Fail [Fail: value for property 'scriptDirectory' must have type 'file']
+>   raised at: stdIn:1.1-1.34
 Sys.set ("now", 0);
-> java.lang.RuntimeException: value for property 'now' must have type 'string'
+> uncaught exception Fail [Fail: value for property 'now' must have type 'string']
+>   raised at: stdIn:1.1-1.19
 
 (* "rangeMaxLength" takes an "IntInf.int": an "int", or a numeral in a
  * string where the value does not fit one. A string that is not a numeral
@@ -117,9 +123,11 @@ Sys.set ("now", 0);
 Sys.set ("rangeMaxLength", "4722366482869645213696");
 > val it = () : unit
 Sys.set ("rangeMaxLength", "banana");
-> java.lang.RuntimeException: value for property 'rangeMaxLength' must have type 'IntInf.int'
+> uncaught exception Fail [Fail: value for property 'rangeMaxLength' must have type 'IntInf.int']
+>   raised at: stdIn:1.1-1.37
 Sys.set ("rangeMaxLength", true);
-> java.lang.RuntimeException: value for property 'rangeMaxLength' must have type 'IntInf.int'
+> uncaught exception Fail [Fail: value for property 'rangeMaxLength' must have type 'IntInf.int']
+>   raised at: stdIn:1.1-1.33
 Sys.unset "rangeMaxLength";
 > val it = () : unit
 
