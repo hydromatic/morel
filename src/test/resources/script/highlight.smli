@@ -66,6 +66,12 @@ Test.highlight "nil";
 Test.highlight "truest";
 > val it = "n{truest}" : string
 
+(* A word that no longer spells a keyword is a plain identifier.
+ * Descending order is written `order DESC i`, so `desc` is an
+ * ordinary name, as are the words a reader might expect beside it. *)
+Test.highlight "desc asc ascending sort";
+> val it = "n{desc} n{asc} n{ascending} n{sort}" : string
+
 (* An identifier immediately before '.' is a structure name, and
  * shares its class with type variables. *)
 Test.highlight "List.map";
@@ -199,9 +205,9 @@ Test.highlight "fun lcm (m, n) = (m * n) div gcd (m, n);";
 > val it =
 >   "kr{fun} nf{lcm} p{(}n{m}p{,} n{n}p{)} p{=} p{(}n{m} o{*} n{n}p{)} kr{div} n{gcd} p{(}n{m}p{,} n{n}p{);}"
 >   : string
-Test.highlight "from (i, j) in pairs order i desc, j";
+Test.highlight "from (i, j) in pairs order DESC i, j";
 > val it =
->   "kr{from} p{(}nv{i}p{,} nv{j}p{)} kr{in} n{pairs} kr{order} n{i} kr{desc}p{,} n{j}"
+>   "kr{from} p{(}nv{i}p{,} nv{j}p{)} kr{in} n{pairs} kr{order} n{DESC} n{i}p{,} n{j}"
 >   : string
 Test.highlight "val (i, j) = (1, 2)";
 > val it = "kr{val} p{(}nv{i}p{,} nv{j}p{)} p{=} p{(}mi{1}p{,} mi{2}p{)}"

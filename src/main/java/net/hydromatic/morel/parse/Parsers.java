@@ -133,7 +133,8 @@ public final class Parsers {
           "val",
           "where",
           "with",
-          "yield");
+          "yield",
+          "yieldAll");
 
   /**
    * Given quoted identifier {@code `abc`} returns {@code abc}. Converts any

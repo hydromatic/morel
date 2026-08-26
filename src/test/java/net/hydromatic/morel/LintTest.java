@@ -32,6 +32,8 @@ import static org.hamcrest.core.Is.is;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
+import com.google.common.collect.HashMultiset;
+import com.google.common.collect.Multiset;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -1540,7 +1542,7 @@ public class LintTest {
           && image.charAt(0) == '"'
           && image.charAt(image.length() - 1) == '"') {
         final String word = image.substring(1, image.length() - 1);
-        if (word.matches("[a-z][a-z_]*")) {
+        if (word.matches("[a-z][a-zA-Z_]*")) {
           fromGrammar.add(word);
         }
       }
@@ -1551,22 +1553,52 @@ public class LintTest {
   }
 
   /**
-   * Tests that the highlighter knows every keyword the parser does.
+   * Tests that the highlighter colors exactly the parser's keywords, plus the
+   * two categories of word that are deliberately not keywords of it.
    *
-   * <p>It knows more, and may: {@link MorelHighlighter#SML_KEYWORDS} contains
-   * the Standard ML keywords that Morel does not implement, so that Standard ML
-   * code is highlighted correctly too. But a keyword the parser knows and the
-   * highlighter does not is a bug -- the word is a keyword on the screen and
-   * back-ticked on output, yet displayed as an identifier.
+   * <p>A keyword the parser knows and the highlighter does not is a bug -- the
+   * word is a keyword on the screen and back-ticked on output, yet displayed as
+   * an identifier. The converse is a bug too, and a quieter one: {@code desc}
+   * sat in the Morel list long after the language stopped having it, coloring a
+   * name no program can use.
+   *
+   * <p>So the comparison is by equality. The words the highlighter colors that
+   * the grammar does not know are accounted for by category -- Standard ML
+   * keywords Morel does not implement, and identifiers colored as keywords
+   * anyway -- and the categories are disjoint, so every word belongs to exactly
+   * one and none can hide.
    */
   @Test
   void testHighlighterKeywords() {
     final TreeSet<String> declared = new TreeSet<>(Parsers.RESERVED_WORDS);
     declared.addAll(Parsers.NON_RESERVED_KEYWORDS);
-    // testReservedWords checks that 'declared' is the grammar's keywords.
-    declared.removeAll(MorelHighlighter.ALL_KEYWORDS);
+
+    // The categories partition ALL_KEYWORDS: every word is in exactly one
+    // of them (count 1), and between them they account for the whole set.
+    final Multiset<String> categoryCount = HashMultiset.create();
+    categoryCount.addAll(MorelHighlighter.SML_KEYWORDS);
+    categoryCount.addAll(MorelHighlighter.UNIMPLEMENTED_SML_KEYWORDS);
+    categoryCount.addAll(MorelHighlighter.MOREL_KEYWORDS);
+    categoryCount.addAll(MorelHighlighter.PSEUDO_KEYWORDS);
+    categoryCount
+        .entrySet()
+        .forEach(
+            entry ->
+                assertThat(
+                    "categories of " + entry.getElement(),
+                    entry.getCount(),
+                    is(1)));
     assertThat(
-        "keywords that MorelHighlighter does not highlight", declared, empty());
+        "a word in no category",
+        categoryCount.elementSet(),
+        is(MorelHighlighter.ALL_KEYWORDS));
+
+    // testReservedWords checks that 'declared' is the grammar's keywords.
+    final TreeSet<String> highlighted =
+        new TreeSet<>(MorelHighlighter.ALL_KEYWORDS);
+    highlighted.removeAll(MorelHighlighter.UNIMPLEMENTED_SML_KEYWORDS);
+    highlighted.removeAll(MorelHighlighter.PSEUDO_KEYWORDS);
+    assertThat(highlighted, is(declared));
   }
 
   /** Tests the primary-constructor rule against synthetic source code. */

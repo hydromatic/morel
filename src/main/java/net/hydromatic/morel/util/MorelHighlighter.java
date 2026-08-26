@@ -55,49 +55,60 @@ import java.util.function.Function;
  */
 public class MorelHighlighter {
 
-  /** SML reserved words. */
-  private static final Set<String> SML_KEYWORDS =
+  /**
+   * Standard ML reserved words that Morel implements. Every one of these is a
+   * keyword of the Morel grammar.
+   */
+  public static final Set<String> SML_KEYWORDS =
       ImmutableSet.of(
-          "abstype",
           "and",
           "andalso",
           "as",
           "case",
           "datatype",
           "div",
-          "do",
           "else",
           "end",
           "eqtype",
           "exception",
           "fn",
           "fun",
-          "handle",
           "if",
           "in",
-          "infix",
-          "infixr",
           "let",
-          "local",
           "mod",
-          "nonfix",
           "of",
           "op",
-          "open",
           "orelse",
           "raise",
           "rec",
-          "sharing",
           "sig",
           "signature",
-          "struct",
-          "structure",
           "then",
           "type",
           "val",
           "where",
+          "with");
+
+  /**
+   * Standard ML reserved words that Morel does not implement. They are
+   * highlighted so that Standard ML code, which a Morel document may quote,
+   * reads correctly; the Morel parser knows none of them.
+   */
+  public static final Set<String> UNIMPLEMENTED_SML_KEYWORDS =
+      ImmutableSet.of(
+          "abstype",
+          "do",
+          "handle",
+          "infix",
+          "infixr",
+          "local",
+          "nonfix",
+          "open",
+          "sharing",
+          "struct",
+          "structure",
           "while",
-          "with",
           "withtype");
 
   /**
@@ -105,12 +116,11 @@ public class MorelHighlighter {
    * after.sh} promotes from {@code <span class="n">} to {@code <span
    * class="kr">} on the live blog.
    */
-  private static final Set<String> MOREL_KEYWORDS =
+  public static final Set<String> MOREL_KEYWORDS =
       ImmutableSet.of(
           "all",
           "compute",
           "current",
-          "desc",
           "distinct",
           "elem",
           "elements",
@@ -128,7 +138,6 @@ public class MorelHighlighter {
           "join",
           "left",
           "lenient",
-          "not",
           "notelem",
           "o",
           "on",
@@ -152,6 +161,13 @@ public class MorelHighlighter {
           "yieldAll");
 
   /**
+   * Words that the parser treats as ordinary identifiers but that are
+   * highlighted as keywords all the same. {@code not} is a function, {@code
+   * bool -> bool}, but it reads as an operator and is colored like one.
+   */
+  public static final Set<String> PSEUDO_KEYWORDS = ImmutableSet.of("not");
+
+  /**
    * DML keywords, not active by default. Pass to {@link
    * #amendKeywords(Function)} to enable them for a highlighter instance.
    */
@@ -159,16 +175,16 @@ public class MorelHighlighter {
       ImmutableSet.of("assign", "commit", "delete", "insert", "update");
 
   /**
-   * Union of {@link #SML_KEYWORDS} and {@link #MOREL_KEYWORDS}.
-   *
-   * <p>It must contain every keyword of the Morel grammar, which {@code
-   * LintTest.testHighlighterKeywords} checks; it contains more, because it also
-   * highlights the Standard ML keywords that Morel does not implement.
+   * Every word this highlighter colors as a keyword: the union of {@link
+   * #SML_KEYWORDS}, {@link #UNIMPLEMENTED_SML_KEYWORDS}, {@link
+   * #MOREL_KEYWORDS} and {@link #PSEUDO_KEYWORDS}.
    */
   public static final Set<String> ALL_KEYWORDS =
       ImmutableSet.<String>builder()
           .addAll(SML_KEYWORDS)
+          .addAll(UNIMPLEMENTED_SML_KEYWORDS)
           .addAll(MOREL_KEYWORDS)
+          .addAll(PSEUDO_KEYWORDS)
           .build();
 
   /**
