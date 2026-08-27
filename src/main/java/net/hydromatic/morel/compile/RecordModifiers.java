@@ -21,6 +21,7 @@ package net.hydromatic.morel.compile;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -89,6 +90,48 @@ class RecordModifiers {
         throw new AssertionError(modifier.op);
     }
     return sources;
+  }
+
+  /**
+   * Returns whether a modifier leaves the record's type as it was: the same
+   * fields, in the same places, each keeping the type it had.
+   *
+   * <p>Only such a modifier can claim the type of the record it was applied to.
+   * One that adds, removes or renames a field produces a record of a different
+   * shape; one that is {@code lenient} may give a field a different type, which
+   * is what {@code lenient} is for. A verb that skips preserves the type by
+   * doing nothing, which is right: it did nothing.
+   */
+  static boolean preserves(
+      PairList<String, Source> sources, Collection<String> fields) {
+    return sources.size() == fields.size()
+        && sources.allMatch(
+            (label, source) -> {
+              if (source instanceof Kept) {
+                // A field that kept its own name, rather than another's.
+                return ((Kept) source).field.equals(label);
+              } else if (source instanceof Taken) {
+                return ((Taken) source).sameType;
+              } else {
+                return ((Assigned) source).sameType;
+              }
+            });
+  }
+
+  /**
+   * Returns whether a modifier claims something of a value it assigns: that the
+   * value has the type the field it goes into was declared with.
+   *
+   * <p>A field being added has no declared type -- it takes the value's -- and
+   * {@code lenient} gives up the field's type for the same reason, so neither
+   * claims anything. A field kept, removed or renamed carries a value that was
+   * checked when it was put there.
+   */
+  static boolean claims(PairList<String, Source> sources) {
+    return sources.anyMatch(
+        (label, source) ->
+            source instanceof Assigned && ((Assigned) source).sameType
+                || source instanceof Taken && ((Taken) source).sameType);
   }
 
   /**

@@ -46,6 +46,11 @@ public class Visitor {
 
   protected void visit(Ast.Ordinal ordinal) {}
 
+  protected void visit(Ast.Cast cast) {
+    cast.exp.accept(this);
+    cast.type.accept(this);
+  }
+
   protected void visit(Ast.AnnotatedExp annotatedExp) {
     annotatedExp.exp.accept(this);
     annotatedExp.type.accept(this);
@@ -201,6 +206,16 @@ public class Visitor {
 
   protected void visit(Ast.NamedType namedType) {
     namedType.types.forEach(this::accept);
+  }
+
+  protected void visit(Ast.CheckExp checkExp) {
+    checkExp.exp.accept(this);
+    checkExp.checks.forEach(f -> f.accept(this));
+  }
+
+  protected void visit(Ast.CheckedType checkedType) {
+    checkedType.type.accept(this);
+    checkedType.checks.forEach(f -> f.accept(this));
   }
 
   protected void visit(Ast.TyVar tyVar) {}
@@ -363,6 +378,7 @@ public class Visitor {
   protected void visit(Ast.TypeBind typeBind) {
     typeBind.tyVars.forEach(this::accept);
     typeBind.type.accept(this);
+    typeBind.checks.forEach(f -> f.accept(this));
   }
 
   protected void visit(Ast.DatatypeDecl datatypeDecl) {

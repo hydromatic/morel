@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.function.UnaryOperator;
+import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.Op;
 import net.hydromatic.morel.compile.BuiltIn;
 
@@ -55,7 +56,20 @@ public class Keys {
   /** Returns a key that gives a name to an existing type. */
   public static Type.Key alias(
       String name, Type.Key key, List<? extends Type.Key> arguments) {
-    return new AliasKey(name, key, ImmutableList.copyOf(arguments));
+    return alias(name, key, arguments, ImmutableList.of());
+  }
+
+  /** Returns a key that gives a name, and constraints, to an existing type. */
+  public static Type.Key alias(
+      String name,
+      Type.Key key,
+      List<? extends Type.Key> arguments,
+      List<Ast.Fn> checks) {
+    return new AliasKey(
+        name,
+        key,
+        ImmutableList.copyOf(arguments),
+        ImmutableList.copyOf(checks));
   }
 
   /**
@@ -300,22 +314,51 @@ public class Keys {
     private final String name;
     private final Type.Key key;
     private final ImmutableList<Type.Key> arguments;
+    private final ImmutableList<Ast.Fn> checks;
+    /**
+     * The constraints, rendered. A condition is closed, so its text decides
+     * whether two checked types are the same type; an {@link Ast.Fn} does not
+     * compare by value.
+     */
+    private final String checkText;
 
-    AliasKey(String name, Type.Key key, ImmutableList<Type.Key> arguments) {
+    AliasKey(
+        String name,
+        Type.Key key,
+        ImmutableList<Type.Key> arguments,
+        ImmutableList<Ast.Fn> checks) {
       super(Op.ALIAS_TYPE);
       this.name = requireNonNull(name);
       this.key = key;
       this.arguments = requireNonNull(arguments);
+      this.checks = requireNonNull(checks);
+      this.checkText = checks.toString();
     }
 
     @Override
     public String toString() {
-      return name;
+      return describe(new StringBuilder(), 0, 0).toString();
     }
 
     @Override
     public StringBuilder describe(StringBuilder buf, int left, int right) {
-      return describeParameterized(buf, name, arguments);
+      if (!name.isEmpty()) {
+        return describeParameterized(buf, name, arguments);
+      }
+      // A checked type that is not named has only its body and its
+      // conditions to be written by, so write it in full. A condition binds
+      // more loosely than anything else in a type, so parenthesize wherever
+      // this is not the whole type.
+      final boolean parens = left > 0 || right > 0;
+      if (parens) {
+        buf.append('(');
+      }
+      key.describe(buf, 0, 0);
+      checks.forEach(c -> c.appendMatchList(buf, " check "));
+      if (parens) {
+        buf.append(')');
+      }
+      return buf;
     }
 
     @Override
@@ -328,13 +371,14 @@ public class Keys {
       return obj == this
           || obj instanceof AliasKey
               && ((AliasKey) obj).name.equals(name)
-              && ((AliasKey) obj).key.equals(key);
+              && ((AliasKey) obj).key.equals(key)
+              && ((AliasKey) obj).checkText.equals(checkText);
     }
 
     @Override
     public Type toType(TypeSystem typeSystem) {
       return typeSystem.aliasType(
-          name, key.toType(typeSystem), typeSystem.typesFor(arguments));
+          name, key.toType(typeSystem), typeSystem.typesFor(arguments), checks);
     }
   }
 

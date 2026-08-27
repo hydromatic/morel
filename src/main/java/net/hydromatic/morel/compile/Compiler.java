@@ -80,6 +80,7 @@ import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.type.TypedValue;
 import net.hydromatic.morel.util.ImmutablePairList;
+import net.hydromatic.morel.util.MorelException;
 import net.hydromatic.morel.util.Pair;
 import net.hydromatic.morel.util.PairList;
 import net.hydromatic.morel.util.TailList;
@@ -620,6 +621,132 @@ public class Compiler {
     }
   }
 
+  /**
+   * Creates a code that returns a value if its type's condition holds of it,
+   * and otherwise raises {@code Constraint}.
+   *
+   * <p>{@code kind} distinguishes the three operators: {@code $check} returns
+   * the value, {@code $require} returns true, so that a check on a component
+   * can be a conjunct of the condition of the value that contains it, and
+   * {@code $attempt} returns the result of the condition, so that {@code asOpt}
+   * can answer NONE.
+   *
+   * <p>The message quotes the value, so the code keeps the value's type and
+   * renders it as the shell would. It renders with the default properties
+   * rather than the session's: a message is not a binding, and should not elide
+   * or wrap because the session was told to print narrowly.
+   */
+  private Code constraintCode(
+      Code conditionCode,
+      Code valueCode,
+      Type type,
+      String name,
+      String blame,
+      BuiltIn kind,
+      Pos pos) {
+    final Map<Prop, Object> map = ImmutableMap.of();
+    final Pretty pretty =
+        new Pretty(
+            typeSystem,
+            -1,
+            Prop.Output.CLASSIC,
+            Prop.PRINT_LENGTH.intValue(map),
+            Prop.PRINT_DEPTH.intValue(map),
+            Prop.STRING_DEPTH.intValue(map),
+            0,
+            BagPrinter.NATURAL);
+    return new Code() {
+      @Override
+      public int maxSlots() {
+        // The value and the condition are evaluated one after the other, in
+        // this frame, so the deeper of the two decides. Returning the default
+        // 0 said that a check needs no slots, and a closure whose body was one
+        // -- a condition on the element type of a collection, say -- was given
+        // a frame too small to evaluate it in.
+        return Math.max(valueCode.maxSlots(), conditionCode.maxSlots());
+      }
+
+      @Override
+      public Object eval(Stack stack) {
+        final Object value = valueCode.eval(stack);
+        final boolean holds;
+        try {
+          holds = (Boolean) conditionCode.eval(stack);
+        } catch (RuntimeException e) {
+          if (!(e instanceof MorelException)) {
+            // Not a Morel-level failure, so not something a condition can be
+            // said to have decided; let it out.
+            throw e;
+          }
+          if (e instanceof Codes.MorelRuntimeException
+              && ((Codes.MorelRuntimeException) e).builtInExn()
+                  == Codes.BuiltInExn.CONSTRAINT) {
+            // A check on a component has already reported, and said precisely
+            // which component and why. Wrapping it again would bury that.
+            throw e;
+          }
+          // The condition could not be evaluated, so whether the value has the
+          // type is not false but unknown. Raise Constraint either way -- the
+          // value has not been shown to have the type -- but say which
+          // happened, and say what went wrong.
+          final StringBuilder b = new StringBuilder("cannot tell whether ");
+          pretty.prettyValue(b, type, value);
+          b.append(" is a valid ").append(name);
+          if (!blame.isEmpty()) {
+            b.append(": ").append(blame);
+          }
+          b.append("; ").append(strip((MorelException) e));
+          throw new Codes.MorelRuntimeException(
+              Codes.BuiltInExn.CONSTRAINT,
+              new Codes.Description(b.toString()),
+              pos);
+        }
+        if (holds) {
+          return kind == BuiltIn.Z_CHECK ? value : Boolean.TRUE;
+        }
+        if (kind == BuiltIn.Z_ATTEMPT) {
+          // 'asOpt' asks rather than claims, so a value that does not have the
+          // type is an answer, not a failure.
+          return Boolean.FALSE;
+        }
+        final StringBuilder b = new StringBuilder();
+        pretty.prettyValue(b, type, value);
+        b.append(" is not a valid ").append(name);
+        if (!blame.isEmpty()) {
+          b.append(": ").append(blame);
+        }
+        throw new Codes.MorelRuntimeException(
+            Codes.BuiltInExn.CONSTRAINT,
+            new Codes.Description(b.toString()),
+            pos);
+      }
+
+      @Override
+      public Describer describe(Describer describer) {
+        return describer.start(
+            "check",
+            d ->
+                d.arg("condition", conditionCode)
+                    .arg("value", valueCode)
+                    .arg("", name)
+                    .arg("", blame)
+                    .arg("", kind.name()));
+      }
+    };
+  }
+
+  /**
+   * Describes an exception as it would be reported, without the "uncaught
+   * exception" that begins a report, so that it can be quoted inside another
+   * message.
+   */
+  private static String strip(MorelException e) {
+    final String s = e.describeTo(new StringBuilder()).toString();
+    return s.startsWith(Codes.UNCAUGHT_PREFIX)
+        ? s.substring(Codes.UNCAUGHT_PREFIX.length())
+        : s;
+  }
+
   protected Code compileApply(Context cx, Core.Apply apply) {
     return compileApply(cx, apply, false);
   }
@@ -643,6 +770,21 @@ public class Compiler {
           case Z_LIST:
             argCodes = compileArgs(cx, ((Core.Tuple) apply.arg).args);
             return Codes.list(argCodes);
+          case Z_ATTEMPT:
+          case Z_CHECK:
+          case Z_REQUIRE:
+            // Argument is always a quadruple: the condition, the value, the
+            // name of the checked type, and what the value is of.
+            final List<Core.Exp> checkArgs = ((Core.Tuple) apply.arg).args;
+            argCodes = compileArgs(cx, checkArgs);
+            return constraintCode(
+                argCodes.get(0),
+                argCodes.get(1),
+                checkArgs.get(1).type,
+                ((Core.Literal) checkArgs.get(2)).unwrap(String.class),
+                ((Core.Literal) checkArgs.get(3)).unwrap(String.class),
+                builtIn,
+                apply.pos);
           case Z_ORDINAL:
             if (cx.ordinalSlots == null) {
               // Nothing is counting rows here. Only a 'yield' installs a
@@ -1696,10 +1838,14 @@ public class Compiler {
       @Nullable List<Action> actions) {
     if (actions != null) {
       for (AliasType type : types) {
-        actions.add(
-            (outLines, outBindings, evalEnv) ->
-                outLines.accept(
-                    "type " + type.moniker() + " = " + type.type.key()));
+        final StringBuilder b =
+            new StringBuilder("type ")
+                .append(type.moniker())
+                .append(" = ")
+                .append(type.type.key());
+        type.checks.forEach(check -> check.appendMatchList(b, " check "));
+        final String line = b.toString();
+        actions.add((outLines, outBindings, evalEnv) -> outLines.accept(line));
       }
     }
   }

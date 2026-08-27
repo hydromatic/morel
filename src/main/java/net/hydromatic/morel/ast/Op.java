@@ -121,6 +121,7 @@ public enum Op {
   // 't1 * t2 * t3' are three distinct types in SML.
   TUPLE_TYPE(" * ", 7, Assoc.NONE),
   COMPOSITE_TYPE,
+  CHECKED_TYPE(" check ", 5),
   FUNCTION_TYPE(" -> ", 6, Assoc.RIGHT),
   NAMED_TYPE(" ", 8),
   ALIAS_TYPE(" ", 8),
@@ -131,6 +132,9 @@ public enum Op {
 
   // annotated expression "e: t"
   ANNOTATED_EXP(" : ", 0),
+  AS(" as ", 0),
+  CHECK_EXP(" check ", 0),
+  AS_OPT(" asOpt ", 0),
 
   // attributes
   ATTRIBUTE,

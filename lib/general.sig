@@ -53,6 +53,12 @@ sig
    *)
   exception Chr
 
+  (**
+   * is raised when a value does not satisfy the `check` condition of the
+   * checked type it is being converted to.
+   *)
+  exception Constraint [@@specified "morel"]
+
   (** is raised on integer division by zero. *)
   exception Div
 

@@ -464,6 +464,21 @@ INR ((1, true), 7);
 INR (1, (true, 7));
 > val it = INR (1,(true,7)) : ('a,int * (bool * int)) either
 
+(* A 'check' condition is an expression, and ends at a delimiter, so one may
+ * be written inside an argument list or beside a '*' without parentheses of
+ * its own: ',' and ')' both end it. Where it lands is decided the same way as
+ * for any other type. *)
+type checkedArg = (int check c => c >= 0, char) either;
+> type checkedArg = (int check c => c >= 0,char) either
+type checkedLast = (int, char check c => true) either;
+> type checkedLast = (int,char check c => true) either
+type checkedComponent = (int check c => c >= 0) * char;
+> type checkedComponent = (int check c => c >= 0) * char
+
+(*) With no parentheses the condition applies to the whole type.
+type checkedWhole = int * int * int check c => true;
+> type checkedWhole = int * int * int check c => true
+
 (* Tuple types and function types interact correctly: '*' binds tighter
  * than '->' in both source syntax and printed form. A tuple as a
  * function arg or result needs no parens; a function as a tuple element

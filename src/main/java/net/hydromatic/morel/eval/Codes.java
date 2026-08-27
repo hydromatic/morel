@@ -7834,6 +7834,8 @@ public abstract class Codes {
     b.add(BuiltIn.WORD_WORD_SIZE, WORD_WORD_SIZE);
     b.add(BuiltIn.WORD_XORB, WORD_XORB);
     b.add(BuiltIn.Z_ANDALSO, Unit.INSTANCE);
+    b.add(BuiltIn.Z_ATTEMPT, Unit.INSTANCE);
+    b.add(BuiltIn.Z_CHECK, Unit.INSTANCE);
     b.add(BuiltIn.Z_CURRENT, Unit.INSTANCE);
     b.add(BuiltIn.Z_ELEMENTS, Unit.INSTANCE);
     b.add(BuiltIn.Z_EXTENT, Z_EXTENT);
@@ -7841,6 +7843,7 @@ public abstract class Codes {
     b.add(BuiltIn.Z_NTH, Unit.INSTANCE);
     b.add(BuiltIn.Z_ORDINAL, 0);
     b.add(BuiltIn.Z_ORELSE, Unit.INSTANCE);
+    b.add(BuiltIn.Z_REQUIRE, Unit.INSTANCE);
     b.add(BuiltIn.Z_SUM_INT, Z_SUM_INT);
     b.add(BuiltIn.Z_SUM_REAL, Z_SUM_REAL);
     b.add(BuiltIn.Z_TEST_OVER_COUNT_BAG, Z_TEST_OVER_COUNT_BAG);
@@ -8111,6 +8114,11 @@ public abstract class Codes {
       this.pos = requireNonNull(pos);
     }
 
+    /** Returns which built-in exception this is. */
+    public BuiltInExn builtInExn() {
+      return e;
+    }
+
     @Override
     public String toString() {
       return e.mlName() + " at " + pos;
@@ -8118,8 +8126,10 @@ public abstract class Codes {
 
     @Override
     public StringBuilder describeTo(StringBuilder buf) {
-      buf.append("uncaught exception ").append(e.mlName());
-      if (payload != null) {
+      buf.append(UNCAUGHT_PREFIX).append(e.mlName());
+      if (payload instanceof Description) {
+        buf.append(" [").append(payload).append("]");
+      } else if (payload != null) {
         buf.append(" [")
             .append(e.mlName())
             .append(": ")
@@ -8137,6 +8147,31 @@ public abstract class Codes {
     }
   }
 
+  /** How a description of an uncaught exception begins. */
+  public static final String UNCAUGHT_PREFIX = "uncaught exception ";
+
+  /**
+   * Payload of a {@link MorelRuntimeException} that describes the failure in
+   * full, and is therefore rendered without the exception's name.
+   *
+   * <p>An exception with an ordinary payload renders it as "{@code Fail: no
+   * such file}"; one with a {@code Description} renders "{@code ~1 is not a
+   * valid nat}", which reads better when the description is a sentence and the
+   * exception carries no value at the Morel level.
+   */
+  public static class Description {
+    private final String s;
+
+    public Description(String s) {
+      this.s = requireNonNull(s);
+    }
+
+    @Override
+    public String toString() {
+      return s;
+    }
+  }
+
   /** Definitions of Morel built-in exceptions. */
   public enum BuiltInExn {
     // lint: sort until '##public ' where '##[A-Z]'
@@ -8145,6 +8180,7 @@ public abstract class Codes {
         BuiltIn.Constructor.EXN_BIND,
         "nonexhaustive binding failure"),
     CHR("General", BuiltIn.Constructor.EXN_CHR, null),
+    CONSTRAINT("General", BuiltIn.Constructor.EXN_CONSTRAINT, null),
     DATE("Date", BuiltIn.Constructor.EXN_DATE, null),
     DIV("General", BuiltIn.Constructor.EXN_DIV, "divide by zero"),
     DOMAIN("General", BuiltIn.Constructor.EXN_DOMAIN, "domain error"),

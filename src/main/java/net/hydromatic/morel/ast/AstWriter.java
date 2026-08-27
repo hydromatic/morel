@@ -31,7 +31,7 @@ public class AstWriter {
   private final StringBuilder b;
   private final boolean parenthesize;
 
-  private AstWriter(StringBuilder b, boolean parenthesize) {
+  AstWriter(StringBuilder b, boolean parenthesize) {
     this.b = b;
     this.parenthesize = parenthesize;
   }

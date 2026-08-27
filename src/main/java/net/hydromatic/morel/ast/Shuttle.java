@@ -102,6 +102,10 @@ public class Shuttle {
     return ordinal;
   }
 
+  protected Ast.Exp visit(Ast.Cast cast) {
+    return cast.copy(cast.exp.accept(this), cast.type.accept(this));
+  }
+
   protected Ast.Exp visit(Ast.AnnotatedExp annotatedExp) {
     return ast.annotatedExp(
         annotatedExp.pos,
@@ -282,6 +286,24 @@ public class Shuttle {
 
   protected Ast.Type visit(Ast.NamedType namedType) {
     return namedType; // leaf
+  }
+
+  protected Ast.Type visit(Ast.CheckedType checkedType) {
+    return checkedType.copy(
+        checkedType.type.accept(this), visitChecks(checkedType.checks));
+  }
+
+  protected Ast.Exp visit(Ast.CheckExp checkExp) {
+    return checkExp.copy(
+        checkExp.exp.accept(this), visitChecks(checkExp.checks));
+  }
+
+  /**
+   * Visits the conditions of a `check` clause. A condition is a function, so it
+   * has expressions in it that a shuttle rewriting expressions must see.
+   */
+  private List<Ast.Fn> visitChecks(List<Ast.Fn> checks) {
+    return transformEager(checks, check -> (Ast.Fn) check.accept(this));
   }
 
   protected Ast.TyVar visit(Ast.TyVar tyVar) {
@@ -467,7 +489,8 @@ public class Shuttle {
         typeBind.pos,
         typeBind.name.accept(this),
         visitList(typeBind.tyVars),
-        typeBind.type.accept(this));
+        typeBind.type.accept(this),
+        visitList(typeBind.checks));
   }
 
   protected Ast.DatatypeDecl visit(Ast.DatatypeDecl datatypeDecl) {
