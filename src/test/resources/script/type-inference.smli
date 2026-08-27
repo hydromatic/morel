@@ -358,6 +358,23 @@ let val g = fn r => {r remove b} in g {a=1,b=2} end;
 > stdIn:1.1-1.3 Error: unresolved flex record (can't tell what fields there are besides #a)
 >   raised at: stdIn:1.1-1.3
 
+(* A field selected from the result of a function application takes its
+ * type from the function's result type. That holds however the function
+ * is named -- plainly, qualified by its structure, or by an overloaded
+ * name that resolves to one of them. *)
+:t (hd [{a = 1}]).a;
+> val it : int
+:t (List.hd [{a = 1}]).a;
+> val it : int
+:t (List.nth ([{a = 1}], 0)).a;
+> val it : int
+:t (only [{deptno = 10, name = "Sales"}]).name;
+> val it : string
+:t (List.only [{deptno = 10, name = "Sales"}]).name;
+> val it : string
+:t (Bag.only (bag [{deptno = 10, name = "Sales"}])).name;
+> val it : string
+
 (*) Tuple labels
 :t { 1 = true, 2 = 0};
 > val it : bool * int
