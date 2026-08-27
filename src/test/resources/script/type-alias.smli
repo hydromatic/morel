@@ -277,14 +277,15 @@ n < 6;
 > val it = true : bool
 
 (* A record modifier must see the fields of the record it is modifying, so it
- * looks through the alias to find them. The result is a plain record: a
- * derived value loses the abbreviation, as it does in arithmetic. *)
+ * looks through the alias to find them. A modifier that leaves the record's
+ * shape alone keeps the abbreviation; one that adds, removes or renames a
+ * field gives a record of a different shape, which the name does not fit. *)
 type point = {x: int, y: int};
 > type point = {x:int, y:int}
 val pt: point = {x = 1, y = 2};
 > val pt = {x=1,y=2} : point
 {pt replace x = 3};
-> val it = {x=3,y=2} : {x:int, y:int}
+> val it = {x=3,y=2} : point
 {pt extend z = 4};
 > val it = {x=1,y=2,z=4} : {x:int, y:int, z:int}
 

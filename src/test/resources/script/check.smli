@@ -1,0 +1,1425 @@
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *
+ * Tests checked types, i.e. a 'type' declaration with a
+ * 'check' clause.
+ *)
+
+Sys.set ("lineWidth", 78);
+> val it = () : unit
+
+(* A 'check' clause on a type declaration states a condition that every
+ * value of the type satisfies. *)
+type nat = int check i => i >= 0;
+> type nat = int check i => i >= 0
+val n: nat = 5;
+> val n = 5 : nat
+
+(*) A clause may be repeated; each adds a constraint.
+type batchSize = int check i => i >= 1 check j => j <= 12;
+> type batchSize = int check i => i >= 1 check j => j <= 12
+
+(*) The match may have more than one branch, and need not be exhaustive.
+type badPair = (bool * int) check
+    (true, 0) => true
+  | (false, i) => i mod 2 = 0;
+> type badPair = bool * int check (true, 0) => true | (false, i) => i mod 2 = 0
+
+(*) The value the match binds may be destructured.
+type parityPair = {i: int, j: int} check {i, j} => i mod 2 = j mod 2;
+> type parityPair = {i:int, j:int} check {i = i, j = j} => i mod 2 = j mod 2
+
+(*) A type without a clause is unaffected.
+type plain = int;
+> type plain = int
+val p: plain = 5;
+> val p = 5 : plain
+
+(* A clause must be a function from the type it constrains to 'bool'. The
+ * condition sees the type as the type it abbreviates: the value has not yet
+ * been admitted to the checked type, so the constraint may not be assumed
+ * of it. *)
+type notBool = int check i => i + 1;
+> stdIn:1.1-1.36 Error: Cannot deduce type: conflict: bool vs int
+>   raised at: stdIn:1.1-1.36
+type notInt = int check s => String.size s > 0;
+> stdIn:1.1-1.47 Error: Cannot deduce type: conflict: int vs string
+>   raised at: stdIn:1.1-1.47
+
+(* The branches of a clause are alternatives, but separate clauses are
+ * conjoined, so the two may not be flattened into one list. Here the first
+ * clause is total via its second branch; as separate clauses neither would
+ * be. *)
+type evenOrZero = int check 0 => true | i => i mod 2 = 0 check i => i >= 0;
+> type evenOrZero = int check 0 => true | i => i mod 2 = 0 check i => i >= 0
+
+(* A constraint is part of the type's identity, so redeclaring the name with a
+ * different condition gives a different type; but it does not survive into
+ * the type the compiler works with, so a checked type still behaves as
+ * the type it abbreviates. *)
+type nat = int check i => i >= 1;
+> type nat = int check i => i >= 1
+val n2: nat = 5;
+> val n2 = 5 : nat
+n2 + 1;
+> val it = 6 : int
+List.hd [n2];
+> val it = 5 : nat
+List.map (fn i => i) [n2];
+> val it = [5] : nat list
+
+(* The name means the declaration in force, at every site that claims it.
+ * A type is cached by the name an annotation writes it as, and the cache
+ * went on answering with the type the name used to have, so a value was
+ * checked against the condition of a type the name no longer meant. 0 is a
+ * 'nat' by the first declaration and not by this one. *)
+val n3: nat = 0;
+> uncaught exception Constraint [0 is not a valid nat]
+>   raised at: stdIn:1.5-1.16
+0 as nat;
+> uncaught exception Constraint [0 is not a valid nat]
+>   raised at: stdIn:1.1-1.9
+0 asOpt nat;
+> val it = NONE : nat option
+
+(* A condition must be closed: it may refer only to the value it is given and
+ * to the standard basis. That is what lets a checked type be interned like
+ * any other type -- two checked types are the same type when their
+ * conditions are textually equal, which would not follow if a condition could
+ * also depend on an environment -- and it settles what a condition means when
+ * the values it used are re-bound, by making the question not arise.
+ *
+ * Supporting a non-closed condition, by inlining what it refers to at the
+ * declaration so that the condition becomes closed, is a possible future
+ * feature; then the type would survive, with the values it used snapshotted
+ * as they were when it was declared. *)
+val limit = 12;
+> val limit = 12 : int
+fun lessThanDozen i = i >= 1 andalso i <= limit;
+> val lessThanDozen = fn : int -> bool
+type batch = int check i => lessThanDozen i;
+> stdIn:1.1-1.17 Error: condition of checked type 'batch' is not closed; it refers to 'lessThanDozen'
+>   raised at: stdIn:1.1-1.17
+
+(*) Written out, the same condition is closed.
+type batch = int check i => i >= 1 andalso i <= 12;
+> type batch = int check i => i >= 1 andalso i <= 12
+val six: batch = 6;
+> val six = 6 : batch
+
+(*) A reference to the standard basis is closed; a built-in is not re-bindable.
+type nonEmpty = string check s => String.size s > 0;
+> type nonEmpty = string check s => #size String s > 0
+val hi: nonEmpty = "hi";
+> val hi = "hi" : nonEmpty
+val blank: nonEmpty = "";
+> uncaught exception Constraint ["" is not a valid nonEmpty]
+>   raised at: stdIn:1.5-1.25
+
+(*) A parameterized type may not be checked.
+type 'a myList = 'a list check l => not (List.null l);
+> stdIn:1.6-1.25 Error: cannot check parameterized type 'myList'
+>   raised at: stdIn:1.6-1.25
+
+(* A binding at a checked type is where a value flows into a claim, so the
+ * condition is checked there. It is not checked anywhere else: the value is
+ * already known to satisfy it. *)
+val ok: nat = 5;
+> val ok = 5 : nat
+val notOk: nat = ~1;
+> uncaught exception Constraint [~1 is not a valid nat]
+>   raised at: stdIn:1.5-1.20
+
+(*) Every clause must hold.
+val small: batchSize = 6;
+> val small = 6 : batchSize
+val tooBig: batchSize = 13;
+> uncaught exception Constraint [13 is not a valid batchSize]
+>   raised at: stdIn:1.5-1.27
+val tooSmall: batchSize = 0;
+> uncaught exception Constraint [0 is not a valid batchSize]
+>   raised at: stdIn:1.5-1.28
+
+(*) The whole value is quoted in the message, however big.
+val evens: parityPair = {i = 2, j = 4};
+> val evens = {i=2,j=4} : parityPair
+val mixed: parityPair = {i = 1, j = 2};
+> uncaught exception Constraint [{i=1,j=2} is not a valid parityPair]
+>   raised at: stdIn:1.5-1.39
+
+(* A condition need not match every value; a value it does not match does not
+ * satisfy it. Without this the condition would raise 'Match'. *)
+type zero = int check 0 => true;
+> type zero = int check 0 => true
+val z0: zero = 0;
+> val z0 = 0 : zero
+val z1: zero = 1;
+> uncaught exception Constraint [1 is not a valid zero]
+>   raised at: stdIn:1.5-1.17
+
+(* 'as' converts a value to a type, checking the type's condition; 'asOpt'
+ * tests the condition instead, giving SOME if it holds and NONE if it does
+ * not. A conversion displays the type it was asked for, not the type
+ * inference deduces: inference gives the meet, which for a checked type is
+ * the type it abbreviates, and the conversion is the record of what was
+ * verified. 'asOpt' wraps that type in 'option'. *)
+val i = 5;
+> val i = 5 : int
+val j = ~5;
+> val j = ~5 : int
+i as nat;
+> val it = 5 : nat
+j as nat;
+> uncaught exception Constraint [~5 is not a valid nat]
+>   raised at: stdIn:1.1-1.9
+i asOpt nat;
+> val it = SOME 5 : nat option
+j asOpt nat;
+> val it = NONE : nat option
+
+(* The type survives into a binding, and is the element type of a list of
+ * conversions, so what a conversion verified is not lost at the next step. *)
+val n = i as nat;
+> val n = 5 : nat
+val ns = [i as nat, 0];
+> val ns = [5,0] : nat list
+val no = i asOpt nat;
+> val no = SOME 5 : nat option
+
+(*) Converting to an unchecked type claims nothing, and cannot fail.
+i as int;
+> val it = 5 : int
+j asOpt int;
+> val it = SOME ~5 : int option
+
+(*) They bind as loosely as ':', so the whole expression is converted.
+i - 1 as nat;
+> val it = 4 : nat
+(i as nat) + 1;
+> val it = 6 : int
+i - 10 as nat;
+> uncaught exception Constraint [~5 is not a valid nat]
+>   raised at: stdIn:1.1-1.14
+
+(* They are left-associative, and mix with ':'. The last conversion is the
+ * one that decides the type, so 'i as nat as int' is an 'int'. *)
+i as nat as int;
+> val it = 5 : int
+(i : int) as nat;
+> val it = 5 : nat
+
+(* Every conversion in a chain is checked, so widening at the end does not
+ * excuse a narrowing before it that fails. The position blames the
+ * conversion that raised, not the whole expression. *)
+~1 as nat as int;
+> uncaught exception Constraint [~1 is not a valid nat]
+>   raised at: stdIn:1.1-1.10
+
+(* A conversion between types with different erasures is an ordinary type
+ * error, reported by the unifier without any constraint reasoning. *)
+"abc" as nat;
+> stdIn:1.1-1.13 Error: Cannot deduce type: conflict: nat (alias for int) vs string
+>   raised at: stdIn:1.1-1.13
+
+(* A parameter's check is compiled inside the function, so it travels with
+ * the function value and fires however the function is called. The position
+ * reported is the function's, not the call's, for that reason. *)
+fun f (n: nat) = n;
+> val f = fn : nat -> nat
+f 5;
+> val it = 5 : int
+f ~1;
+> uncaught exception Constraint [~1 is not a valid nat]
+>   raised at: stdIn:1.5-1.19
+val k = fn (n: nat) => n + 1;
+> val k = fn : int -> int
+k ~3;
+> uncaught exception Constraint [~3 is not a valid nat]
+>   raised at: stdIn:1.12-1.29
+
+(* So a checked value may be passed through a polymorphic function that
+ * knows nothing of the constraint, and is still checked. This is why such a
+ * function needs no reified type or handler. *)
+List.map f [1, 2];
+> val it = [1,2] : int list
+List.map f [1, ~2];
+> uncaught exception Constraint [~2 is not a valid nat]
+>   raised at: stdIn:1.5-1.19
+List.filter (fn i => i > 0) [1, ~2];
+> val it = [1] : int list
+
+(* The annotation is read, not deduced, because the body may weaken it:
+ * arithmetic drops the constraint, so this function's type is 'int -> int',
+ * but its parameter is still checked. *)
+fun decr (n: nat) = n - 1;
+> val decr = fn : int -> int
+decr 3;
+> val it = 2 : int
+decr ~3;
+> uncaught exception Constraint [~3 is not a valid nat]
+>   raised at: stdIn:1.5-1.26
+
+(* What drops the constraint is the operator, not the operands. 'n - 1' loses
+ * it because the '1' is an 'int' that the 'nat' has to meet, and a meet takes
+ * the weaker of the two; but an operator applied to operands of its own type
+ * has nothing to meet. Such an operator computes a value the type has not
+ * been shown to contain, so it drops the constraint whatever it was applied
+ * to, and a unary operator drops it too. *)
+~n2;
+> val it = ~5 : int
+n2 + n2;
+> val it = 10 : int
+abs n2;
+> val it = 5 : int
+type small = int check i => i < 100;
+> type small = int check i => i < 100
+val s: small = 60;
+> val s = 60 : small
+s + s;
+> val it = 120 : int
+s * s;
+> val it = 3600 : int
+fun dbl (i: small) = i + i;
+> val dbl = fn : int -> int
+dbl 60;
+> val it = 120 : int
+
+(* A check is made where the value flows into the claim, whatever the body
+ * then does with the name it binds. Raising is a check's only effect, so an
+ * optimizer that reasons about values alone would be entitled to discard one
+ * whose name is never read, or to defer one to wherever its name is read;
+ * either would lose the check. *)
+fun ignores (i: nat) = 0;
+> val ignores = fn : nat -> int
+ignores 5;
+> val it = 0 : int
+ignores ~1;
+> uncaught exception Constraint [~1 is not a valid nat]
+>   raised at: stdIn:1.5-1.25
+
+(*) Read only in a branch that is not taken.
+fun branches (i: nat) = if false then i else 0;
+> val branches = fn : int -> int
+branches ~1;
+> uncaught exception Constraint [~1 is not a valid nat]
+>   raised at: stdIn:1.5-1.47
+
+(*) Read only inside a function that is never called.
+val delays = fn (i: nat) => fn () => i;
+> val delays = fn : nat -> unit -> nat
+delays ~1;
+> uncaught exception Constraint [~1 is not a valid nat]
+>   raised at: stdIn:1.17-1.39
+
+(* A claim on a composite type is a claim about its components, so each is
+ * checked. The message names the component that failed and quotes it, rather
+ * than the whole value. A tuple's components are numbered as its selectors
+ * are, so 'component 2' is what '#2' selects. An element is written '[_]',
+ * a subscript with nothing known about which element it was; if a collection
+ * ever declares a key, that is where the key would go. *)
+type employee = {empno: nat, name: string};
+> type employee = {empno:nat, name:string}
+val e: employee = {empno = 1, name = "Fred"};
+> val e = {empno=1,name="Fred"} : employee
+val e2: employee = {empno = ~1, name = "Fred"};
+> uncaught exception Constraint [~1 is not a valid nat: field empno]
+>   raised at: stdIn:1.5-1.47
+
+(*) Nesting is followed to any depth.
+type team = {lead: employee, size: nat};
+> type team = {lead:employee, size:nat}
+val t: team = {lead = {empno = ~1, name = "Fred"}, size = 2};
+> uncaught exception Constraint [~1 is not a valid nat: field lead.empno]
+>   raised at: stdIn:1.5-1.61
+
+(*) A tuple behaves as a record does.
+type pair = nat * nat;
+> type pair = nat * nat
+val p: pair = (1, 2);
+> val p = (1,2) : pair
+val p2: pair = (1, ~2);
+> uncaught exception Constraint [~2 is not a valid nat: component 2]
+>   raised at: stdIn:1.5-1.23
+
+(*) Every element of a list must satisfy the element type's condition.
+type nats = nat list;
+> type nats = nat list
+val ns: nats = [1, 2];
+> val ns = [1,2] : nats
+val ns2: nats = [1, ~2];
+> uncaught exception Constraint [~2 is not a valid nat: [_]]
+>   raised at: stdIn:1.5-1.24
+
+(* A vector is walked element by element, as a list is. It is not a
+ * collection -- a query cannot scan one -- and it is an eqtype, so it has no
+ * constructors to walk either; before this it fell between the two, and a
+ * condition inside one was claimed and never checked. *)
+type natVector = nat vector;
+> type natVector = nat vector
+val vs: natVector = Vector.fromList [1, 2];
+> val vs = #[1,2] : natVector
+val vs2: natVector = Vector.fromList [1, ~2];
+> uncaught exception Constraint [~2 is not a valid nat: [_]]
+>   raised at: stdIn:1.5-1.45
+
+(* The claim is reached through whatever encloses the vector: a walk that
+ * answers "nothing here is checked" is believed by every walk above it. *)
+val vs3: nat vector list = [Vector.fromList [~1]];
+> uncaught exception Constraint [~1 is not a valid nat: [_][_]]
+>   raised at: stdIn:1.5-1.50
+
+(*) A vector whose element type constrains nothing is not checked.
+val vs4: int vector = Vector.fromList [~1];
+> val vs4 = #[~1] : int vector
+
+(* Components are checked before the whole, so a type's own condition may
+ * assume that its components satisfy theirs. *)
+type nonEmptyNats = nat list check l => not (List.null l);
+> type nonEmptyNats = nat list check l => not (#null List l)
+val q1: nonEmptyNats = [1];
+> val q1 = [1] : nonEmptyNats
+val q2: nonEmptyNats = [];
+> uncaught exception Constraint [[] is not a valid nonEmptyNats]
+>   raised at: stdIn:1.5-1.26
+val q3: nonEmptyNats = [~1];
+> uncaught exception Constraint [~1 is not a valid nat: [_]]
+>   raised at: stdIn:1.5-1.28
+
+(*) A composite that constrains nothing is not checked at all.
+type plainPair = int * string;
+> type plainPair = int * string
+val pp: plainPair = (1, "a");
+> val pp = (1,"a") : plainPair
+
+(* The whole is blamed only when its own condition fails; a component that
+ * fails is blamed for itself. Components are checked first, so the innermost
+ * failure is the one reported. *)
+type evenPair = (nat * nat) check (i, j) => i * j mod 2 = 0;
+> type evenPair = nat * nat check (i, j) => i * j mod 2 = 0
+val ep1: evenPair = (2, 3);
+> val ep1 = (2,3) : evenPair
+val ep2: evenPair = (~1, 2);
+> uncaught exception Constraint [~1 is not a valid nat: component 1]
+>   raised at: stdIn:1.5-1.28
+val ep3: evenPair = (1, 3);
+> uncaught exception Constraint [(1,3) is not a valid evenPair]
+>   raised at: stdIn:1.5-1.27
+
+(* Applying a datatype constructor is a construction site, like a binding:
+ * the constructor was declared to hold a 'nat', so its argument is checked. *)
+datatype box = Box of nat;
+> datatype box = Box of nat
+Box 1;
+> val it = Box 1 : box
+Box ~1;
+> uncaught exception Constraint [~1 is not a valid nat: argument of Box]
+>   raised at: stdIn:1.1-1.4
+
+(*) The path names the component within the argument.
+datatype boxPair = BoxPair of nat * nat;
+> datatype boxPair = BoxPair of nat * nat
+BoxPair (1, ~2);
+> uncaught exception Constraint [~2 is not a valid nat: argument of BoxPair.2]
+>   raised at: stdIn:1.1-1.8
+
+(*) A constructor that holds an unchecked type is not checked.
+datatype plainBox = PlainBox of int;
+> datatype plainBox = PlainBox of int
+PlainBox ~1;
+> val it = PlainBox ~1 : plainBox
+
+(* A condition reached through a datatype's type parameter is checked too.
+ * The datatype is walked, as a record and a collection are: the value must
+ * satisfy whatever the type it was given carries. Without this the claim was
+ * made and never checked -- 'nat option' printed, holding a value that is not
+ * one. *)
+val someNat: nat option = SOME 1;
+> val someNat = SOME 1 : nat option
+val someNotNat: nat option = SOME ~1;
+> uncaught exception Constraint [~1 is not a valid nat: SOME]
+>   raised at: stdIn:1.5-1.37
+
+(*) A constructor that carries nothing has nothing to check.
+val noNat: nat option = NONE;
+> val noNat = NONE : nat option
+
+(*) The same goes for a datatype the user declared.
+datatype 'a bx = Bx of 'a;
+> datatype 'a bx = Bx of 'a
+val bxNat: nat bx = Bx ~1;
+> uncaught exception Constraint [~1 is not a valid nat: Bx]
+>   raised at: stdIn:1.5-1.26
+
+(* A datatype may contain itself, so the walk is a function that is applied to
+ * the value rather than an expansion, and a recursive datatype calls it. The
+ * value is checked however deep the condition is reached. *)
+datatype 'a tree = Leaf | Node of 'a * 'a tree;
+> datatype 'a tree = Leaf | Node of 'a * 'a tree
+val goodTree: nat tree = Node (1, Node (2, Leaf));
+> val goodTree = Node (1,Node (2,Leaf)) : nat tree
+val badTree: nat tree = Node (1, Node (~2, Leaf));
+> uncaught exception Constraint [~2 is not a valid nat: Node.1]
+>   raised at: stdIn:1.5-1.50
+
+(*) A datatype whose parameter carries no condition is not walked.
+val plainTree: int tree = Node (1, Node (~2, Leaf));
+> val plainTree = Node (1,Node (~2,Leaf)) : int tree
+
+(* A record modifier that assigns to a field claims the type of the record it
+ * modifies -- the field keeps its declared type, so the value must have it --
+ * and the claim is checked at the modifier. Nobody else wrote the type down,
+ * so nowhere else would check it. *)
+{e replace empno = ~1};
+> uncaught exception Constraint [~1 is not a valid nat: field empno]
+>   raised at: stdIn:1.1-1.23
+val e3: employee = {e replace empno = ~1};
+> uncaught exception Constraint [~1 is not a valid nat: field empno]
+>   raised at: stdIn:1.20-1.42
+
+(*) A value that satisfies the field's type gives back the type unchanged.
+{e replace empno = 2};
+> val it = {empno=2,name="Fred"} : employee
+
+(* 'lenient' says the field need not keep its type, so nothing is claimed of
+ * the value and nothing is checked. The result is a different type. *)
+{e replace lenient empno = ~1};
+> val it = {empno=~1,name="Fred"} : {empno:int, name:string}
+
+(* A modifier that adds, removes or renames a field cannot claim the type: the
+ * result has a different shape. It needs no check either -- every value it
+ * carries over was checked when it was put there. *)
+{e extend hired = true};
+> val it = {empno=1,hired=true,name="Fred"}
+>   : {empno:nat, hired:bool, name:string}
+{e remove name};
+> val it = {empno=1} : {empno:nat}
+
+(*) 'replace all' assigns too, so it claims and checks.
+{e replace all {empno = ~1}};
+> uncaught exception Constraint [~1 is not a valid nat: field empno]
+>   raised at: stdIn:1.1-1.29
+{e replace all {empno = 2}};
+> val it = {empno=2,name="Fred"} : employee
+
+(* A verb that skips assigns nothing, so the record is the one it was given,
+ * and the type comes back with it. *)
+{e replace or skip hired = true};
+> val it = {empno=1,name="Fred"} : employee
+
+(* Every modifier in a chain must leave the shape alone; one that does not
+ * gives a record the name no longer fits, so the chain claims nothing, and an
+ * assigned field takes the type of the value rather than keeping its own.
+ * Nothing is claimed of '~1' -- the field it is in is an 'int' -- so nothing
+ * is checked, and the type that is printed says so. *)
+{e replace empno = 2 extend hired = true};
+> val it = {empno=2,hired=true,name="Fred"}
+>   : {empno:int, hired:bool, name:string}
+{e replace empno = ~1 extend hired = true};
+> val it = {empno=~1,hired=true,name="Fred"}
+>   : {empno:int, hired:bool, name:string}
+{e replace empno = ~1 remove name};
+> val it = {empno=~1} : {empno:int}
+
+(* --- A modifier inherits the record's own condition ------------- *)
+
+(* A modifier that changes the record's shape cannot claim its type, but the
+ * type's own conditions need not be lost with the name. A condition is
+ * carried over if every field it depends on was left alone, and rewritten to
+ * name them as the result names them. The result is a checked type that
+ * has no name. *)
+type crate = {a: int, b: nat} check r => r.a < 10;
+> type crate = {a:int, b:nat} check r => #a r < 10
+val v0: crate = {a = 1, b = 2};
+> val v0 = {a=1,b=2} : crate
+
+(*) 'extend' leaves every field alone, so every condition is carried over.
+{v0 extend c = 5};
+> val it = {a=1,b=2,c=5} : {a:int, b:nat, c:int} check r => #a r < 10
+
+(* 'remove' drops a condition that mentions the field it removed -- the
+ * condition would no longer typecheck -- and keeps one that does not.
+ * Projecting a column away drops the constraints that mention it, as it does
+ * in a database. *)
+{v0 remove a};
+> val it = {b=2} : {b:nat}
+{v0 remove b};
+> val it = {a=1} : {a:int} check r => #a r < 10
+
+(*) 'rename' carries the condition over with the field renamed inside it.
+{v0 rename z = a};
+> val it = {b=2,z=1} : {b:nat, z:int} check r => #z r < 10
+
+(* The condition is carried into the type, not just displayed on it, so it is
+ * enforced where the derived record is modified again. This is what the
+ * inheritance is for: a schema derived by 'extend' keeps its invariants. *)
+val v1 = {v0 extend c = 5};
+> val v1 = {a=1,b=2,c=5} : {a:int, b:nat, c:int} check r => #a r < 10
+{v1 replace a = 3};
+> val it = {a=3,b=2,c=5} : {a:int, b:nat, c:int} check r => #a r < 10
+{v1 replace a = 20};
+> uncaught exception Constraint [{a=20,b=2,c=5} is not a valid value]
+>   raised at: stdIn:1.1-1.20
+
+(* A condition that depends on a field the modifier assigned to is dropped:
+ * the value that is there now was never shown to satisfy it. *)
+{v0 replace a = 3 extend c = 1};
+> val it = {a=3,b=2,c=1} : {a:int, b:nat, c:int}
+{v0 replace b = 3 extend c = 1};
+> val it = {a=1,b=3,c=1} : {a:int, b:int, c:int} check r => #a r < 10
+
+(* A condition written by destructuring is rewritten to select instead, so
+ * that it holds of a record with fields its pattern does not mention.
+ * Otherwise whether a condition could be inherited would depend on how it
+ * happened to be written. *)
+type parity = {i: int, j: int} check {i, j} => i mod 2 = j mod 2;
+> type parity = {i:int, j:int} check {i = i, j = j} => i mod 2 = j mod 2
+val p0: parity = {i = 2, j = 4};
+> val p0 = {i=2,j=4} : parity
+val p1 = {p0 extend k = 1};
+> val p1 = {i=2,j=4,k=1}
+>   : {i:int, j:int, k:int} check $r => let val i = #i $r and j = #j $r in i mod 2 = j mod 2 end
+{p1 replace i = 4};
+> val it = {i=4,j=4,k=1}
+>   : {i:int, j:int, k:int} check $r => let val i = #i $r and j = #j $r in i mod 2 = j mod 2 end
+{p1 replace i = 3};
+> uncaught exception Constraint [{i=3,j=4,k=1} is not a valid value]
+>   raised at: stdIn:1.1-1.19
+
+(* A condition that uses the record as a whole, rather than by selecting
+ * fields from it, is dropped: a record of another shape is not that record. *)
+type whole = {i: int, j: int} check r => r = {i = 1, j = 2};
+> type whole = {i:int, j:int} check r => r = {i = 1, j = 2}
+val w0: whole = {i = 1, j = 2};
+> val w0 = {i=1,j=2} : whole
+{w0 extend k = 9};
+> val it = {i=1,j=2,k=9} : {i:int, j:int, k:int}
+
+(* 'typeof e' names the type 'e' was shown to have, conditions and all, so an
+ * annotation that uses it claims what that type claims. It used to reduce the
+ * type to what inference made of it, which left the claim unchecked. *)
+val fromTypeof: typeof n = 5;
+> val fromTypeof = 5 : nat
+val fromTypeofBad: typeof n = ~5;
+> uncaught exception Constraint [~5 is not a valid nat]
+>   raised at: stdIn:1.5-1.33
+(~5 : typeof n);
+> uncaught exception Constraint [~5 is not a valid nat]
+>   raised at: stdIn:1.1-1.16
+
+(* A condition written on a 'typeof' is not supported. A condition is typed
+ * against its base, and the base has to be materialized to do that, which a
+ * 'typeof' cannot be at the point a type is converted. A 'typeof' in a type
+ * or datatype declaration does work, because there the expression it names
+ * can be deduced on its own. *)
+(5 : (typeof n check i => i < 100));
+> stdIn:1.7-1.15 Error: 'typeof' is not supported here
+>   raised at: stdIn:1.7-1.15
+
+(* An ascription is a claim, like a binding, so it is checked wherever it
+ * appears -- not only where its value is bound. *)
+(~1 : nat);
+> uncaught exception Constraint [~1 is not a valid nat]
+>   raised at: stdIn:1.1-1.11
+([1, ~2] : nat list);
+> uncaught exception Constraint [~2 is not a valid nat: [_]]
+>   raised at: stdIn:1.1-1.21
+val fm = fn () => (~1 : nat);
+> val fm = fn : unit -> int
+fm ();
+> uncaught exception Constraint [~1 is not a valid nat]
+>   raised at: stdIn:1.19-1.29
+
+(* An ascription inside a binding is checked twice over, and each check walks
+ * the bag with a predicate of its own. A check said that it needed no stack
+ * slots, which was true of the check and false of the condition inside it, so
+ * the predicate was given a frame with no room to evaluate the condition on a
+ * field of the element. *)
+val twice: {empno: nat} bag = (bag [{empno = 1}] : {empno: nat} bag);
+> val twice = [{empno=1}] : {empno:nat} bag
+
+(* A 'fun' declaration's result annotation reaches Resolver as an ascription
+ * on the body, so a result is checked too. The declared type is still 'int':
+ * the annotation and the body's type meet, and the meet of a checked type
+ * and the type it abbreviates is the latter. *)
+fun neg () : nat = ~1;
+> val neg = fn : unit -> int
+neg ();
+> uncaught exception Constraint [~1 is not a valid nat]
+>   raised at: stdIn:1.20-1.22
+fun pos () : nat = 1;
+> val pos = fn : unit -> int
+pos ();
+> val it = 1 : int
+fun idNat (x: int) : nat = x;
+> val idNat = fn : int -> int
+idNat 1;
+> val it = 1 : int
+idNat ~1;
+> uncaught exception Constraint [~1 is not a valid nat]
+>   raised at: stdIn:1.28
+
+(* A check on a value is made when the value is made, and a function value is
+ * not a value its type can be checked against: to check 'nat -> nat' every
+ * argument it is ever given and every result it ever returns would have to be
+ * checked, which means replacing the function with a proxy. Rather than do
+ * that silently, or accept the claim and check nothing, the claim is
+ * rejected. *)
+val h: nat -> nat = fn i => i - 1;
+> stdIn:1.8-1.18 Error: cannot claim a checked function type 'nat -> nat'
+>   raised at: stdIn:1.8-1.18
+val h2: int -> nat = fn i => i;
+> stdIn:1.9-1.19 Error: cannot claim a checked function type 'int -> nat'
+>   raised at: stdIn:1.9-1.19
+val h3: nat -> int = fn i => i;
+> stdIn:1.9-1.19 Error: cannot claim a checked function type 'nat -> int'
+>   raised at: stdIn:1.9-1.19
+
+(*) A function type nested inside another type is rejected too.
+val h4: {f: nat -> nat} = {f = fn i => i};
+> stdIn:1.9-1.24 Error: cannot claim a checked function type '{f:nat -> nat}'
+>   raised at: stdIn:1.9-1.24
+
+(*) So is one claimed at a parameter, or by an ascription or a conversion.
+fun apply2 (g: nat -> nat) = g 1;
+> stdIn:1.16-1.26 Error: cannot claim a checked function type 'nat -> nat'
+>   raised at: stdIn:1.16-1.26
+val h5 = (fn i => i) : nat -> nat;
+> stdIn:1.24-1.34 Error: cannot claim a checked function type 'nat -> nat'
+>   raised at: stdIn:1.24-1.34
+
+(*) A function type that constrains nothing is unaffected.
+val h6: int -> int = fn i => i;
+> val h6 = fn : int -> int
+val h7: plain -> plain = fn i => i;
+> val h7 = fn : plain -> plain
+
+(* A binding whose annotation has a different erasure is an ordinary type
+ * error, as the conversion above was; the unifier names both, and says which
+ * is an alias. *)
+val bad2: nat = "abc";
+> stdIn:1.1-1.22 Error: Cannot deduce type: conflict: nat (alias for int) vs string
+>   raised at: stdIn:1.1-1.22
+
+(* A condition may itself raise. Then whether the value has the type is not
+ * false but unknown, and 'Constraint' is raised either way -- the value has
+ * not been shown to have the type -- but the message says which happened, and
+ * what went wrong. *)
+type odd = int check i => 100 div i mod 2 = 1;
+> type odd = int check i => 100 div i mod 2 = 1
+val odd1: odd = 3;
+> val odd1 = 3 : odd
+val odd2: odd = 2;
+> uncaught exception Constraint [2 is not a valid odd]
+>   raised at: stdIn:1.5-1.18
+val odd3: odd = 0;
+> uncaught exception Constraint [cannot tell whether 0 is a valid odd; Div [divide by zero]]
+>   raised at: stdIn:1.5-1.18
+
+(*) A component says which component, as it does when the condition is false.
+type odds = odd list;
+> type odds = odd list
+val os1: odds = [3, 5];
+> uncaught exception Constraint [5 is not a valid odd: [_]]
+>   raised at: stdIn:1.5-1.23
+val os2: odds = [3, 2];
+> uncaught exception Constraint [2 is not a valid odd: [_]]
+>   raised at: stdIn:1.5-1.23
+val os3: odds = [3, 0];
+> uncaught exception Constraint [cannot tell whether 0 is a valid odd: [_]; Div [divide by zero]]
+>   raised at: stdIn:1.5-1.23
+
+(* 'asOpt' asks rather than claims, so a condition that is false is an answer;
+ * but one that raises has no answer, so it raises too. *)
+3 asOpt odd;
+> val it = SOME 3 : odd option
+2 asOpt odd;
+> val it = NONE : odd option
+0 asOpt odd;
+> uncaught exception Constraint [cannot tell whether 0 is a valid odd; Div [divide by zero]]
+>   raised at: stdIn:1.1-1.12
+
+(* A scan over a checked type enumerates the values of that type, so the
+ * type's condition belongs in the query, where the planner can use it to
+ * generate the values rather than generate and reject them. It does not
+ * raise: which values the type has is the question being asked, not something
+ * already claimed of a value in hand. *)
+type parityPair = {i: int, j: int} check {i, j} => i mod 2 = j mod 2;
+> type parityPair = {i:int, j:int} check {i = i, j = j} => i mod 2 = j mod 2
+from {i, j}: parityPair where i elem [0..2] andalso j elem [5..8];
+> val it = [{i=0,j=6},{i=0,j=8},{i=1,j=5},{i=1,j=7},{i=2,j=6},{i=2,j=8}]
+>   : {i:int, j:int} list
+
+(* The condition restricts a scalar scan too. 'nat' is the declaration above,
+ * 'i >= 1', not the one at the top of this file. *)
+from n: nat where n elem [~2..2];
+> val it = [1,2] : int list
+
+(*) A scan over an unchecked type is unaffected.
+type plainPair = {i: int, j: int};
+> type plainPair = {i:int, j:int}
+from {i, j}: plainPair where i elem [0..1] andalso j elem [0..1];
+> val it = [{i=0,j=0},{i=0,j=1},{i=1,j=0},{i=1,j=1}] : {i:int, j:int} list
+
+(* A record variable is grounded by constraining every one of its fields, so
+ * the selecting form gives what the destructured form above gives. Each field
+ * yields a generator of its own, and they are assembled into one for 'p'; the
+ * type's condition is conjoined into the scan as before. *)
+from p: parityPair where p.i elem [0..2] andalso p.j elem [5..8];
+> val it = [{i=0,j=6},{i=0,j=8},{i=1,j=5},{i=1,j=7},{i=2,j=6},{i=2,j=8}]
+>   : parityPair list
+
+(*) A field left unconstrained leaves the record ungrounded.
+from p: parityPair where p.i elem [0..2];
+> stdIn:1.6-1.19 Error: pattern 'p' is not grounded
+>   raised at: stdIn:1.6-1.19
+
+(*) The forms may be mixed, and there may be more than two fields.
+type triple = {i: int, j: int, k: int};
+> type triple = {i:int, j:int, k:int}
+from p: triple where p.i elem [0,1] andalso p.j elem [2] andalso p.k elem [3..4];
+> val it = [{i=0,j=2,k=3},{i=0,j=2,k=4},{i=1,j=2,k=3},{i=1,j=2,k=4}]
+>   : triple list
+
+(*) A tuple is grounded the same way, by its components.
+from p: int * int where #1 p elem [0,1] andalso #2 p elem [2,3];
+> val it = [(0,2),(0,3),(1,2),(1,3)] : (int * int) list
+
+(* A claim is an annotation the user wrote, not a type inference deduced. So
+ * a 'let val' is checked exactly as a top-level 'val' is; both read the same
+ * annotation, through the same code. *)
+val topLevel: nat = ~1;
+> uncaught exception Constraint [~1 is not a valid nat]
+>   raised at: stdIn:1.5-1.23
+let val inLet: nat = ~1 in inLet end;
+> uncaught exception Constraint [~1 is not a valid nat]
+>   raised at: stdIn:1.9-1.24
+
+(* And a type inference deduces is not a claim. Here the user claimed nothing:
+ * the function checks its own parameter, and 'nat -> nat' is what inference
+ * made of that, so there is nothing to reject and nothing to check twice. *)
+val fnVal = fn (n: nat) => n;
+> val fnVal = fn : nat -> nat
+fnVal ~1;
+> uncaught exception Constraint [~1 is not a valid nat]
+>   raised at: stdIn:1.16-1.29
+
+(*) An annotation on a component of a pattern claims that component.
+val (compA: nat, compB) = (~1, 2);
+> uncaught exception Constraint [~1 is not a valid nat: component 1]
+>   raised at: stdIn:1.5-1.34
+fun compFn (x: nat, y: int) = x;
+> val compFn = fn : nat * int -> nat
+compFn (~1, 2);
+> uncaught exception Constraint [~1 is not a valid nat: component 1]
+>   raised at: stdIn:1.5-1.32
+
+(* A record pattern claims per field, as a tuple pattern claims per
+ * component. A field the pattern does not mention claims nothing. *)
+val {x = fieldX: nat, y = fieldY} = {x = ~1, y = 2};
+> uncaught exception Constraint [~1 is not a valid nat: field x]
+>   raised at: stdIn:1.5-1.52
+fun fieldFn {x: nat, y: int} = x;
+> val fieldFn = fn : {x:nat, y:int} -> nat
+fieldFn {x = ~1, y = 2};
+> uncaught exception Constraint [~1 is not a valid nat: field x]
+>   raised at: stdIn:1.5-1.33
+fieldFn {x = 1, y = 2};
+> val it = 1 : int
+val {x = ellipsisX: nat, ...} = {x = ~1, y = 2};
+> uncaught exception Constraint [~1 is not a valid nat: field x]
+>   raised at: stdIn:1.5-1.48
+
+(* Entering a branch whose pattern claims a type is where a value flows into
+ * the claim, so that is where the check goes. A pattern stays irrefutable: it
+ * still matches every value, and may then raise. *)
+case ~1 of (n: nat) => n;
+> uncaught exception Constraint [~1 is not a valid nat]
+>   raised at: stdIn:1.12-1.25
+case 1 of (n: nat) => n;
+> val it = 1 : int
+
+(* A branch is what a function's parameter and a 'case' have in common, so a
+ * function of several branches is checked in whichever branch claims. The
+ * parameter of the function as a whole claims nothing -- another branch may
+ * match instead -- and its type is 'int -> int'. *)
+fun firstOrNat 0 = 0 | firstOrNat (n: nat) = n;
+> val firstOrNat = fn : int -> int
+firstOrNat 0;
+> val it = 0 : int
+firstOrNat 5;
+> val it = 5 : int
+firstOrNat ~1;
+> uncaught exception Constraint [~1 is not a valid nat]
+>   raised at: stdIn:1.24-1.47
+
+(* A pattern that destructures inside a 'case' branch is not checked: the
+ * check is put on a name the pattern binds, and this one binds none that
+ * covers the whole value. The same is true of a tuple, so this is a limit of
+ * where the check is inserted rather than anything to do with records. *)
+case (~1, 2) of (n: nat, m) => n;
+> val it = ~1 : int
+case {x = ~1, y = 2} of {x: nat, y: int} => x;
+> val it = ~1 : int
+
+(* --- A schema of tables, each level a named type ---------------- *)
+
+(* A schema: a record whose fields are tables. Constraints apply at three
+ * levels -- a row, a whole table, and the schema that relates the tables --
+ * and each is a condition on the type at that level. *)
+type emp = {deptno: int, empno: int, mgrno: int option,
+    sal: real check s => s > 0.0};
+> type emp = {deptno:int, empno:int, mgrno:int option, sal:real check s => s > 0.0}
+type dept = {deptno: int, dname: string};
+> type dept = {deptno:int, dname:string}
+
+(* Intra-relation constraints, on a table: a department number identifies at
+ * most one department -- there are as many distinct numbers as rows. *)
+type depts = dept bag
+  check ds => ds.length ()
+      = (from d in ds yield d.deptno distinct).length ();
+> type depts = dept bag check ds => #length Bag ds = #length Bag (from d in ds yield #deptno d distinct)
+
+(* The same for employees, and nobody earns more than their manager. A manager
+ * is optional, so the employee at the top of the tree has none. *)
+type emps = emp bag
+  check es => es.length ()
+      = (from e in es yield e.empno distinct).length ()
+  check es => not (exists e in es, m in es
+      where e.mgrno = SOME m.empno andalso e.sal > m.sal);
+> type emps = emp bag check es => #length Bag es = #length Bag (from e in es yield #empno e distinct) check es => not (exists e in es, m in es where #mgrno e = SOME (#empno m) andalso #sal e > #sal m)
+
+(* An inter-relation constraint, on the schema: every employee's department
+ * exists. Only the schema can state it, because only it sees both tables. *)
+type hr = {depts: depts, emps: emps}
+  check h => not (exists e in h.emps
+      where not (exists d in h.depts where d.deptno = e.deptno));
+> type hr = {depts:depts, emps:emps} check h => not (exists e in #emps h where not (exists d in #depts h where #deptno d = #deptno e))
+
+val hr0: hr = {
+  depts = bag [{deptno = 10, dname = "Sales"},
+               {deptno = 20, dname = "Research"}],
+  emps = bag [{empno = 1, deptno = 10, mgrno = NONE, sal = 9.0},
+              {empno = 2, deptno = 20, mgrno = SOME 1, sal = 5.0}]};
+> val hr0 =
+>   {depts=[{deptno=10,dname="Sales"},{deptno=20,dname="Research"}],
+>    emps=[{deptno=10,empno=1,mgrno=NONE,sal=9},
+>          {deptno=20,empno=2,mgrno=SOME 1,sal=5}]} : hr
+
+(* A schema derived from another claims the type it derives from, so it is
+ * checked at the derivation. Hiring is an append. *)
+val hrHired: hr = {hr0 replace emps = from e in hr0.emps
+  union [{empno = 3, deptno = 10, mgrno = SOME 1, sal = 4.0}]};
+> val hrHired =
+>   {depts=[{deptno=10,dname="Sales"},{deptno=20,dname="Research"}],
+>    emps=[{deptno=10,empno=1,mgrno=NONE,sal=9},
+>          {deptno=20,empno=2,mgrno=SOME 1,sal=5},
+>          {deptno=10,empno=3,mgrno=SOME 1,sal=4}]} : hr
+
+(*) Hiring someone with a number already in use breaks the table.
+val hrDup: hr = {hr0 replace emps = from e in hr0.emps
+  union [{empno = 2, deptno = 10, mgrno = SOME 1, sal = 4.0}]};
+> uncaught exception Constraint [[{deptno=10,empno=1,mgrno=NONE,sal=9},{deptno=20,empno=2,mgrno=SOME 1,sal=5},{deptno=10,empno=2,mgrno=SOME 1,sal=4}] is not a valid emps: field emps]
+>   raised at: stdIn:1.17-2.63
+
+(* Hiring someone unpaid breaks the row, and is blamed on the row: a
+ * constraint is checked at the level that states it. *)
+val hrUnpaid: hr = {hr0 replace emps = from e in hr0.emps
+  union [{empno = 3, deptno = 10, mgrno = SOME 1, sal = 0.0}]};
+> uncaught exception Constraint [0 is not a valid value: field emps[_].sal]
+>   raised at: stdIn:1.20-2.63
+
+(*) Raising someone above their manager breaks the table.
+val hrRaise: hr = {hr0 replace emps = from e in hr0.emps
+  yield (if e.empno = 2 then {e replace sal = 99.0} else e)};
+> uncaught exception Constraint [[{deptno=10,empno=1,mgrno=NONE,sal=9},{deptno=20,empno=2,mgrno=SOME 1,sal=99}] is not a valid emps: field emps]
+>   raised at: stdIn:1.19-2.61
+
+(*) Moving someone to a department that does not exist breaks the schema.
+val hrMoved: hr = {hr0 replace emps = from e in hr0.emps
+  yield (if e.empno = 2 then {e replace deptno = 99} else e)};
+> uncaught exception Constraint [{depts=[{deptno=10,dname="Sales"},{deptno=20,dname="Research"}],emps=[{deptno=10,empno=1,mgrno=NONE,sal=9},{deptno=99,empno=2,mgrno=SOME 1,sal=5}]} is not a valid hr]
+>   raised at: stdIn:1.19-2.62
+
+(*) Closing a department that still has employees breaks it from the other side.
+val hrClosed: hr = {hr0 replace depts = from d in hr0.depts
+  where d.deptno <> 20};
+> uncaught exception Constraint [{depts=[{deptno=10,dname="Sales"}],emps=[{deptno=10,empno=1,mgrno=NONE,sal=9},{deptno=20,empno=2,mgrno=SOME 1,sal=5}]} is not a valid hr]
+>   raised at: stdIn:1.20-2.24
+
+(*) Opening a department whose number is in use breaks the other table.
+val hrDupDept: hr = {hr0 replace depts = from d in hr0.depts
+  union [{deptno = 10, dname = "Field"}]};
+> uncaught exception Constraint [[{deptno=10,dname="Sales"},{deptno=20,dname="Research"},{deptno=10,dname="Field"}] is not a valid depts: field depts]
+>   raised at: stdIn:1.21-2.42
+
+
+(* --- The same schema as a single type --------------------------- *)
+
+(* The same schema written as one type, with the row and table types inline.
+ * Only a 'type' declaration carries a 'check', so a type that is not named
+ * cannot state one, and every condition belongs to 'hr1'.
+ *
+ * The conditions are written with 'forall ... require', where the schema of
+ * named types above writes 'not (exists ... where ...)'. De Morgan turns one
+ * into the other -- a negated 'where' becomes the 'require', and the negation
+ * is pushed in -- and both forms are exercised, because they desugar to the
+ * same thing but do not have to. *)
+type hr1 = {
+    depts: {deptno: int, dname: string} bag,
+    emps: {deptno: int, empno: int, mgrno: int option, sal: real} bag}
+  check h => (forall e in h.emps require e.sal > 0.0)
+  check h => h.depts.length ()
+      = (from d in h.depts yield d.deptno distinct).length ()
+  check h => h.emps.length ()
+      = (from e in h.emps yield e.empno distinct).length ()
+  check h => (forall e in h.emps, m in h.emps
+      require e.mgrno <> SOME m.empno orelse e.sal <= m.sal)
+  check h => (forall e in h.emps
+      require exists d in h.depts where d.deptno = e.deptno);
+> type hr1 = {depts:{deptno:int, dname:string} bag, emps:{deptno:int, empno:int, mgrno:int option, sal:real} bag} check h => forall e in #emps h require #sal e > 0.0 check h => #length Bag (#depts h) = #length Bag (from d in #depts h yield #deptno d distinct) check h => #length Bag (#emps h) = #length Bag (from e in #emps h yield #empno e distinct) check h => forall e in #emps h, m in #emps h require #mgrno e <> SOME (#empno m) orelse #sal e <= #sal m check h => forall e in #emps h require exists d in #depts h where #deptno d = #deptno e
+
+val hr1: hr1 = {
+  depts = bag [{deptno = 10, dname = "Sales"},
+               {deptno = 20, dname = "Research"}],
+  emps = bag [{empno = 1, deptno = 10, mgrno = NONE, sal = 9.0},
+              {empno = 2, deptno = 20, mgrno = SOME 1, sal = 5.0}]};
+> val hr1 =
+>   {depts=[{deptno=10,dname="Sales"},{deptno=20,dname="Research"}],
+>    emps=[{deptno=10,empno=1,mgrno=NONE,sal=9},
+>          {deptno=20,empno=2,mgrno=SOME 1,sal=5}]} : hr1
+
+(* The same derivations are rejected, but every message names 'hr1' and
+ * quotes the whole schema, because that is the only type there is. Naming the
+ * levels is what buys a message that says which level failed, and quotes only
+ * that much of the value. *)
+val hr1Unpaid: hr1 = {hr1 replace emps = from e in hr1.emps
+  union [{empno = 3, deptno = 10, mgrno = SOME 1, sal = 0.0}]};
+> uncaught exception Constraint [{depts=[{deptno=10,dname="Sales"},{deptno=20,dname="Research"}],emps=[{deptno=10,empno=1,mgrno=NONE,sal=9},{deptno=20,empno=2,mgrno=SOME 1,sal=5},{deptno=10,empno=3,mgrno=SOME 1,sal=0}]} is not a valid hr1]
+>   raised at: stdIn:1.22-2.63
+
+val hr1Dup: hr1 = {hr1 replace emps = from e in hr1.emps
+  union [{empno = 2, deptno = 10, mgrno = SOME 1, sal = 4.0}]};
+> uncaught exception Constraint [{depts=[{deptno=10,dname="Sales"},{deptno=20,dname="Research"}],emps=[{deptno=10,empno=1,mgrno=NONE,sal=9},{deptno=20,empno=2,mgrno=SOME 1,sal=5},{deptno=10,empno=2,mgrno=SOME 1,sal=4}]} is not a valid hr1]
+>   raised at: stdIn:1.19-2.63
+
+val hr1Moved: hr1 = {hr1 replace emps = from e in hr1.emps
+  yield (if e.empno = 2 then {e replace deptno = 99} else e)};
+> uncaught exception Constraint [{depts=[{deptno=10,dname="Sales"},{deptno=20,dname="Research"}],emps=[{deptno=10,empno=1,mgrno=NONE,sal=9},{deptno=99,empno=2,mgrno=SOME 1,sal=5}]} is not a valid hr1]
+>   raised at: stdIn:1.21-2.62
+
+val hr1DupDept: hr1 = {hr1 replace depts = from d in hr1.depts
+  union [{deptno = 10, dname = "Field"}]};
+> uncaught exception Constraint [{depts=[{deptno=10,dname="Sales"},{deptno=20,dname="Research"},{deptno=10,dname="Field"}],emps=[{deptno=10,empno=1,mgrno=NONE,sal=9},{deptno=20,empno=2,mgrno=SOME 1,sal=5}]} is not a valid hr1]
+>   raised at: stdIn:1.23-2.42
+
+
+(* --- The same schema, conditions pushed down -------------------- *)
+
+(* The same schema again, still one named type, but with each condition
+ * written on the type it is about rather than lifted to the top. A type may
+ * carry a condition wherever it is written, so a condition can sit on the
+ * field, on the table, and on the schema.
+ *
+ * Its conditions use 'forall ... require', as 'hr1' does; only the schema of
+ * named types states them as 'not (exists ... where ...)'. *)
+type hr2 = {
+    depts: {deptno: int, dname: string} bag
+      check ds => ds.length ()
+          = (from d in ds yield d.deptno distinct).length (),
+    emps: {deptno: int, empno: int, mgrno: int option,
+        sal: real check s => s > 0.0} bag
+      check es => es.length ()
+          = (from e in es yield e.empno distinct).length ()
+      check es => (forall e in es, m in es
+          require e.mgrno <> SOME m.empno orelse e.sal <= m.sal)}
+  check h => (forall e in h.emps
+      require exists d in h.depts where d.deptno = e.deptno);
+> type hr2 = {depts:{deptno:int, dname:string} bag check ds => #length Bag ds = #length Bag (from d in ds yield #deptno d distinct), emps:{deptno:int, empno:int, mgrno:int option, sal:real check s => s > 0.0} bag check es => #length Bag es = #length Bag (from e in es yield #empno e distinct) check es => forall e in es, m in es require #mgrno e <> SOME (#empno m) orelse #sal e <= #sal m} check h => forall e in #emps h require exists d in #depts h where #deptno d = #deptno e
+
+val hr2: hr2 = {
+  depts = bag [{deptno = 10, dname = "Sales"},
+               {deptno = 20, dname = "Research"}],
+  emps = bag [{empno = 1, deptno = 10, mgrno = NONE, sal = 9.0},
+              {empno = 2, deptno = 20, mgrno = SOME 1, sal = 5.0}]};
+> val hr2 =
+>   {depts=[{deptno=10,dname="Sales"},{deptno=20,dname="Research"}],
+>    emps=[{deptno=10,empno=1,mgrno=NONE,sal=9},
+>          {deptno=20,empno=2,mgrno=SOME 1,sal=5}]} : hr2
+
+(* Now each message points at the level whose condition failed, and quotes
+ * only that much of the value -- as the version with a type per level does.
+ * What is lost by not naming the levels is the name: a type that is not named
+ * is called "value", and the blame path says which one. *)
+val hr2Unpaid: hr2 = {hr2 replace emps = from e in hr2.emps
+  union [{empno = 3, deptno = 10, mgrno = SOME 1, sal = 0.0}]};
+> uncaught exception Constraint [0 is not a valid value: field emps[_].sal]
+>   raised at: stdIn:1.22-2.63
+
+val hr2Dup: hr2 = {hr2 replace emps = from e in hr2.emps
+  union [{empno = 2, deptno = 10, mgrno = SOME 1, sal = 4.0}]};
+> uncaught exception Constraint [[{deptno=10,empno=1,mgrno=NONE,sal=9},{deptno=20,empno=2,mgrno=SOME 1,sal=5},{deptno=10,empno=2,mgrno=SOME 1,sal=4}] is not a valid value: field emps]
+>   raised at: stdIn:1.19-2.63
+
+val hr2Moved: hr2 = {hr2 replace emps = from e in hr2.emps
+  yield (if e.empno = 2 then {e replace deptno = 99} else e)};
+> uncaught exception Constraint [{depts=[{deptno=10,dname="Sales"},{deptno=20,dname="Research"}],emps=[{deptno=10,empno=1,mgrno=NONE,sal=9},{deptno=99,empno=2,mgrno=SOME 1,sal=5}]} is not a valid hr2]
+>   raised at: stdIn:1.21-2.62
+
+val hr2DupDept: hr2 = {hr2 replace depts = from d in hr2.depts
+  union [{deptno = 10, dname = "Field"}]};
+> uncaught exception Constraint [[{deptno=10,dname="Sales"},{deptno=20,dname="Research"},{deptno=10,dname="Field"}] is not a valid value: field depts]
+>   raised at: stdIn:1.23-2.42
+
+
+(* --- A reference discriminated by a datatype -------------------- *)
+
+(* A picture refers to an employee or to a product, and which one is decided
+ * by a datatype rather than by which of two fields is set. The schema's
+ * condition must therefore case over the reference, and each branch looks in
+ * a different table. *)
+type emp = {empno: int, ename: string};
+> type emp = {empno:int, ename:string}
+type product = {sku: string, name: string};
+> type product = {name:string, sku:string}
+datatype ref = EMP of int | PRODUCT of string;
+> datatype ref = EMP of int | PRODUCT of string
+type picture = {ref: ref, bytes: word vector};
+> type picture = {bytes:word vector, ref:ref}
+
+(* A field reference inside a condition is resolved like any other, so a
+ * mistyped one is a type error naming the field and the type that lacks it.
+ * Here 'e.empno' is written 's.empno', and 's' is the schema. *)
+type badSchema = {
+  emps: emp bag,
+  products: product bag,
+  pictures: picture bag
+}
+check s =>
+  forall p in s.pictures
+    require case p.ref of
+      EMP (empno) => (exists e in s.emps where s.empno = empno)
+    | PRODUCT (sku) => exists p in s.products where p.sku = sku;
+> stdIn:9.50-9.55 Error: no field 'empno' in type '{emps:{empno:int, ename:string} bag, pictures:{bytes:word vector, ref:ref} bag, products:{name:string, sku:string} bag}'
+>   raised at: stdIn:9.50-9.55
+
+(*) Written correctly, the schema is declared.
+type schema = {
+  emps: emp bag,
+  products: product bag,
+  pictures: picture bag
+}
+check s =>
+  forall p in s.pictures
+    require case p.ref of
+      EMP (empno) => (exists e in s.emps where e.empno = empno)
+    | PRODUCT (sku) => exists p in s.products where p.sku = sku;
+> type schema = {emps:emp bag, pictures:picture bag, products:product bag} check s => forall p in #pictures s require case #ref p of EMP empno => exists e in #emps s where #empno e = empno | PRODUCT sku => exists p in #products s where #sku p = sku
+
+(*) A schema whose every picture refers to a row that exists.
+val s0: schema = {
+  emps = bag [{empno = 1, ename = "Fred"}],
+  products = bag [{sku = "A1", name = "Anvil"}],
+  pictures = bag [{ref = EMP 1, bytes = Vector.fromList [0w1]},
+                  {ref = PRODUCT "A1", bytes = Vector.fromList [0w2]}]};
+> val s0 =
+>   {emps=[{empno=1,ename="Fred"}],
+>    pictures=[{bytes=#[0wx1],ref=EMP 1},{bytes=#[0wx2],ref=PRODUCT "A1"}],
+>    products=[{name="Anvil",sku="A1"}]} : schema
+
+(*) A picture of an employee who does not exist breaks the schema.
+val sBadEmp: schema = {s0 replace pictures = from p in s0.pictures
+  union [{ref = EMP 99, bytes = Vector.fromList [0w3]}]};
+> uncaught exception Constraint [{emps=[{empno=1,ename="Fred"}],pictures=[{bytes=#[0wx1],ref=EMP 1},{bytes=#[0wx2],ref=PRODUCT "A1"},{bytes=#[0wx3],ref=EMP 99}],products=[{name="Anvil",sku="A1"}]} is not a valid schema]
+>   raised at: stdIn:1.23-2.57
+
+(*) So does a picture of a product that does not exist.
+val sBadProduct: schema = {s0 replace pictures = from p in s0.pictures
+  union [{ref = PRODUCT "Z9", bytes = Vector.fromList [0w4]}]};
+> uncaught exception Constraint [{emps=[{empno=1,ename="Fred"}],pictures=[{bytes=#[0wx1],ref=EMP 1},{bytes=#[0wx2],ref=PRODUCT "A1"},{bytes=#[0wx4],ref=PRODUCT "Z9"}],products=[{name="Anvil",sku="A1"}]} is not a valid schema]
+>   raised at: stdIn:1.27-2.63
+
+(*) Deleting the employee breaks it from the other side.
+val sNoEmp: schema = {s0 replace emps = from e in s0.emps where e.empno <> 1};
+> uncaught exception Constraint [{emps=[],pictures=[{bytes=#[0wx1],ref=EMP 1},{bytes=#[0wx2],ref=PRODUCT "A1"}],products=[{name="Anvil",sku="A1"}]} is not a valid schema]
+>   raised at: stdIn:1.22-1.78
+
+(* --- A condition on an expression ------------------------------- *)
+
+(* 'e check m' adds a condition to the type deduced for e: the counterpart of
+ * 'as' for a type that is not named. It checks, and the binding carries the
+ * type. *)
+val y = 1;
+> val y = 1 : int
+val small = y + 1 check i => i < 100;
+> val small = 2 : int check i => i < 100
+val big = y + 1 check i => i < 2;
+> uncaught exception Constraint [2 is not a valid value]
+>   raised at: stdIn:1.11-1.33
+val nonEmpty = "ab" check s => String.size s > 1;
+> val nonEmpty = "ab" : string check s => #size String s > 1
+
+(* A type that is not named survives inference, as a named one does, so its
+ * condition reaches a later use rather than stopping at the binding it was
+ * written on. A term identifies an alias by name and this type has none, so
+ * it is given one derived from its conditions. *)
+val small2 = small;
+> val small2 = 2 : int check i => i < 100
+[small, small2];
+> val it = [2,2] : (int check i => i < 100) list
+
+(*) Arithmetic drops it, as it drops a named one: the meet is the body.
+val sum = small + 1;
+> val sum = 3 : int
+
+(* The name is derived from the conditions and nothing else, so two written
+ * the same way are the same type -- a condition is closed, so its text
+ * decides -- and two written differently meet at the body they share. *)
+val alsoSmall = 3 check i => i < 100;
+> val alsoSmall = 3 : int check i => i < 100
+[small, alsoSmall];
+> val it = [2,3] : (int check i => i < 100) list
+val positive = 3 check i => i > 0;
+> val positive = 3 : int check i => i > 0
+[small, positive];
+> val it = [2,3] : int list
+
+(* A condition binds more loosely than anything else in a type, so it is
+ * parenthesized wherever it is not the whole type. *)
+fun keepSmall (n: (int check i => i < 100)) = n;
+> val keepSmall = fn : (int check i => i < 100) -> (int check i => i < 100)
+
+(* A match ends where a 'check' begins, which is what lets a type carry
+ * several conditions: the first condition here ends at the second 'check'
+ * rather than swallowing it. *)
+type twice = int check i => i >= 1 check j => j <= 12;
+> type twice = int check i => i >= 1 check j => j <= 12
+val six: twice = 6;
+> val six = 6 : twice
+val thirteen: twice = 13;
+> uncaught exception Constraint [13 is not a valid twice]
+>   raised at: stdIn:1.5-1.25
+
+(* The same rule means an expression-level condition inside a match must be
+ * parenthesized, since otherwise the match would have ended. *)
+val guarded = (fn i => (i check j => j > 0)) 3;
+> val guarded = 3 : int
+val guardedBad = (fn i => (i check j => j > 0)) ~3;
+> uncaught exception Constraint [~3 is not a valid value]
+>   raised at: stdIn:1.27-1.47
+
+(* Several conditions belong to one expression, as they do to one type
+ * declaration. Nesting them would put each in the type of the last, and only
+ * the last would be seen. *)
+val twiceChecked = y + 1 check i => i > 0 check i => i < 100;
+> val twiceChecked = 2 : int check i => i > 0 check i => i < 100
+val failsFirst = y + 1 check i => i > 5 check i => i < 100;
+> uncaught exception Constraint [2 is not a valid value]
+>   raised at: stdIn:1.18-1.59
+val failsSecond = y + 1 check i => i > 0 check i => i < 2;
+> uncaught exception Constraint [2 is not a valid value]
+>   raised at: stdIn:1.19-1.58
+
+(* A condition is added to what the expression already claims, not put in
+ * place of it, so the type that results carries both. The condition is
+ * therefore typed against the type the expression's own conditions are typed
+ * against -- the type they abbreviate -- because typing 'i < 100' against a
+ * 'nat' would make the alias meet an 'int', and the meet would take away the
+ * condition that made it one. *)
+type positive = int check i => i >= 1;
+> type positive = int check i => i >= 1
+val one: positive = 1;
+> val one = 1 : positive
+val bounded = one check i => i < 100;
+> val bounded = 1 : positive check i => i < 100
+val boundedLow: typeof bounded = 0;
+> uncaught exception Constraint [0 is not a valid value]
+>   raised at: stdIn:1.5-1.35
+val boundedHigh: typeof bounded = 200;
+> uncaught exception Constraint [200 is not a valid value]
+>   raised at: stdIn:1.5-1.38
+val boundedOk: typeof bounded = 7;
+> val boundedOk = 7 : positive check i => i < 100
+
+(*) The same, where what the expression claims has no name.
+val stacked = (5 check i => i > 0) check i => i < 100;
+> val stacked = 5 : int check i => i > 0 check i => i < 100
+val stackedLow: typeof stacked = ~1;
+> uncaught exception Constraint [~1 is not a valid value]
+>   raised at: stdIn:1.5-1.36
+val stackedHigh: typeof stacked = 200;
+> uncaught exception Constraint [200 is not a valid value]
+>   raised at: stdIn:1.5-1.38
+
+(* --- Conditions on types that are not named --------------------- *)
+
+(* A type may carry a condition wherever it is written, not only where it is
+ * declared, so a constraint can sit on the thing it is about. *)
+type point = {x: int check i => i >= 0, y: int check i => i >= 0};
+> type point = {x:int check i => i >= 0, y:int check i => i >= 0}
+val p1: point = {x = 1, y = 2};
+> val p1 = {x=1,y=2} : point
+val p2: point = {x = 1, y = ~2};
+> uncaught exception Constraint [~2 is not a valid value: field y]
+>   raised at: stdIn:1.5-1.32
+
+(* A type that is not named is called "value" in a message. It has no name to
+ * give, and printing its condition would repeat what the message already says
+ * failed; the blame path says which value it was. *)
+
+(* A condition binds more loosely than anything else in a type, so it applies
+ * to the whole type: here the condition is given the pair, not the second
+ * component. *)
+type wholePair = int * int check c => #1 c >= 0;
+> type wholePair = int * int check c => #1 c >= 0
+val wp: wholePair = (~1, 2);
+> uncaught exception Constraint [(~1,2) is not a valid wholePair]
+>   raised at: stdIn:1.5-1.28
+
+(*) Parenthesizing puts the condition on a component instead.
+type partPair = (int check c => c >= 0) * int;
+> type partPair = (int check c => c >= 0) * int
+val pp2: partPair = (~1, 2);
+> uncaught exception Constraint [~1 is not a valid value: component 1]
+>   raised at: stdIn:1.5-1.28
+
+(* A condition is an expression, and extends as far as it can, so a type that
+ * follows one is read as part of it. Parenthesize to end the condition. *)
+type swallowed = int check c => c >= 0 list;
+> stdIn:1.40-1.44 Error: unbound variable or constructor: list
+>   raised at: stdIn:1.40-1.44
+type notSwallowed = (int check c => c >= 0) list;
+> type notSwallowed = (int check c => c >= 0) list
+
+(* A function type behaves the same way, and where the condition lands decides
+ * whether the type may be claimed at all. A condition on the function type
+ * itself is given the function value, and is checked like any other; one on
+ * the parameter would have to check every argument the function is ever
+ * given, and is rejected. *)
+type fnWhole = int -> int check c => true;
+> type fnWhole = int -> int check c => true
+type fnPart = (int check c => c >= 0) -> int;
+> type fnPart = (int check c => c >= 0) -> int
+val fw: fnWhole = fn i => i;
+> val fw = fn : fnWhole
+val fp: fnPart = fn i => i;
+> stdIn:1.9-1.15 Error: cannot claim a checked function type 'fnPart'
+>   raised at: stdIn:1.9-1.15
+
+(*) So a condition on a function type can fail, like any other.
+type fnFalse = (int -> int) check c => false;
+> type fnFalse = int -> int check c => false
+val ff: fnFalse = fn i => i;
+> uncaught exception Constraint [fn is not a valid fnFalse]
+>   raised at: stdIn:1.5-1.28
+
+(*) Two such types written the same way are the same type.
+type same1 = {v: int check i => i > 0};
+> type same1 = {v:int check i => i > 0}
+type same2 = {v: int check i => i > 0};
+> type same2 = {v:int check i => i > 0}
+val s1: same1 = {v = 1};
+> val s1 = {v=1} : same1
+val s2: same2 = s1;
+> val s2 = {v=1} : same2
+
+(* A condition may be written wherever a type is written, not only where a
+ * type is declared: in an annotation, or on a parameter. Parentheses are
+ * needed, because a condition extends as far right as it can and would
+ * otherwise swallow what follows. *)
+val direct: (int check i => i >= 0) list = [1];
+> val direct = [1] : int list
+val notNat: (int check i => i >= 0) = ~1;
+> uncaught exception Constraint [~1 is not a valid value]
+>   raised at: stdIn:1.5-1.41
+fun mustBeNat (n: (int check i => i >= 0)) = n;
+> val mustBeNat = fn : (int check i => i >= 0) -> (int check i => i >= 0)
+mustBeNat 3;
+> val it = 3 : int
+mustBeNat ~3;
+> uncaught exception Constraint [~3 is not a valid value]
+>   raised at: stdIn:1.5-1.47
+
+(* --- Parentheses, when a condition is unparsed ------------------ *)
+
+(* 'Sys.parseTree' parses a statement and prints the tree, so it shows which
+ * parentheses survive: a condition should get the ones it needs, and no
+ * others. *)
+Sys.set ("stringDepth", ~1);
+> val it = () : unit
+
+(*) A condition on the whole type needs none.
+Sys.parseTree "type t = int check c => c >= 0";
+> val it = "(type_decl type t = int check c => c >= 0)" : string
+Sys.parseTree "type t = int * int check c => true";
+> val it = "(type_decl type t = int * int check c => true)" : string
+
+(*) Redundant parentheses are dropped.
+Sys.parseTree "type t = (int check c => c >= 0)";
+> val it = "(type_decl type t = int check c => c >= 0)" : string
+
+(*) Parentheses that put the condition on a component are kept.
+Sys.parseTree "type t = (int check c => c >= 0) * int";
+> val it = "(type_decl type t = (int check c => c >= 0) * int)" : string
+Sys.parseTree "type t = (int check c => c >= 0) list";
+> val it = "(type_decl type t = (int check c => c >= 0) list)" : string
+
+(* A type written after a condition is an operand of it, so no parentheses are
+ * added -- and none would help; the type is already part of the condition. *)
+Sys.parseTree "type t = int check c => c >= 0 list";
+> val it = "(type_decl type t = int check c => c >= 0 list)" : string
+
+(*) An expression whose operand binds tighter needs none.
+Sys.parseTree "val x = e check c => c > 0";
+> val it = "(val (valBind (idPat x) (check_exp e check c => c > 0)))" : string
+Sys.parseTree "val x = e + 1 check c => c > 0";
+> val it = "(val (valBind (idPat x) (check_exp e + 1 check c => c > 0)))"
+>   : string
+
+(* An operand that ends in a type must be parenthesized, or the type would
+ * take the condition: 'e : int check c' reads as 'e : (int check c)'. The two
+ * are different trees. *)
+Sys.parseTree "val x = (e : int) check c => c > 0";
+> val it = "(val (valBind (idPat x) (check_exp (e : int) check c => c > 0)))"
+>   : string
+Sys.parseTree "val x = e : (int check c => c > 0)";
+> val it =
+>   "(val (valBind (idPat x) (annotatedExp (id e) (checked_type int check c => c > 0))))"
+>   : string
+
+(*) A condition inside a match body keeps its parentheses.
+Sys.parseTree "val x = fn i => (i check j => j > 0)";
+> val it =
+>   "(val (valBind (idPat x) (fn (match (idPat i) (check_exp i check j => j > 0)))))"
+>   : string
+
+(* --- Shadowing, which has to come last -------------------------- *)
+
+(* Whether a reference is to the basis is decided by the binding, not by the
+ * name. A user who shadows a basis name has declared a value of their own,
+ * and a condition that referred to it would take its meaning from the
+ * environment: before this was checked, the condition below was accepted, and
+ * admitted ~1 though it reads as "not negative".
+ *
+ * This shadows 'not' for everything after it, so it comes last. *)
+val not = fn (b: bool) => true;
+> val not = fn : bool -> bool
+type shadowed = int check i => not (i < 0);
+> stdIn:1.1-1.20 Error: condition of checked type 'shadowed' is not closed; it refers to 'not'
+>   raised at: stdIn:1.1-1.20
+
+(*) End check.smli

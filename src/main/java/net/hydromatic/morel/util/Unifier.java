@@ -258,6 +258,35 @@ public abstract class Unifier {
     return () -> reason;
   }
 
+  /**
+   * Replaces, throughout a term, each alias that met a different type during
+   * unification with what it expands to.
+   *
+   * <p>An alias is only as strong as what it abbreviates, so where {@code nat}
+   * meets {@code int} the result is {@code int}. Without this the first type
+   * seen would win, and {@code [n, i]} and {@code [i, n]} would differ.
+   */
+  public static Term weaken(Term term, Map<Term, Term> weakened) {
+    final Term replacement = weakened.get(term);
+    if (replacement != null) {
+      return weaken(replacement, weakened);
+    }
+    if (term instanceof Sequence) {
+      final Sequence sequence = (Sequence) term;
+      final List<Term> terms = new ArrayList<>();
+      boolean changed = false;
+      for (Term t : sequence.terms) {
+        final Term t2 = weaken(t, weakened);
+        changed |= t2 != t;
+        terms.add(t2);
+      }
+      if (changed) {
+        return new Sequence(sequence.operator, terms);
+      }
+    }
+    return term;
+  }
+
   /** Called by the unifier when a Term's type becomes known. */
   @FunctionalInterface
   public interface Action {

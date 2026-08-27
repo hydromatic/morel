@@ -36,6 +36,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.AstNode;
 import net.hydromatic.morel.type.AliasType;
+import net.hydromatic.morel.type.Keys;
 import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.QualifiedType;
 import net.hydromatic.morel.type.RecordLikeType;
@@ -79,17 +80,27 @@ public class TypeMap {
    */
   final ImmutableMap<String, Type> displacedTypes;
 
+  /**
+   * Conditions of checked types that have no name, by the name their term was
+   * given.
+   *
+   * @see TypeResolver#unnamedCheckName
+   */
+  final ImmutableMap<String, List<Ast.Fn>> unnamedChecks;
+
   TypeMap(
       TypeSystem typeSystem,
       Map<AstNode, Unifier.Term> nodeTypeTerms,
       Unifier.Substitution substitution,
       Map<Ast.Pat, Type> realTypes,
-      Map<String, Type> displacedTypes) {
+      Map<String, Type> displacedTypes,
+      Map<String, List<Ast.Fn>> unnamedChecks) {
     this.typeSystem = requireNonNull(typeSystem);
     this.nodeTypeTerms = ImmutableMap.copyOf(nodeTypeTerms);
     this.substitution = requireNonNull(substitution.resolve());
     this.realTypes = ImmutableMap.copyOf(realTypes);
     this.displacedTypes = ImmutableMap.copyOf(displacedTypes);
+    this.unnamedChecks = ImmutableMap.copyOf(unnamedChecks);
   }
 
   @Override
@@ -296,9 +307,16 @@ public class TypeMap {
               // is zero once it is applied.
               return body;
             }
-            final Type aliasType =
-                typeMap.typeSystem.lookupOpt(
-                    TypeResolver.aliasTermName(sequence));
+            final String aliasName = TypeResolver.aliasTermName(sequence);
+            final List<Ast.Fn> checks = typeMap.unnamedChecks.get(aliasName);
+            if (checks != null) {
+              // A checked type that has no name is rebuilt rather than
+              // looked up: the term carries its body, and its name identifies
+              // its conditions.
+              return Keys.alias("", body.key(), ImmutableList.of(), checks)
+                  .toType(typeMap.typeSystem);
+            }
+            final Type aliasType = typeMap.typeSystem.lookupOpt(aliasName);
             return aliasType instanceof AliasType ? aliasType : body;
           }
           // A displaced datatype is looked up first; the type system would

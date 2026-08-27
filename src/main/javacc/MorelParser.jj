@@ -841,6 +841,18 @@ Exp fn() :
   }
 }
 
+/** Parses a "{@code check match}" clause. */
+void check(List<Ast.Fn> checks) :
+{
+  final List<Match> matchList;
+  final Span span;
+}
+{
+  <CHECK> { span = Span.of(pos()); } matchList = matchList() {
+    checks.add(ast.fn(span.end(this), matchList));
+  }
+}
+
 List<Match> matchList() :
 {
   Match match;
@@ -861,7 +873,7 @@ Match match() :
   final Exp e;
 }
 {
-  pat = pat() <RARROW> e = expression() {
+  pat = pat() <RARROW> e = expressionNoCheck() {
     return ast.match(pat.pos.plus(e.pos), pat, e);
   }
 }
@@ -1298,6 +1310,35 @@ Exp expression0() :
 Exp expression() :
 {
   Exp e;
+  final List<Ast.Fn> checks = new ArrayList<>();
+}
+{
+  e = expressionNoCheck()
+  (
+    check(checks)
+  )*
+  {
+    // Several conditions belong to one expression, as they do to one type
+    // declaration; nesting them would put each in the type of the last, and
+    // only the last would be seen.
+    return checks.isEmpty() ? e
+        : ast.checkExp(
+            e.pos.plus(checks.get(checks.size() - 1).pos), e, checks);
+  }
+}
+
+/** Parses an expression that does not extend over a following {@code check}.
+ *
+ * <p>A match's body is parsed at this level, so that {@code check} ends the
+ * match rather than being taken into it. That is what lets a type carry
+ * several conditions -- in "{@code int check i => i >= 1 check j => j <= 12}"
+ * the first condition ends at the second {@code check} -- and it means an
+ * expression-level {@code check} must be parenthesized to appear in a match
+ * body.
+ */
+Exp expressionNoCheck() :
+{
+  Exp e;
   Type t;
 }
 {
@@ -1305,6 +1346,14 @@ Exp expression() :
   (
     <COLON> t = type() {
       e = ast.annotatedExp(e.pos.plus(t.pos), e, t);
+    }
+  |
+    <AS> t = type() {
+      e = ast.as(e.pos.plus(t.pos), e, t);
+    }
+  |
+    <AS_OPT> t = type() {
+      e = ast.asOpt(e.pos.plus(t.pos), e, t);
     }
   )*
   { return e; }
@@ -1821,15 +1870,25 @@ void typeBind(List<Ast.TypeBind> typeBinds) :
   final Pair<Pos, List<TyVar>> tyVars;
   final Ast.Id id;
   final List<TyCon> tyCons = new ArrayList<>();
-  final Type type;
+  Type type;
+  final List<Ast.Fn> checks = new ArrayList<>();
 }
 {
   tyVars = tyVars()
   id = identifier()
   <EQ>
-  type = type() {
+  type = type()
+  {
+    // 'type()' has taken any 'check' clauses, because a type may carry one
+    // wherever it is written. Here they belong to the name being declared,
+    // so lift them off the body.
+    if (type instanceof Ast.CheckedType) {
+      final Ast.CheckedType checkedType = (Ast.CheckedType) type;
+      checks.addAll(checkedType.checks);
+      type = checkedType.type;
+    }
     final Pos pos = tyVars.left.plus(type.pos);
-    typeBinds.add(ast.typeBind(pos, id, tyVars.right, type));
+    typeBinds.add(ast.typeBind(pos, id, tyVars.right, type, checks));
   }
 }
 
@@ -2362,6 +2421,7 @@ Ast.Type type6() :
 Ast.Type type() :
 {
   final List<Type> types = new ArrayList<>();
+  final List<Ast.Fn> checks = new ArrayList<>();
   Type t;
 }
 {
@@ -2370,8 +2430,14 @@ Ast.Type type() :
     <RTHINARROW> t = type6() { types.add(t); }
   )*
   {
-    return types.size() == 1 ? t
-        : ast.foldFunctionType(types);
+    t = types.size() == 1 ? t : ast.foldFunctionType(types);
+  }
+  (
+    check(checks)
+  )*
+  {
+    return checks.isEmpty() ? t
+        : ast.checkedType(t.pos.plus(pos()), t, checks);
   }
 }
 
@@ -2547,7 +2613,9 @@ AstNode statementEof() :
 // lint: sort until '^$'
 | < ANDALSO: "andalso" >
 | < AS: "as" >
+| < AS_OPT: "asOpt" >
 | < CASE: "case" >
+| < CHECK: "check" >
 | < DATATYPE: "datatype" >
 | < DIV: "div" >
 | < ELSE: "else" >

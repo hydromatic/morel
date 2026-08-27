@@ -346,6 +346,19 @@ public class MainTest {
     ml("type myInt = int and myRealList = real list").assertParseSame();
     ml("type emp = {empno: int, pets: string list}").assertParseSame();
 
+    // Most 'check' tests are in 'script/check.smli'. Two facts are only
+    // visible here. First, that a type may carry a clause at all.
+    ml("type nat = int check i => i >= 0").assertParseSame();
+
+    // Second, that a condition is an expression, and extends as far as it
+    // can, so a type written after one is read as part of it: 'list' is an
+    // operand of the condition, not a type constructor, and is reported as an
+    // unbound variable only when the declaration is resolved. It round-trips
+    // unchanged, so nothing in the syntax says the type is not what it looks
+    // like. Parenthesizing ends the condition.
+    ml("type t = int check c => c >= 0 list").assertParseSame();
+    ml("type t = (int check c => c >= 0) list").assertParseSame();
+
     // various types as annotations
     ml("fn x : int => 0").assertParseSame();
     ml("fn x : boolean => 0").assertParseSame();

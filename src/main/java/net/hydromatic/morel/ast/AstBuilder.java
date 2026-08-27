@@ -645,6 +645,22 @@ public enum AstBuilder {
     return new Ast.InfixPat(pos, op, p0, p1);
   }
 
+  /**
+   * Creates an "{@code exp as type}" conversion, which raises {@code
+   * Constraint} if the type's condition does not hold of the value.
+   */
+  public Ast.Cast as(Pos pos, Ast.Exp exp, Ast.Type type) {
+    return new Ast.Cast(pos, Op.AS, exp, type);
+  }
+
+  /**
+   * Creates an "{@code exp asOpt type}" conversion, which answers {@code NONE}
+   * if the type's condition does not hold of the value.
+   */
+  public Ast.Cast asOpt(Pos pos, Ast.Exp exp, Ast.Type type) {
+    return new Ast.Cast(pos, Op.AS_OPT, exp, type);
+  }
+
   public Ast.AnnotatedExp annotatedExp(
       Pos pos, Ast.Exp expression, Ast.Type type) {
     return new Ast.AnnotatedExp(pos, expression, type);
@@ -696,9 +712,50 @@ public enum AstBuilder {
     return new Ast.TypeDecl(pos, ImmutableList.copyOf(binds));
   }
 
+  /**
+   * Creates a {@code CheckExp}, an expression with a condition.
+   *
+   * <p>A condition written on an expression that has one already is conjoined
+   * with it, rather than nesting: nesting would put each condition in the type
+   * of the last, and only the last would be seen. So "{@code (e check m1) check
+   * m2}" is the same expression as "{@code e check m1 check m2}", which the
+   * parser builds as one node.
+   */
+  public Ast.Exp checkExp(Pos pos, Ast.Exp exp, Iterable<Ast.Fn> checks) {
+    if (exp instanceof Ast.CheckExp) {
+      final Ast.CheckExp checkExp = (Ast.CheckExp) exp;
+      return checkExp(
+          pos,
+          checkExp.exp,
+          ImmutableList.<Ast.Fn>builder()
+              .addAll(checkExp.checks)
+              .addAll(checks)
+              .build());
+    }
+    return new Ast.CheckExp(pos, exp, ImmutableList.copyOf(checks));
+  }
+
+  public Ast.Type checkedType(Pos pos, Ast.Type type, Iterable<Ast.Fn> checks) {
+    return new Ast.CheckedType(pos, type, ImmutableList.copyOf(checks));
+  }
+
   public Ast.TypeBind typeBind(
       Pos pos, Ast.Id name, Iterable<Ast.TyVar> tyVars, Ast.Type type) {
-    return new Ast.TypeBind(pos, ImmutableList.copyOf(tyVars), name, type);
+    return typeBind(pos, name, tyVars, type, ImmutableList.of());
+  }
+
+  public Ast.TypeBind typeBind(
+      Pos pos,
+      Ast.Id name,
+      Iterable<Ast.TyVar> tyVars,
+      Ast.Type type,
+      Iterable<Ast.Fn> checks) {
+    return new Ast.TypeBind(
+        pos,
+        ImmutableList.copyOf(tyVars),
+        name,
+        type,
+        ImmutableList.copyOf(checks));
   }
 
   public Ast.DatatypeDecl datatypeDecl(

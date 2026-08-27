@@ -41,6 +41,7 @@ datatype <a id='order' href="#order-impl">order</a> = LESS | EQUAL | GREATER
 exception <a id='Bind' href="#Bind-impl">Bind</a>
 exception <a id='Match' href="#Match-impl">Match</a>
 exception <a id='Chr' href="#Chr-impl">Chr</a>
+exception <a id='Constraint' href="#Constraint-impl">Constraint</a>
 exception <a id='Div' href="#Div-impl">Div</a>
 exception <a id='Domain' href="#Domain-impl">Domain</a>
 exception <a id='Fail' href="#Fail-impl">Fail</a> of string
@@ -89,6 +90,12 @@ function application.
 <h3><code><strong>exception</strong> Chr</code></h3>
 
 is raised by `Char.chr` when given an integer outside the valid range.
+
+<a id="Constraint-impl"></a>
+<h3><code><strong>exception</strong> Constraint</code></h3>
+
+is raised when a value does not satisfy the `check` condition of the
+checked type it is being converted to.
 
 <a id="Div-impl"></a>
 <h3><code><strong>exception</strong> Div</code></h3>

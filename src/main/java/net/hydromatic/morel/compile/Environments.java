@@ -164,6 +164,10 @@ public abstract class Environments {
                   requireNonNull(emptyEnv.getOpt(structure.name))));
         });
 
+    // Everything bound so far is the standard basis. A foreign value is not:
+    // it comes from outside, and a condition that referred to one would not be
+    // closed.
+    bindings.replaceAll(Binding::withBuiltIn);
     foreignBindings(typeSystem, valueMap, bindings);
     return bind(environment, bindings);
   }

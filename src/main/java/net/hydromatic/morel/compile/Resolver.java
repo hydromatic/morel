@@ -71,6 +71,7 @@ import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.FnType;
 import net.hydromatic.morel.type.ForallType;
+import net.hydromatic.morel.type.Keys;
 import net.hydromatic.morel.type.ListType;
 import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.QualifiedType;
@@ -90,6 +91,7 @@ import org.jspecify.annotations.Nullable;
 /** Converts AST expressions to Core expressions. */
 public class Resolver {
   final TypeMap typeMap;
+  final Enforcer enforcer;
   final NameGenerator nameGenerator;
   final Environment env;
   final @Nullable Session session;
@@ -158,6 +160,7 @@ public class Resolver {
       Core.@Nullable IdPat ordinalPat,
       AggregateResolver aggregateResolver) {
     this.typeMap = typeMap;
+    this.enforcer = new Enforcer(typeMap, nameGenerator, env, this::toCore);
     this.nameGenerator = nameGenerator;
     this.variantIdMap = variantIdMap;
     this.resolvedOverloads = resolvedOverloads;
@@ -502,7 +505,11 @@ public class Resolver {
                           typeMap.typeSystem.qualifiedType(
                               matching, corePat.type));
             }
-            patExps.add(new PatExp(corePat, coreExp, pat.pos.plus(exp.pos)));
+            patExps.add(
+                new PatExp(
+                    corePat,
+                    enforcer.withChecks(coreExp, pat, pat.pos.plus(exp.pos)),
+                    pat.pos.plus(exp.pos)));
           });
       patExps.forEach(
           x -> Compiles.acceptBinding(typeMap.typeSystem, x.pat, bindings));
@@ -704,7 +711,23 @@ public class Resolver {
   }
 
   private AliasType toCore(Ast.TypeBind bind) {
-    return (AliasType) typeMap.typeSystem.lookup(bind.name.name);
+    final AliasType aliasType =
+        (AliasType) typeMap.typeSystem.lookup(bind.name.name);
+    enforcer.compileDeclaredChecks(bind, aliasType, bind.checks);
+    // A checked type written inside the body has no name of its own, so
+    // its conditions are compiled here too, against the type its key builds.
+    bind.type.accept(
+        new Visitor() {
+          @Override
+          protected void visit(Ast.CheckedType checkedType) {
+            super.visit(checkedType);
+            enforcer.compileDeclaredChecks(
+                bind,
+                TypeResolver.toType(checkedType, typeMap.typeSystem),
+                checkedType.checks);
+          }
+        });
+    return aliasType;
   }
 
   private DataType toCore(Ast.DatatypeBind bind) {
@@ -766,7 +789,66 @@ public class Resolver {
       case WORD_LITERAL:
         return core.wordLiteral((BigDecimal) ((Ast.Literal) exp).value);
       case ANNOTATED_EXP:
-        return toCore(((Ast.AnnotatedExp) exp).exp);
+        // An ascription is a claim, like a binding: '(e : nat)' says that e is
+        // a nat, so the condition must hold of it. A 'fun' declaration's
+        // result annotation reaches here as one.
+        final Ast.AnnotatedExp annotatedExp = (Ast.AnnotatedExp) exp;
+        final Core.Exp annotatedCore = toCore(annotatedExp.exp);
+        final Type annotatedType = enforcer.claimedType(annotatedExp.type);
+        return annotatedType == null
+            ? annotatedCore
+            : enforcer.checked(annotatedCore, annotatedType, exp.pos);
+
+      case CHECK_EXP:
+        // The type is not written anywhere, so build it here, where the
+        // expression's type is known: the base is what was deduced, and the
+        // conditions are the ones written.
+        //
+        // The base is the type displayed for the expression, conditions and
+        // all, rather than the type it reduces to. A condition is added to
+        // what the expression already claimed, so 'n check m' where 'n' is a
+        // 'nat' must check both, and the deep walk finds each condition on the
+        // way down.
+        final Ast.CheckExp checkExp = (Ast.CheckExp) exp;
+        final Core.Exp checkCore = toCore(checkExp.exp);
+        final Type.@Nullable Key checkBaseKey =
+            typeMap.displayedKey(checkExp.exp);
+        final Type checkType =
+            Keys.alias(
+                    "",
+                    checkBaseKey == null ? checkCore.type.key() : checkBaseKey,
+                    ImmutableList.of(),
+                    checkExp.checks)
+                .toType(typeMap.typeSystem);
+        enforcer.compileChecks(checkType, checkExp.checks, checkExp.pos);
+        return enforcer.checked(checkCore, checkType, exp.pos);
+
+      case AS:
+        final Ast.Cast cast = (Ast.Cast) exp;
+        final Core.Exp castExp = toCore(cast.exp);
+        final Type castType = enforcer.claimedType(cast.type);
+        // Converting to a type that constrains nothing claims nothing, so it
+        // is erased, as an annotation is.
+        return castType == null
+            ? castExp
+            : enforcer.checked(castExp, castType, exp.pos);
+
+      case AS_OPT:
+        final Ast.Cast castOpt = (Ast.Cast) exp;
+        final Core.Exp castOptExp = toCore(castOpt.exp);
+        final Type optionType = typeMap.getType(exp);
+        final Type castOptType = enforcer.claimedType(castOpt.type);
+        if (castOptType == null) {
+          // Converting to an unchecked type cannot fail.
+          return core.apply(
+              exp.pos,
+              optionType,
+              core.constructor(
+                  typeMap.typeSystem, BuiltIn.Constructor.OPTION_SOME),
+              castOptExp);
+        }
+        return enforcer.checkedOpt(
+            castOptExp, castOptType, optionType, exp.pos);
       case ID:
         return toCore((Ast.Id) exp);
       case OP_SECTION:
@@ -933,14 +1015,14 @@ public class Resolver {
       Map<Ast.Exp, Core.Id> operands) {
     if (i == exps.size()) {
       return modify(
-          record.modifiers,
+          record,
           0,
           requireNonNull(operands.get(record.base)),
           operands,
-          record.pos);
+          false);
     }
     final Ast.Exp exp = exps.get(i);
-    return letValue(
+    return enforcer.letValue(
         toCore(exp),
         exp.pos,
         id -> {
@@ -949,22 +1031,45 @@ public class Resolver {
         });
   }
 
-  /** Applies the modifiers of a record, from {@code i} onwards. */
+  /**
+   * Applies the modifiers of a record, from {@code i} onwards.
+   *
+   * <p>{@code claimed} says whether a modifier already applied put a value into
+   * a field that has a declared type. If one did, the record claims that the
+   * value has that type, and the claim is checked here -- at the modifier, not
+   * where its result is bound, because nobody else wrote the type down. A
+   * modifier that only adds, removes or renames a field claims nothing new:
+   * every value it carries over was checked when it was put there.
+   */
   private Core.Exp modify(
-      List<Ast.Modifier> modifiers,
+      Ast.Record record,
       int i,
       Core.Exp value,
       Map<Ast.Exp, Core.Id> operands,
-      Pos pos) {
+      boolean claimed) {
+    final List<Ast.Modifier> modifiers = record.modifiers;
+    final Pos pos = record.pos;
     if (i == modifiers.size()) {
-      return value;
+      final Type type = typeMap.getAliasedType(record);
+      if (type instanceof AliasType) {
+        // A modifier that changed the record's shape may have carried
+        // conditions over into a type that has no name, and so was never
+        // declared. Compile them, so that the type can be used.
+        enforcer.compileChecks(type, ((AliasType) type).checks, pos);
+      }
+      if (!claimed) {
+        // Nothing was assigned, so nothing is claimed that has not been shown:
+        // every value the result carries was checked when it was put there.
+        return value;
+      }
+      return type == null ? value : enforcer.checked(value, type, pos);
     }
     final Ast.Modifier modifier = modifiers.get(i);
     final Core.Id allId =
         modifier instanceof Ast.AllModifier
             ? requireNonNull(operands.get(((Ast.AllModifier) modifier).exp))
             : null;
-    return letValue(
+    return enforcer.letValue(
         value,
         pos,
         id -> {
@@ -992,30 +1097,12 @@ public class Resolver {
               pos,
               r ->
                   r.modify(
-                      modifiers,
+                      record,
                       i + 1,
                       r.build(sources, id, allId, pos),
                       operands,
-                      pos));
+                      claimed || RecordModifiers.claims(sources)));
         });
-  }
-
-  /**
-   * Binds an expression to a name and applies {@code body} to it.
-   *
-   * <p>The {@code let} is what stops the expression being evaluated twice, once
-   * to read its type and once for the result.
-   */
-  private Core.Exp letValue(
-      Core.Exp coreExp, Pos pos, Function<Core.Id, Core.Exp> body) {
-    if (coreExp instanceof Core.Id) {
-      // Already a variable, so reading it twice costs nothing.
-      return body.apply((Core.Id) coreExp);
-    }
-    final Core.IdPat idPat =
-        core.idPat(coreExp.type, () -> nameGenerator.getPrefixed("v"));
-    final Core.Exp exp = body.apply(core.id(idPat));
-    return core.let(core.nonRecValDecl(pos, idPat, null, coreExp), exp);
   }
 
   /**
@@ -1119,7 +1206,8 @@ public class Resolver {
   }
 
   private Core.Apply toCore(Ast.Apply apply) {
-    final Core.Exp coreArg = toCore(apply.arg);
+    final Core.Exp coreArg =
+        enforcer.withConstructorCheck(apply.fn, toCore(apply.arg));
     Type type = typeMap.getType(apply);
     final Core.Exp coreFn;
     if (apply.fn.op == Op.RECORD_SELECTOR) {
@@ -1586,7 +1674,36 @@ public class Resolver {
     final FnType type = (FnType) typeMap.getType(fn);
     final List<Core.Match> matchList =
         transformEager(fn.matchList, this::toCore);
-    return core.fn(fn.pos, type, matchList, nameGenerator::inc);
+    final Core.Fn coreFn = core.fn(fn.pos, type, matchList, nameGenerator::inc);
+    final Type paramType = enforcer.parameterType(fn, coreFn.idPat.type);
+    if (paramType == null) {
+      return coreFn;
+    }
+    // The check goes inside the function, so it travels with the function
+    // value and fires however the function is called -- including from
+    // polymorphic code that knows nothing of the checked type.
+    //
+    //   fn (n: nat) => e
+    //
+    // becomes
+    //
+    //   fn v => let val n = $check (c v, v, "nat") in e end
+    //
+    // rather than checking and discarding, which an optimizer would be
+    // entitled to remove: the body reads the name the check binds, so the
+    // check cannot be dropped.
+    final Core.IdPat paramPat =
+        core.idPat(coreFn.idPat.type, () -> nameGenerator.getPrefixed("v"));
+    return core.fn(
+        (FnType) coreFn.type,
+        paramPat,
+        core.let(
+            core.nonRecValDecl(
+                fn.pos,
+                coreFn.idPat,
+                null,
+                enforcer.checked(core.id(paramPat), paramType, fn.pos)),
+            coreFn.exp));
   }
 
   private Core.Case toCore(Ast.If if_) {
@@ -1786,6 +1903,36 @@ public class Resolver {
     final List<Binding> bindings = new ArrayList<>();
     Compiles.acceptBinding(typeMap.typeSystem, pat, bindings);
     final Core.Exp exp = withEnv(bindings).toCore(match.exp);
+    final Type claimed = enforcer.claimedPatType(match.pat, pat.type);
+    if (claimed != null && pat instanceof Core.NamedPat) {
+      // Entering a branch whose pattern claims a type is where a value flows
+      // into the claim, so that is where the check goes. A branch is what a
+      // function's parameter and a 'case' have in common, so both are checked
+      // here, and a function of several branches is checked in whichever
+      // branch claims -- the parameter of the function as a whole claims
+      // nothing, because another branch may match instead.
+      //
+      //   (n: nat) => e
+      //
+      // becomes
+      //
+      //   v => let val n = $check (c v, v, "nat", "") in e end
+      //
+      // rather than checking and discarding, which an optimizer would be
+      // entitled to remove: the body reads the name the check binds.
+      final Core.IdPat rawPat =
+          core.idPat(pat.type, () -> nameGenerator.getPrefixed("v"));
+      return core.match(
+          match.pos,
+          rawPat,
+          core.let(
+              core.nonRecValDecl(
+                  match.pos,
+                  (Core.NamedPat) pat,
+                  null,
+                  enforcer.checked(core.id(rawPat), claimed, match.pos)),
+              exp));
+    }
     return core.match(match.pos, pat, exp);
   }
 
@@ -2281,6 +2428,71 @@ public class Resolver {
                   .withOrdinalPat(null)
                   .toCore(scan.condition);
       fromBuilder.scan(scan.op, corePat, coreExp, coreCondition);
+      // The type's condition becomes a step of its own rather than part of
+      // the scan's condition, which only a join reads.
+      final Core.Exp typeCondition =
+          scanTypeCondition(scan.pat, corePat, scan.pat.pos);
+      if (typeCondition != null) {
+        fromBuilder.where(typeCondition);
+      }
+    }
+
+    /**
+     * Returns the condition of the checked type a scan is over, or null if it
+     * is not over one.
+     *
+     * <p>A scan over a checked type enumerates the values of that type, so the
+     * type's condition belongs in the scan's filter, where the planner can use
+     * it to generate the values rather than generate and reject them. It does
+     * not raise: which values the type has is the question being asked, not
+     * something already claimed of a value in hand.
+     */
+    private Core.@Nullable Exp scanTypeCondition(
+        Ast.Pat pat, Core.Pat corePat, Pos pos) {
+      if (pat.op != Op.ANNOTATED_PAT) {
+        return null;
+      }
+      final Type type = enforcer.claimedType(((Ast.AnnotatedPat) pat).type);
+      if (type == null) {
+        return null;
+      }
+      // The erased type comes from the value, not the pattern: a record
+      // pattern reaches Core as a tuple, whose fields are named 1, 2.
+      final Core.Exp value = rowValue(corePat, type.unalias());
+      return value == null
+          ? null
+          : enforcer.deepCondition(type, value.type, value, "", false, pos);
+    }
+
+    /**
+     * Returns an expression for the row a scan's pattern binds, or null if the
+     * pattern is one this does not know how to reassemble.
+     */
+    private Core.@Nullable Exp rowValue(Core.Pat corePat, Type erasedType) {
+      if (corePat instanceof Core.NamedPat) {
+        return core.id((Core.NamedPat) corePat);
+      }
+      if (corePat instanceof Core.TuplePat
+          && erasedType instanceof RecordLikeType) {
+        // A record pattern, '{i, j}', reaches Core as a tuple of the fields in
+        // field order, so the names come from the type the user wrote, not
+        // from the pattern, whose fields are named 1, 2.
+        final Core.TuplePat tuplePat = (Core.TuplePat) corePat;
+        final RecordLikeType recordType = (RecordLikeType) erasedType;
+        final PairList<String, Core.Exp> nameExps = PairList.of();
+        forEach(
+            recordType.argNameTypes().keySet(),
+            tuplePat.args,
+            (name, arg) -> {
+              if (arg instanceof Core.NamedPat) {
+                nameExps.add(name, core.id((Core.NamedPat) arg));
+              }
+            });
+        return nameExps.size() == tuplePat.args.size()
+            ? core.record(typeMap.typeSystem, nameExps)
+            : null;
+      }
+      return null;
     }
 
     @Override

@@ -23,6 +23,7 @@ import static net.hydromatic.morel.util.Static.transformEager;
 import com.google.common.collect.ImmutableList;
 import java.util.List;
 import java.util.function.UnaryOperator;
+import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.Op;
 
 /**
@@ -38,16 +39,71 @@ import net.hydromatic.morel.ast.Op;
  * transparent: it is applied by substituting its arguments into the body (e.g.
  * "{@code int my_list}" expands to "{@code int list}"), not by creating a
  * distinct type. The {@link #parameterTypes parameter count} records its arity.
+ *
+ * <p><b>Checked types.</b> An alias may carry {@code check} conditions (see
+ * {@link #checks}), and is then a <em>checked type</em>: its base type plus a
+ * predicate that every value of the type satisfies. For example "{@code type
+ * nat = int check i => i >= 0}".
+ *
+ * <p>A checked type is erased. Its representation is that of the type it
+ * abbreviates, and the condition does not survive {@link #unalias}, so
+ * everything that examines a type structurally -- choosing an overload,
+ * aggregating, printing -- behaves as it does for the base type.
+ *
+ * <p>Erasure is what makes <b>widening free and narrowing checked</b>. Using a
+ * {@code nat} as an {@code int} needs no coercion and none is generated; the
+ * condition is simply dropped, so "{@code n - 100}" is ordinary {@code int}
+ * subtraction and has type {@code int}. The other direction can fail, and is
+ * checked where the surface type is known.
+ *
+ * <p>The soundness argument is one invariant: <b>a condition is claimed only
+ * where the type says so, and a check is inserted wherever a value flows into a
+ * claim.</b> Everywhere else the name has reduced to the base type, so nothing
+ * is claimed and nothing can be breached. {@link
+ * net.hydromatic.morel.compile.Resolver} is where those checks are inserted --
+ * at a binding, a parameter, an ascription, a conversion, a constructor, and
+ * inside a composite value -- and raising is a check's only effect.
  */
 public class AliasType extends ParameterizedType {
   public final Type type;
   public final List<Type> arguments;
 
-  AliasType(String name, Type type, List<Type> arguments) {
+  /**
+   * Constraints on this type, one per {@code check} clause, each a function
+   * from a value of the type to {@code bool}. Empty if the type is unchecked.
+   *
+   * <p>A constraint is part of the type's identity -- two checked types are the
+   * same type when their conditions are textually equal -- but it does not
+   * survive {@link #unalias}, so nothing that examines a type structurally sees
+   * it.
+   */
+  public final List<Ast.Fn> checks;
+
+  AliasType(String name, Type type, List<Type> arguments, List<Ast.Fn> checks) {
     super(
-        Op.ALIAS_TYPE, name, computeMoniker(name, arguments), arguments.size());
+        Op.ALIAS_TYPE,
+        name,
+        moniker(name, type, arguments, checks),
+        arguments.size());
     this.type = type;
     this.arguments = ImmutableList.copyOf(arguments);
+    this.checks = ImmutableList.copyOf(checks);
+  }
+
+  /**
+   * Returns how to write this type.
+   *
+   * <p>A named type is written by its name. One that is not named has only its
+   * body and its conditions to be written by, so it is written in full.
+   */
+  private static String moniker(
+      String name, Type type, List<Type> arguments, List<Ast.Fn> checks) {
+    if (!name.isEmpty()) {
+      return computeMoniker(name, arguments);
+    }
+    final StringBuilder b = new StringBuilder(type.moniker());
+    checks.forEach(c -> c.appendMatchList(b, " check "));
+    return b.toString();
   }
 
   @Override
@@ -57,7 +113,8 @@ public class AliasType extends ParameterizedType {
 
   @Override
   public Key key() {
-    return Keys.alias(name, type.key(), transformEager(arguments, Type::key));
+    return Keys.alias(
+        name, type.key(), transformEager(arguments, Type::key), checks);
   }
 
   @Override

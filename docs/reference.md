@@ -96,6 +96,8 @@ In Morel but not Standard ML:
   OCaml's `with`), `extend`, `remove`, `rename`, their `or` pairs, `all`
   and `lenient`
 * overloaded functions may be declared using `over` and `inst`
+* checked types: a `check` condition on a type declaration, the `check`
+  expression operator, and the `as` and `asOpt` conversion operators
 * attributes (`[@attr]` / `[@@attr]` / `[@@@attr]`) based on OCaml
 * `(*)` line comments (syntax as SML/NJ and MLton)
 * `(**` ... `*)` doc comments (from OCaml)
@@ -196,6 +198,9 @@ In Standard ML but not in Morel:
     | <i>exp</i> <b>.</b> <i>lab</i> <b>()</b>              postfix call (no argument)
     | <i>exp<sub>1</sub></i> <b>.</b> <i>lab</i> <i>exp<sub>2</sub></i>            postfix call (with argument)
     | <i>exp</i> <b>:</b> <i>type</i>                type annotation
+    | <i>exp</i> <b>as</b> <i>typ</i>                 conversion (raises on failure)
+    | <i>exp</i> <b>asOpt</b> <i>typ</i>              conversion (answers an option)
+    | <i>exp</i> <b>check</b> <i>match</i>            checked expression
     | <i>exp<sub>1</sub></i> <b>andalso</b> <i>exp<sub>2</sub></i>         conjunction
     | <i>exp<sub>1</sub></i> <b>orelse</b> <i>exp<sub>2</sub></i>          disjunction
     | <b>if</b> <i>exp<sub>1</sub></i> <b>then</b> <i>exp<sub>2</sub></i> <b>else</b> <i>exp<sub>3</sub></i>
@@ -316,6 +321,60 @@ back-ticks to be used as identifiers. `all`, `lenient` and `or` are
 not: they are keywords only in the positions above, and are ordinary
 identifiers everywhere else.
 
+### Checked types
+
+A `check` clause on a type declaration states a condition that every value
+of the type satisfies:
+
+```
+type nat = int check i => i >= 0;
+val n: nat = 5;
+> val n = 5 : nat
+val bad: nat = ~1;
+> uncaught exception Constraint [~1 is not a valid nat]
+```
+
+A clause may be repeated, and each adds a condition. The match may have
+several branches and need not be exhaustive; a value that no branch matches
+does not have the type. The value the match binds may be destructured.
+
+A condition must be *closed*: it may refer only to the value it is given and
+to the standard basis. That is what lets a checked type be interned like any
+other type -- two are the same type when their conditions are textually equal
+-- and it settles what a condition means when the names it used are re-bound.
+Shadowing a basis name does not evade this: the binding decides, not the name.
+
+A checked type is *erased*. Its representation is that of the type it
+abbreviates, and everything that examines a type structurally -- choosing an
+overload, aggregating, printing -- behaves as it does for the base type. So
+widening is free and narrowing is checked: using a `nat` as an `int` needs no
+coercion, and `n - 100` is ordinary `int` subtraction with type `int`.
+
+A condition is claimed only where the type says so, and is checked wherever a
+value flows into a claim: a binding, a function parameter, an ascription, a
+conversion, a datatype constructor, and inside a composite value, where the
+message names the component that failed. A scan over a checked type conjoins
+the condition into the query, so a generator enumerates only values of the
+type.
+
+Two conversion operators ask rather than claim. `exp as typ` converts, raising
+`Constraint` if the condition does not hold; `exp asOpt typ` answers `NONE`
+instead. Both bind as loosely as `:`, are left-associative, and may be mixed
+with it.
+
+A condition may also be written on an expression, `exp check match`, which
+adds to what the expression already claims rather than replacing it, and on
+any type, not only one that is named. `check` binds more loosely than
+anything else in a type or an expression, so parentheses put the condition on
+a component instead.
+
+A function type may not be claimed -- honouring the claim would mean
+inserting a check at every call site -- and a parameterized type may not
+carry a condition. Both are reported rather than silently ignored.
+
+`check` and `asOpt` are reserved words, and need back-ticks to be used as
+identifiers.
+
 ### Patterns
 
 <pre>
@@ -346,6 +405,8 @@ identifiers everywhere else.
     | <i>typ<sub>1</sub></i> '<b>*</b>' ... '<b>*</b>' <i>typ<sub>n</sub></i>     tuple (n &ge; 2)
     | <b>{</b> [ <i>typrow</i> ] <b>}</b>            record
     | <b>typeof</b> <i>exp</i>                expression type
+    | <i>typ</i> <b>check</b> <i>match<sub>1</sub></i> ... <b>check</b> <i>match<sub>n</sub></i>
+                                checked type (n &ge; 1)
     | <i>typ</i> <i>expAttr<sub>1</sub></i> ... <i>expAttr<sub>n</sub></i>
                                 attributed type (n &ge; 1)
 <i>typrow</i> &rarr; <i>lab</i> : <i>typ</i> [, <i>typrow</i>]   type row
@@ -603,7 +664,7 @@ Exception:
 | [Date](lib/date.md) | Calendar date and time values.<br>[`date`](lib/date.md#date-impl), [`month`](lib/date.md#month-impl), [`weekday`](lib/date.md#weekday-impl), [`Date`](lib/date.md#Date-impl), [`compare`](lib/date.md#compare-impl), [`day`](lib/date.md#day-impl), [`fmt`](lib/date.md#fmt-impl), [`fromString`](lib/date.md#fromString-impl), [`fromTimeLocal`](lib/date.md#fromTimeLocal-impl), [`fromTimeUniv`](lib/date.md#fromTimeUniv-impl), [`hour`](lib/date.md#hour-impl), [`isDst`](lib/date.md#isDst-impl), [`localOffset`](lib/date.md#localOffset-impl), [`minute`](lib/date.md#minute-impl), [`scan`](lib/date.md#scan-impl), [`second`](lib/date.md#second-impl), [`toString`](lib/date.md#toString-impl), [`toTime`](lib/date.md#toTime-impl), [`weekDay`](lib/date.md#weekDay-impl), [`year`](lib/date.md#year-impl), [`yearDay`](lib/date.md#yearDay-impl) |
 | [Either](lib/either.md) | Values that are one of two types.<br>[`either`](lib/either.md#either-impl), [`isLeft`](lib/either.md#isLeft-impl), [`isRight`](lib/either.md#isRight-impl), [`asLeft`](lib/either.md#asLeft-impl), [`asRight`](lib/either.md#asRight-impl), [`map`](lib/either.md#map-impl), [`mapLeft`](lib/either.md#mapLeft-impl), [`mapRight`](lib/either.md#mapRight-impl), [`app`](lib/either.md#app-impl), [`appLeft`](lib/either.md#appLeft-impl), [`appRight`](lib/either.md#appRight-impl), [`fold`](lib/either.md#fold-impl), [`proj`](lib/either.md#proj-impl), [`partition`](lib/either.md#partition-impl) |
 | [Fn](lib/fn.md) | Higher-order function combinators.<br>[`id`](lib/fn.md#id-impl), [`const`](lib/fn.md#const-impl), [`apply`](lib/fn.md#apply-impl), [`o`](lib/fn.md#o-impl), [`curry`](lib/fn.md#curry-impl), [`uncurry`](lib/fn.md#uncurry-impl), [`flip`](lib/fn.md#flip-impl), [`repeat`](lib/fn.md#repeat-impl), [`equal`](lib/fn.md#equal-impl), [`notEqual`](lib/fn.md#notEqual-impl) |
-| [General](lib/general.md) | Basic types, exceptions, and utility functions.<br>[`unit`](lib/general.md#unit-impl), [`exn`](lib/general.md#exn-impl), [`order`](lib/general.md#order-impl), [`Bind`](lib/general.md#Bind-impl), [`Match`](lib/general.md#Match-impl), [`Chr`](lib/general.md#Chr-impl), [`Div`](lib/general.md#Div-impl), [`Domain`](lib/general.md#Domain-impl), [`Fail`](lib/general.md#Fail-impl), [`Overflow`](lib/general.md#Overflow-impl), [`Size`](lib/general.md#Size-impl), [`Span`](lib/general.md#Span-impl), [`Subscript`](lib/general.md#Subscript-impl), [`exnName`](lib/general.md#exnName-impl), [`exnMessage`](lib/general.md#exnMessage-impl), [`o`](lib/general.md#o-impl), [`before`](lib/general.md#before-impl), [`ignore`](lib/general.md#ignore-impl), [`!`](lib/general.md#!-impl) |
+| [General](lib/general.md) | Basic types, exceptions, and utility functions.<br>[`unit`](lib/general.md#unit-impl), [`exn`](lib/general.md#exn-impl), [`order`](lib/general.md#order-impl), [`Bind`](lib/general.md#Bind-impl), [`Match`](lib/general.md#Match-impl), [`Chr`](lib/general.md#Chr-impl), [`Constraint`](lib/general.md#Constraint-impl), [`Div`](lib/general.md#Div-impl), [`Domain`](lib/general.md#Domain-impl), [`Fail`](lib/general.md#Fail-impl), [`Overflow`](lib/general.md#Overflow-impl), [`Size`](lib/general.md#Size-impl), [`Span`](lib/general.md#Span-impl), [`Subscript`](lib/general.md#Subscript-impl), [`exnName`](lib/general.md#exnName-impl), [`exnMessage`](lib/general.md#exnMessage-impl), [`o`](lib/general.md#o-impl), [`before`](lib/general.md#before-impl), [`ignore`](lib/general.md#ignore-impl), [`!`](lib/general.md#!-impl) |
 | [IEEEReal](lib/ieee-real.md) | <br> |
 | [Int](lib/int.md) | Fixed-precision integer operations.<br>[`int`](lib/int.md#int-impl), [`toLarge`](lib/int.md#toLarge-impl), [`fromLarge`](lib/int.md#fromLarge-impl), [`toInt`](lib/int.md#toInt-impl), [`fromInt`](lib/int.md#fromInt-impl), [`precision`](lib/int.md#precision-impl), [`minInt`](lib/int.md#minInt-impl), [`maxInt`](lib/int.md#maxInt-impl), [`+`](lib/int.md#+-impl), [`-`](lib/int.md#--impl), [`*`](lib/int.md#*-impl), [`div`](lib/int.md#div-impl), [`mod`](lib/int.md#mod-impl), [`quot`](lib/int.md#quot-impl), [`rem`](lib/int.md#rem-impl), [`compare`](lib/int.md#compare-impl), [`<`](lib/int.md#<-impl), [`<=`](lib/int.md#<=-impl), [`>`](lib/int.md#>-impl), [`>=`](lib/int.md#>=-impl), [`~`](lib/int.md#~-impl), [`abs`](lib/int.md#abs-impl), [`min`](lib/int.md#min-impl), [`max`](lib/int.md#max-impl), [`sign`](lib/int.md#sign-impl), [`sameSign`](lib/int.md#sameSign-impl), [`fmt`](lib/int.md#fmt-impl), [`toString`](lib/int.md#toString-impl), [`scan`](lib/int.md#scan-impl), [`fromString`](lib/int.md#fromString-impl) |
 | [IntInf](lib/int-inf.md) | Arbitrary-precision integer operations.<br> |

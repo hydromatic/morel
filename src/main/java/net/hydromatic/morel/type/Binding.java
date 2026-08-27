@@ -44,6 +44,15 @@ public class Binding {
   public final Object value;
   /** If true, the binding is ignored by inlining. */
   public final boolean parameter;
+  /**
+   * Whether this binding is part of the standard basis rather than something
+   * the user declared.
+   *
+   * <p>A built-in is not re-bindable, so a reference to one is closed; a
+   * reference to a user binding is not. The name alone does not decide it: the
+   * user may shadow a basis name.
+   */
+  public final boolean builtIn;
   /** Distinguishes between regular and overloaded values. */
   public final Kind kind;
 
@@ -56,12 +65,24 @@ public class Binding {
       Object value,
       boolean parameter,
       Kind kind) {
+    this(id, overloadId, exp, value, parameter, kind, false);
+  }
+
+  private Binding(
+      Core.NamedPat id,
+      Core.@Nullable IdPat overloadId,
+      Core.@Nullable Exp exp,
+      Object value,
+      boolean parameter,
+      Kind kind,
+      boolean builtIn) {
     this.id = requireNonNull(id);
     this.overloadId = overloadId;
     this.exp = exp;
     this.value = requireNonNull(value);
     this.parameter = parameter;
     this.kind = requireNonNull(kind);
+    this.builtIn = builtIn;
     checkArgument(!(value instanceof Core.IdPat));
     checkArgument((kind == Kind.INST) == (overloadId != null));
   }
@@ -115,7 +136,7 @@ public class Binding {
       return this;
     }
     Core.NamedPat id1 = id.withName(id.name + '_' + id.i);
-    return new Binding(id1, overloadId, exp, value, parameter, kind);
+    return new Binding(id1, overloadId, exp, value, parameter, kind, builtIn);
   }
 
   @Override
@@ -132,16 +153,23 @@ public class Binding {
             && value.equals(((Binding) o).value);
   }
 
+  /** Returns this binding marked as part of the standard basis. */
+  public Binding withBuiltIn() {
+    return builtIn
+        ? this
+        : new Binding(id, overloadId, exp, value, parameter, kind, true);
+  }
+
   public Binding withParameter(boolean parameter) {
     return parameter == this.parameter
         ? this
-        : new Binding(id, overloadId, exp, value, parameter, kind);
+        : new Binding(id, overloadId, exp, value, parameter, kind, builtIn);
   }
 
   public Binding withKind(Kind kind) {
     return kind == this.kind
         ? this
-        : new Binding(id, overloadId, exp, value, parameter, kind);
+        : new Binding(id, overloadId, exp, value, parameter, kind, builtIn);
   }
 
   /** Returns whether this binding is an instance of an overloaded name. */

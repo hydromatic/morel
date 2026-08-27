@@ -582,6 +582,66 @@ public class Ast {
     }
   }
 
+  /**
+   * Parse tree node of a conversion, "{@code exp as type}" or "{@code exp asOpt
+   * type}".
+   *
+   * <p>Both narrow a value to a type whose constraints may not hold of it; they
+   * differ in how they report failure. `as` raises, and has the type it
+   * converts to; `asOpt` returns an option, and has that type wrapped in
+   * `option`.
+   */
+  public static class Cast extends Exp {
+    public final Exp exp;
+    public final Type type;
+
+    Cast(Pos pos, Op op, Exp exp, Type type) {
+      super(pos, op);
+      checkArgument(op == Op.AS || op == Op.AS_OPT);
+      this.exp = requireNonNull(exp);
+      this.type = requireNonNull(type);
+    }
+
+    @Override
+    public int hashCode() {
+      return hash(op, exp, type);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      return this == obj
+          || obj instanceof Cast
+              && op == ((Cast) obj).op
+              && exp.equals(((Cast) obj).exp)
+              && type.equals(((Cast) obj).type);
+    }
+
+    public Exp accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override
+    public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+
+    AstWriter unparse(AstWriter w, int left, int right) {
+      return w.infix(left, exp, op, type, right);
+    }
+
+    @Override
+    public Cast withPos(Pos pos) {
+      return pos.equals(this.pos) ? this : new Cast(pos, op, exp, type);
+    }
+
+    /** Creates a copy of this {@code Cast}, or {@code this} if unchanged. */
+    public Cast copy(Exp exp, Type type) {
+      return this.exp.equals(exp) && this.type.equals(type)
+          ? this
+          : new Cast(pos, op, exp, type);
+    }
+  }
+
   /** Parse tree node of an expression annotated with a type. */
   public static class AnnotatedExp extends Exp {
     public final Type type;
@@ -812,6 +872,150 @@ public class Ast {
         w.append(" ").append(a, 0, 0);
       }
       return w;
+    }
+  }
+
+  /**
+   * Parse tree node of an expression with a condition, "{@code e check i => i >
+   * 0}".
+   *
+   * <p>It is the counterpart of {@code as} for a type that is not named: {@code
+   * e as nat} converts to a named checked type, and this converts to one
+   * written inline, whose base is the type deduced for {@code e}.
+   */
+  public static class CheckExp extends Exp {
+    public final Exp exp;
+    public final List<Fn> checks;
+
+    CheckExp(Pos pos, Exp exp, ImmutableList<Fn> checks) {
+      super(pos, Op.CHECK_EXP);
+      this.exp = requireNonNull(exp);
+      this.checks = requireNonNull(checks);
+      checkArgument(!checks.isEmpty());
+    }
+
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
+      // An operand that ends in a type -- 'e : t', 'e as t' -- must be
+      // parenthesized, because the type would otherwise take the 'check':
+      // 'e : int check c' reads as 'e : (int check c)'.
+      w.append(exp, left, Op.ANNOTATED_EXP.right + 1);
+      for (Fn check : checks) {
+        w.append(" check ").appendAll(check.matchList, 0, Op.BAR, 0);
+      }
+      return w;
+    }
+
+    @Override
+    public Exp withPos(Pos pos) {
+      return pos.equals(this.pos)
+          ? this
+          : new CheckExp(pos, exp, ImmutableList.copyOf(checks));
+    }
+
+    @Override
+    public int hashCode() {
+      return hash(exp, checks);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      return o == this
+          || o instanceof CheckExp
+              && exp.equals(((CheckExp) o).exp)
+              && checks.equals(((CheckExp) o).checks);
+    }
+
+    /** Creates a copy of this {@code CheckExp} with a given expression. */
+    public CheckExp copy(Exp exp) {
+      return copy(exp, checks);
+    }
+
+    /**
+     * Creates a copy of this {@code CheckExp} with a given expression and
+     * conditions.
+     */
+    public CheckExp copy(Exp exp, List<Fn> checks) {
+      return exp.equals(this.exp) && checks.equals(this.checks)
+          ? this
+          : new CheckExp(pos, exp, ImmutableList.copyOf(checks));
+    }
+
+    public Exp accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override
+    public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+  }
+
+  /**
+   * Parse tree node of a type with a constraint, e.g. "{@code real check s => s
+   * > 0.0}".
+   *
+   * <p>The type has no name of its own. A {@code type} declaration whose body
+   * is one of these lifts the constraints onto the name it declares; anywhere
+   * else the type is anonymous.
+   */
+  public static class CheckedType extends Type {
+    public final Type type;
+    public final List<Fn> checks;
+
+    CheckedType(Pos pos, Type type, ImmutableList<Fn> checks) {
+      super(pos, Op.CHECKED_TYPE);
+      this.type = requireNonNull(type);
+      this.checks = requireNonNull(checks);
+      checkArgument(!checks.isEmpty());
+    }
+
+    @Override
+    public int hashCode() {
+      return hash(type, checks);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      return o == this
+          || o instanceof CheckedType
+              && type.equals(((CheckedType) o).type)
+              && checks.equals(((CheckedType) o).checks);
+    }
+
+    /**
+     * Creates a copy of this {@code CheckedType} with a given base type and
+     * conditions.
+     */
+    public CheckedType copy(Type type, List<Fn> checks) {
+      return type.equals(this.type) && checks.equals(this.checks)
+          ? this
+          : new CheckedType(pos, type, ImmutableList.copyOf(checks));
+    }
+
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
+      w.append(type, left, 0);
+      for (Fn check : checks) {
+        w.append(" check ").appendAll(check.matchList, 0, Op.BAR, 0);
+      }
+      return w;
+    }
+
+    @Override
+    public Type withPos(Pos pos) {
+      return pos.equals(this.pos)
+          ? this
+          : new CheckedType(pos, type, ImmutableList.copyOf(checks));
+    }
+
+    public Type accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override
+    public void accept(Visitor visitor) {
+      visitor.visit(this);
     }
   }
 
@@ -1506,6 +1710,16 @@ public class Ast {
           || o instanceof TypeDecl && binds.equals(((TypeDecl) o).binds);
     }
 
+    /**
+     * Creates a copy of this {@code TypeDecl} with given bindings, or this if
+     * the bindings are the same.
+     */
+    public TypeDecl copy(List<TypeBind> binds) {
+      return this.binds.equals(binds)
+          ? this
+          : new TypeDecl(pos, ImmutableList.copyOf(binds));
+    }
+
     public TypeDecl accept(Shuttle shuttle) {
       return shuttle.visit(this);
     }
@@ -1531,12 +1745,27 @@ public class Ast {
     public final List<TyVar> tyVars;
     public final Id name;
     public final Type type;
+    /**
+     * Constraints on the type, one per {@code check} clause, each a function
+     * from a value of the type to {@code bool}. Empty if the type is unchecked.
+     *
+     * <p>A clause is a function, not a match, because its branches are
+     * alternatives -- the first that matches decides -- whereas separate
+     * clauses are conjoined. Flattening the two would confuse them.
+     */
+    public final List<Fn> checks;
 
-    TypeBind(Pos pos, ImmutableList<TyVar> tyVars, Id name, Type type) {
+    TypeBind(
+        Pos pos,
+        ImmutableList<TyVar> tyVars,
+        Id name,
+        Type type,
+        ImmutableList<Fn> checks) {
       super(pos, Op.TYPE_DECL);
       this.tyVars = requireNonNull(tyVars);
       this.name = requireNonNull(name);
       this.type = requireNonNull(type);
+      this.checks = requireNonNull(checks);
     }
 
     @Override
@@ -1550,7 +1779,8 @@ public class Ast {
           || o instanceof TypeBind
               && name.equals(((TypeBind) o).name)
               && tyVars.equals(((TypeBind) o).tyVars)
-              && type.equals(((TypeBind) o).type);
+              && type.equals(((TypeBind) o).type)
+              && checks.equals(((TypeBind) o).checks);
     }
 
     public TypeBind accept(Shuttle shuttle) {
@@ -1564,10 +1794,44 @@ public class Ast {
 
     @Override
     AstWriter unparse(AstWriter w, int left, int right) {
-      return TyVar.unparseList(w, tyVars)
+      TyVar.unparseList(w, tyVars)
           .id(name.name)
           .append(" = ")
           .append(type, 0, 0);
+      for (Fn check : checks) {
+        w.append(" check ").appendAll(check.matchList, 0, Op.BAR, 0);
+      }
+      return w;
+    }
+
+    /**
+     * Creates a copy of this {@code TypeBind} with a given body, or this if the
+     * body is the same.
+     */
+    public TypeBind copy(Type type) {
+      return this.type.equals(type)
+          ? this
+          : new TypeBind(
+              pos,
+              ImmutableList.copyOf(tyVars),
+              name,
+              type,
+              ImmutableList.copyOf(checks));
+    }
+
+    /**
+     * Creates a copy of this {@code TypeBind} with given constraints, or this
+     * if the constraints are the same.
+     */
+    public TypeBind copy(List<Fn> checks) {
+      return this.checks.equals(checks)
+          ? this
+          : new TypeBind(
+              pos,
+              ImmutableList.copyOf(tyVars),
+              name,
+              type,
+              ImmutableList.copyOf(checks));
     }
   }
 
@@ -3314,6 +3578,11 @@ public class Ast {
     @Override
     AstWriter unparse(AstWriter w, int left, int right) {
       return w.append("fn ").appendAll(matchList, 0, Op.BAR, right);
+    }
+
+    /** Appends the match list with a custom prefix instead of {@code fn}. */
+    public void appendMatchList(StringBuilder b, String prefix) {
+      new AstWriter(b, false).append(prefix).appendAll(matchList, 0, Op.BAR, 0);
     }
 
     /**

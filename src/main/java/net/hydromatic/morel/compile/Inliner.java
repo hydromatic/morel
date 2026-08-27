@@ -317,6 +317,33 @@ public class Inliner extends EnvShuttle {
   }
 
   /**
+   * Returns whether an expression checks a condition, and therefore must be
+   * evaluated where it is written.
+   *
+   * <p>A check raises if its condition does not hold, and that is its only
+   * effect; an optimizer that reasons about values alone would be entitled to
+   * discard it when nothing reads its result, or to defer it to wherever the
+   * result is read. Either loses the check: a parameter that the body ignores
+   * would never be checked, and one read inside a branch or a function would be
+   * checked only if that branch is taken or that function is called.
+   */
+  private static boolean checks(Core.Exp exp) {
+    final boolean[] found = {false};
+    exp.accept(
+        new Visitor() {
+          @Override
+          protected void visit(Core.Literal literal) {
+            if (literal.op == Op.FN_LITERAL
+                && (literal.value == BuiltIn.Z_CHECK
+                    || literal.value == BuiltIn.Z_ATTEMPT)) {
+              found[0] = true;
+            }
+          }
+        });
+    return found[0];
+  }
+
+  /**
    * Returns whether a type contains type variables. Used to detect polymorphic
    * functions that require type unification.
    */
@@ -482,8 +509,12 @@ public class Inliner extends EnvShuttle {
         analysis == null
             ? Analyzer.Use.MULTI_UNSAFE
             : let.decl instanceof Core.NonRecValDecl
-                ? requireNonNull(
-                    analysis.map.get(((Core.NonRecValDecl) let.decl).pat))
+                ? checks(((Core.NonRecValDecl) let.decl).exp)
+                    // A declaration that checks a condition stays where it is,
+                    // however often its name is read.
+                    ? Analyzer.Use.MULTI_UNSAFE
+                    : requireNonNull(
+                        analysis.map.get(((Core.NonRecValDecl) let.decl).pat))
                 : Analyzer.Use.MULTI_UNSAFE;
     switch (use) {
       case DEAD:
