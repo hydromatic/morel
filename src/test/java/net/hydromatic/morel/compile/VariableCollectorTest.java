@@ -18,9 +18,11 @@
  */
 package net.hydromatic.morel.compile;
 
+import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
+import static org.hamcrest.core.IsNull.notNullValue;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -230,15 +232,16 @@ public class VariableCollectorTest {
 
     // getOpt2 for "a" should return the environment that declared "a" (e1)
     final Pair<Binding, Environment> pairA = e2.getOpt2(aPat);
-    assertThat(pairA != null, is(true));
-    assertThat(pairA.right.isAncestorOf(e2), is(true));
+    assertThat(pairA, notNullValue());
+    final Environment envA = requireNonNull(pairA).right;
+    assertThat(envA.isAncestorOf(e2), is(true));
     // The declaring env for "a" has e0 as an ancestor
-    assertThat(e0.isAncestorOf(pairA.right), is(true));
+    assertThat(e0.isAncestorOf(envA), is(true));
 
     // getOpt2 for "b" should return the environment that declared "b" (e2)
     final Pair<Binding, Environment> pairB = e2.getOpt2(bPat);
-    assertThat(pairB != null, is(true));
-    assertThat(pairB.right, is(e2));
+    assertThat(pairB, notNullValue());
+    assertThat(requireNonNull(pairB).right, is(e2));
 
     // getOpt2 for unknown variable returns null
     final Core.IdPat zPat = core.idPat(PrimitiveType.INT, "z", 0);

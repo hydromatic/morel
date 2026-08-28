@@ -44,7 +44,7 @@ import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.type.TypeVar;
 import net.hydromatic.morel.util.PairList;
 import net.hydromatic.morel.util.Unifier;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /** The result of type resolution, a map from AST nodes to types. */
 public class TypeMap {

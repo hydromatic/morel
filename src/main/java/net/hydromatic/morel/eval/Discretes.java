@@ -18,6 +18,8 @@
  */
 package net.hydromatic.morel.eval;
 
+import static java.util.Objects.requireNonNull;
+
 import com.google.common.collect.ImmutableList;
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -34,7 +36,7 @@ import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.RecordLikeType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Utilities for creating {@link Discrete} instances.
@@ -154,18 +156,12 @@ public class Discretes {
     return null;
   }
 
-  /**
-   * Returns the min or max tuple value (null if any component is unbounded).
-   */
-  private static @Nullable Object tupleExtreme(
+  /** Returns the min or max tuple value. */
+  private static Object tupleExtreme(
       List<Discrete<Object>> components, boolean min) {
     final List<Object> result = new ArrayList<>();
     for (Discrete<Object> d : components) {
-      final Object extreme = min ? d.minValue() : d.maxValue();
-      if (extreme == null) {
-        return null;
-      }
-      result.add(extreme);
+      result.add(min ? d.minValue() : d.maxValue());
     }
     return ImmutableList.copyOf(result);
   }
@@ -197,7 +193,10 @@ public class Discretes {
         ctorDiscretes.add(Optional.empty());
       } else {
         final Discrete<Object> argDiscrete =
-            discreteForOrNull(typeSystem, ctorTypes.get(e.getKey()), pos);
+            discreteForOrNull(
+                typeSystem,
+                requireNonNull(ctorTypes.get(e.getKey()), e.getKey()),
+                pos);
         if (argDiscrete == null) {
           // A constructor's argument type is not discrete, so neither is the
           // datatype. Name the datatype; its constructors are its own affair.
@@ -421,12 +420,12 @@ public class Discretes {
     }
 
     @Override
-    public @Nullable Object minValue() {
+    public Object minValue() {
       return tupleExtreme(components, /* min= */ true);
     }
 
     @Override
-    public @Nullable Object maxValue() {
+    public Object maxValue() {
       return tupleExtreme(components, /* min= */ false);
     }
 
@@ -486,15 +485,13 @@ public class Discretes {
     }
 
     @Override
-    public @Nullable Object minValue() {
-      final Object max = inner.maxValue();
-      return max == null ? null : ImmutableList.of("DESC", max);
+    public Object minValue() {
+      return ImmutableList.of("DESC", inner.maxValue());
     }
 
     @Override
-    public @Nullable Object maxValue() {
-      final Object min = inner.minValue();
-      return min == null ? null : ImmutableList.of("DESC", min);
+    public Object maxValue() {
+      return ImmutableList.of("DESC", inner.minValue());
     }
 
     @Override
@@ -577,13 +574,13 @@ public class Discretes {
     }
 
     @Override
-    public @Nullable Object minValue() {
-      return firstOf(0);
+    public Object minValue() {
+      return requireNonNull(firstOf(0));
     }
 
     @Override
-    public @Nullable Object maxValue() {
-      return lastOf(ctorNames.size() - 1);
+    public Object maxValue() {
+      return requireNonNull(lastOf(ctorNames.size() - 1));
     }
 
     @Override
@@ -626,10 +623,7 @@ public class Discretes {
       if (!d.isPresent()) {
         return ImmutableList.of(ctorNames.get(i));
       }
-      final Object min = d.get().minValue();
-      return min != null
-          ? ImmutableList.of(ctorNames.get(i), min)
-          : firstOf(i + 1);
+      return ImmutableList.of(ctorNames.get(i), d.get().minValue());
     }
 
     /** Returns the maximum value ending at constructor index {@code i}. */
@@ -641,10 +635,7 @@ public class Discretes {
       if (!d.isPresent()) {
         return ImmutableList.of(ctorNames.get(i));
       }
-      final Object max = d.get().maxValue();
-      return max != null
-          ? ImmutableList.of(ctorNames.get(i), max)
-          : lastOf(i - 1);
+      return ImmutableList.of(ctorNames.get(i), d.get().maxValue());
     }
   }
 }

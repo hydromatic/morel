@@ -44,7 +44,7 @@ import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.ast.Op;
 import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.util.ImmutablePairList;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /** Implementations of {@link RowSink}. */
 @SuppressWarnings({"rawtypes", "unchecked"})
@@ -1207,7 +1207,7 @@ public abstract class RowSinks {
     // 'group' and 'distinct' preserve the input's arrival order.
     final ListMultimap<Object, Object> map =
         MultimapBuilder.linkedHashKeys().arrayListValues().build();
-    final Object[] values;
+    final Object @Nullable [] values;
 
     GroupRowSink(
         Code keyCode,
@@ -1251,7 +1251,7 @@ public abstract class RowSinks {
 
     @Override
     public void accept(Stack stack) {
-      if (inSlots.size() == 1) {
+      if (values == null) {
         map.put(keyCode.eval(stack), inSlots.right(0).eval(stack));
       } else {
         for (int i = 0; i < inSlots.size(); i++) {

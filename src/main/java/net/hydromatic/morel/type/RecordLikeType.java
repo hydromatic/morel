@@ -21,7 +21,7 @@ package net.hydromatic.morel.type;
 import com.google.common.collect.ImmutableList;
 import java.util.List;
 import java.util.SortedMap;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /** A type that has named fields, as a record type does. */
 public interface RecordLikeType extends Type {

@@ -18,6 +18,7 @@
  */
 package net.hydromatic.morel.compile;
 
+import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 
 import com.google.common.collect.BoundType;
@@ -38,7 +39,7 @@ import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Feasibility-based bound tightening (FBBT).
@@ -295,7 +296,8 @@ class Fbbt {
           new ArrayList<>(intervals.keySet());
       sortedPats.sort(Comparator.comparing(p -> p.name));
       for (Core.NamedPat pat : sortedPats) {
-        final ImmutableRangeSet<BigDecimal> finalRs = intervals.get(pat);
+        final ImmutableRangeSet<BigDecimal> finalRs =
+            requireNonNull(intervals.get(pat));
         if (finalRs.isEmpty()) {
           continue;
         }
@@ -422,7 +424,10 @@ class Fbbt {
       //   x OP (c - k)
       if (lhs.var == null) {
         return tightenFromConstant(
-            state, rhs.var, op.reverse(), lhs.offset.subtract(rhs.offset));
+            state,
+            requireNonNull(rhs.var),
+            op.reverse(),
+            lhs.offset.subtract(rhs.offset));
       }
       if (rhs.var == null) {
         return tightenFromConstant(
@@ -828,6 +833,8 @@ class Fbbt {
     /**
      * Tightens {@code self.var}'s interval given {@code self * other OP c}. The
      * propagation uses {@code other}'s current interval shifted by its offset.
+     *
+     * <p>Both {@code self} and {@code other} must have a variable.
      */
     private static boolean tightenSide(
         State state,
@@ -835,8 +842,9 @@ class Fbbt {
         Bounds.Term other,
         BuiltIn op,
         BigDecimal c) {
+      final Core.NamedPat selfVar = requireNonNull(self.var);
       final Range<BigDecimal> otherSpan =
-          shiftSpan(state.get(other.var).span(), other.offset);
+          shiftSpan(state.get(requireNonNull(other.var)).span(), other.offset);
       // For OP_LT / OP_LE: need other.lo > 0 to divide.
       // For OP_GT / OP_GE: need other.hi > 0.
       switch (op) {
@@ -854,7 +862,7 @@ class Fbbt {
           // Translate back to self.var (subtract self.offset).
           final BigDecimal varUpper = selfUpper.subtract(self.offset);
           return state.tighten(
-              self.var, ImmutableRangeSet.of(Range.lessThan(varUpper)));
+              selfVar, ImmutableRangeSet.of(Range.lessThan(varUpper)));
         case OP_GT:
         case OP_GE:
           if (!otherSpan.hasUpperBound()) {
@@ -866,7 +874,7 @@ class Fbbt {
           final BigDecimal selfLower = divide(c, otherSpan.upperEndpoint());
           final BigDecimal varLower = selfLower.subtract(self.offset);
           return state.tighten(
-              self.var, ImmutableRangeSet.of(Range.greaterThan(varLower)));
+              selfVar, ImmutableRangeSet.of(Range.greaterThan(varLower)));
         default:
           return false;
       }

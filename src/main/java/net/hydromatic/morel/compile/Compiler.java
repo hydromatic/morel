@@ -84,7 +84,7 @@ import net.hydromatic.morel.util.Pair;
 import net.hydromatic.morel.util.PairList;
 import net.hydromatic.morel.util.TailList;
 import net.hydromatic.morel.util.ThreadLocals;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /** Compiles an expression to code that can be evaluated. */
 public class Compiler {
@@ -2148,7 +2148,7 @@ public class Compiler {
           d -> {
             if (false) {
               // Don't recurse into refCode... or we'll never get out alive.
-              d.arg("refCode", refCode);
+              d.arg("refCode", requireNonNull(refCode));
             }
           });
     }

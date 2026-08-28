@@ -104,7 +104,8 @@ public class Closure implements Comparable<Closure>, Applicable, Applicable1 {
       final Core.Pat pat = patCode.getKey();
       if (bindRecurse(pat, argValue, envRef)) {
         final Code code = patCode.getValue();
-        final Session session = (Session) envRef.env.getOpt(EvalEnv.SESSION);
+        final Session session =
+            requireNonNull((Session) envRef.env.getOpt(EvalEnv.SESSION));
         return code.eval(new Stack(session, code.maxSlots()));
       }
     }

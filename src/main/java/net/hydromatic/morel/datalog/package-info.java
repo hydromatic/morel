@@ -100,6 +100,9 @@
  *
  * @see <a href="https://en.wikipedia.org/wiki/Datalog">Datalog (Wikipedia)</a>
  */
+@NullMarked
 package net.hydromatic.morel.datalog;
+
+import org.jspecify.annotations.NullMarked;
 
 // End package-info.java

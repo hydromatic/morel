@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.function.Consumer;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.eval.Code;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /** Utilities for {@link Tracer}. */
 public abstract class Tracers {

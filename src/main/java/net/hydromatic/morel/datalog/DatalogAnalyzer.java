@@ -18,6 +18,8 @@
  */
 package net.hydromatic.morel.datalog;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -116,7 +118,7 @@ public class DatalogAnalyzer {
               "Relation '%s' used in %s but not declared", atom.name, context));
     }
 
-    Declaration decl = program.getDeclaration(atom.name);
+    Declaration decl = requireNonNull(program.getDeclaration(atom.name));
     if (atom.arity() != decl.arity()) {
       throw new DatalogException(
           String.format(

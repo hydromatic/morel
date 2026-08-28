@@ -18,6 +18,8 @@
  */
 package net.hydromatic.morel.datalog;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -39,6 +41,7 @@ import net.hydromatic.morel.datalog.DatalogAst.Rule;
 import net.hydromatic.morel.datalog.DatalogAst.Statement;
 import net.hydromatic.morel.datalog.DatalogAst.Term;
 import net.hydromatic.morel.datalog.DatalogAst.Variable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Translates Datalog programs to Morel source code.
@@ -156,7 +159,7 @@ public class DatalogTranslator {
         String relName = outputs.get(i).relationName;
         morel.append(relName).append(" = ");
 
-        Declaration decl = declarationMap.get(relName);
+        Declaration decl = requireNonNull(declarationMap.get(relName));
         List<Fact> facts =
             factsByRelation.getOrDefault(relName, new ArrayList<>());
         List<Rule> rules =
@@ -307,9 +310,9 @@ public class DatalogTranslator {
   private static String ruleToFrom(
       Rule rule,
       Declaration headDecl,
-      String recursiveRelName,
-      String allRelVar,
-      String newRelVar,
+      @Nullable String recursiveRelName,
+      @Nullable String allRelVar,
+      @Nullable String newRelVar,
       Map<String, Declaration> declarationMap) {
     StringBuilder sb = new StringBuilder();
     List<String> fromSources = new ArrayList<>();
@@ -342,10 +345,10 @@ public class DatalogTranslator {
       String sourceName;
       if (recursiveRelName != null && atom.name.equals(recursiveRelName)) {
         if (!usedNewRel) {
-          sourceName = newRelVar;
+          sourceName = requireNonNull(newRelVar);
           usedNewRel = true;
         } else {
-          sourceName = allRelVar;
+          sourceName = requireNonNull(allRelVar);
         }
       } else {
         sourceName = atom.name;

@@ -19,13 +19,13 @@
 package net.hydromatic.morel.ast;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.collect.Iterables.getOnlyElement;
 import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.util.Pair.forEach;
 import static net.hydromatic.morel.util.Static.allMatch;
 import static net.hydromatic.morel.util.Static.append;
 import static net.hydromatic.morel.util.Static.last;
+import static net.hydromatic.morel.util.Static.only;
 import static net.hydromatic.morel.util.Static.skipLast;
 
 import com.google.common.collect.ImmutableList;
@@ -49,7 +49,7 @@ import net.hydromatic.morel.type.RecordLikeType;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.Pair;
 import net.hydromatic.morel.util.PairList;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Builds a {@link Core.From}.
@@ -608,7 +608,7 @@ public class FromBuilder {
         && exp.type.op() == Op.RECORD_TYPE) {
       final String name = typeSystem.nameGenerator.get();
       yield_(name, exp);
-      final Core.Id id = core.id(getOnlyElement(stepEnv().bindings).id);
+      final Core.Id id = core.id(only(stepEnv().bindings).id);
       final RecordLikeType recordType = (RecordLikeType) exp.type;
       final List<Core.Exp> fields = new ArrayList<>();
       for (int i = 0; i < recordType.argNameTypes().size(); i++) {

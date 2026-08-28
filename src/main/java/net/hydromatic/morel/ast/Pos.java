@@ -28,7 +28,7 @@ import java.util.Objects;
 import java.util.function.Function;
 import net.hydromatic.morel.util.Pair;
 import org.apache.calcite.util.mapping.IntPair;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /** Position of a parse-tree node. */
 public class Pos {

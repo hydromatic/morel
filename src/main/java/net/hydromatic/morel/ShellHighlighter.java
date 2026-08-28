@@ -29,6 +29,7 @@ import org.jline.reader.Highlighter;
 import org.jline.reader.LineReader;
 import org.jline.utils.AttributedString;
 import org.jline.utils.AttributedStringBuilder;
+import org.jspecify.annotations.Nullable;
 
 /**
  * JLine {@link Highlighter} that colors Morel input in the shell.
@@ -51,7 +52,8 @@ public class ShellHighlighter implements Highlighter {
   }
 
   @Override
-  public AttributedString highlight(LineReader reader, String buffer) {
+  public AttributedString highlight(
+      @Nullable LineReader reader, String buffer) {
     final ColorScheme scheme = session.colorScheme();
     if (scheme == ColorScheme.NONE) {
       return new AttributedString(buffer);

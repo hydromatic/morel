@@ -28,7 +28,7 @@ import java.util.function.Consumer;
 import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.compile.BuiltIn;
 import net.hydromatic.morel.util.PairList;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * One endpoint of a range: either unbounded (representing −&infin; or +&infin;)
@@ -318,18 +318,21 @@ class Bound {
    *
    * <p>Returns {@code null} if the complement range is empty (i.e., {@code lo}
    * is the minimum discrete value).
+   *
+   * <p>{@code lo} must be bounded; that is, its value must not be null.
    */
   private static @Nullable Bound complementHi(
       Bound lo, @Nullable Discrete<Object> discrete) {
+    final Object loValue = requireNonNull(lo.value, "lo.value");
     if (discrete != null) {
       if (lo.inclusive) {
-        Object prev = discrete.prev(lo.value);
+        Object prev = discrete.prev(loValue);
         return prev != null ? inclusive(prev) : null;
       } else {
-        return inclusive(lo.value);
+        return inclusive(loValue);
       }
     }
-    return lo.inclusive ? exclusive(lo.value) : inclusive(lo.value);
+    return lo.inclusive ? exclusive(loValue) : inclusive(loValue);
   }
 
   /**
@@ -338,18 +341,21 @@ class Bound {
    *
    * <p>Returns {@code null} if there is no discrete value after {@code hi}
    * (i.e., {@code hi} is the maximum discrete value).
+   *
+   * <p>{@code hi} must be bounded; that is, its value must not be null.
    */
   private static @Nullable Bound complementLo(
       Bound hi, @Nullable Discrete<Object> discrete) {
+    final Object hiValue = requireNonNull(hi.value, "hi.value");
     if (discrete != null) {
       if (hi.inclusive) {
-        Object next = discrete.next(hi.value);
+        Object next = discrete.next(hiValue);
         return next != null ? inclusive(next) : null;
       } else {
-        return inclusive(hi.value);
+        return inclusive(hiValue);
       }
     }
-    return hi.inclusive ? exclusive(hi.value) : inclusive(hi.value);
+    return hi.inclusive ? exclusive(hiValue) : inclusive(hiValue);
   }
 
   /**

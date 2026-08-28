@@ -53,7 +53,7 @@ import net.hydromatic.morel.util.AbstractImmutableList;
 import net.hydromatic.morel.util.ImmutablePairList;
 import net.hydromatic.morel.util.PairList;
 import org.apache.calcite.runtime.FlatLists;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * A value with an explicit type.

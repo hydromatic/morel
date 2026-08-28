@@ -45,7 +45,6 @@ import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.util.MorelException;
-import org.checkerframework.checker.nullness.qual.Nullable;
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.CustomTypeSafeMatcher;
 import org.hamcrest.Description;
@@ -53,6 +52,7 @@ import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 import org.hamcrest.TypeSafeMatcher;
 import org.hamcrest.core.Is;
+import org.jspecify.annotations.Nullable;
 
 /** Matchers for use in Morel tests. */
 public abstract class Matchers {

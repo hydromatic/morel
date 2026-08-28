@@ -45,7 +45,7 @@ import net.hydromatic.morel.foreign.Calcite;
 import net.hydromatic.morel.foreign.ForeignValue;
 import org.apache.commons.io.input.TeeReader;
 import org.apache.commons.io.output.TeeWriter;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Runs an ".smli" file.

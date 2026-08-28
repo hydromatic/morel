@@ -19,6 +19,7 @@
 package net.hydromatic.morel;
 
 import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.ast.AstBuilder.ast;
 import static net.hydromatic.morel.eval.Codes.isNegative;
 import static net.hydromatic.morel.util.ColorScheme.rgbToLuma;
@@ -558,17 +559,17 @@ public class UtilTest {
 
     Ord<Float> ord2 = Codes.parseReal(s, false);
     assertThat(ord2, notNullValue());
-    assertThat(ord2.e, matcher);
+    assertThat(requireNonNull(ord2).e, matcher);
   }
 
   private static void checkParseRealBoth(String s, Matcher<Float> matcher) {
     Ord<Float> ord = Codes.parseReal(s, true);
     assertThat(ord, notNullValue());
-    assertThat(ord.e, matcher);
+    assertThat(requireNonNull(ord).e, matcher);
 
     Ord<Float> ord2 = Codes.parseReal(s, false);
     assertThat(ord2, notNullValue());
-    assertThat(ord2.e, matcher);
+    assertThat(requireNonNull(ord2).e, matcher);
   }
 
   /**
@@ -664,7 +665,8 @@ public class UtilTest {
             ImmutableMap.of("/", ImmutableRangeSet.of(range)));
     assertThat(rangeExtent.iterable, notNullValue());
     assertThat(
-        Lists.newArrayList(rangeExtent.iterable), is(Arrays.asList(5, 6, 7)));
+        Lists.newArrayList(requireNonNull(rangeExtent.iterable)),
+        is(Arrays.asList(5, 6, 7)));
 
     // Integer range set [(4, 7], [10, 12]]
     final Range<BigDecimal> range2 =
@@ -678,7 +680,7 @@ public class UtilTest {
                 ImmutableRangeSet.unionOf(ImmutableList.of(range, range2))));
     assertThat(rangeExtent2.iterable, notNullValue());
     assertThat(
-        Lists.newArrayList(rangeExtent2.iterable),
+        Lists.newArrayList(requireNonNull(rangeExtent2.iterable)),
         is(Arrays.asList(5, 6, 7, 10, 11, 12)));
 
     // Boolean range set
@@ -690,7 +692,7 @@ public class UtilTest {
             ImmutableMap.of("/", ImmutableRangeSet.of(range3)));
     assertThat(rangeExtent3.iterable, notNullValue());
     assertThat(
-        Lists.newArrayList(rangeExtent3.iterable),
+        Lists.newArrayList(requireNonNull(rangeExtent3.iterable)),
         is(Arrays.asList(false, true)));
 
     // Range set of (Boolean, Boolean) tuples
@@ -705,7 +707,7 @@ public class UtilTest {
             ImmutableMap.of("/", ImmutableRangeSet.of(range4)));
     assertThat(rangeExtent4.iterable, notNullValue());
     assertThat(
-        Lists.newArrayList(rangeExtent4.iterable),
+        Lists.newArrayList(requireNonNull(rangeExtent4.iterable)),
         is(
             Arrays.asList(
                 FlatLists.of(false, true),
@@ -727,7 +729,7 @@ public class UtilTest {
                         BigDecimal.valueOf(4), BigDecimal.valueOf(6)))));
     assertThat(rangeExtent5.iterable, notNullValue());
     assertThat(
-        ImmutableList.copyOf(rangeExtent5.iterable),
+        ImmutableList.copyOf(requireNonNull(rangeExtent5.iterable)),
         hasToString(
             "[[[NONE], 4], [[NONE], 5], [[NONE], 6],"
                 + " [[SOME, true], 4], [[SOME, true], 5], [[SOME, true], 6]]"));

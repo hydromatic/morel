@@ -19,6 +19,7 @@
 package net.hydromatic.morel;
 
 import static java.lang.String.join;
+import static java.util.Objects.requireNonNull;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.core.Is.is;
@@ -704,7 +705,8 @@ public class DarnTest {
     assertThat(results, hasSize(1));
     assertThat(results.get(0).isOk(), is(false));
     assertThat(results.get(0).error, is((String) null)); // no Java exception
-    assertThat(results.get(0).output.contains("unbound"), is(true));
+    assertThat(
+        requireNonNull(results.get(0).output).contains("unbound"), is(true));
   }
 
   @Test

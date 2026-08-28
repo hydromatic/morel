@@ -27,7 +27,7 @@ import java.util.Objects;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.eval.Unit;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Binding of a name to a type and a value.
@@ -91,7 +91,8 @@ public class Binding {
     return new Binding(id, null, null, value, false, Kind.VAL);
   }
 
-  public static Binding of(Core.NamedPat id, Core.Exp exp, Object value) {
+  public static Binding of(
+      Core.NamedPat id, Core.@Nullable Exp exp, Object value) {
     return new Binding(id, null, exp, value, false, Kind.VAL);
   }
 
@@ -101,7 +102,10 @@ public class Binding {
   }
 
   public static Binding inst(
-      Core.NamedPat id, Core.IdPat overloadId, Core.Exp exp, Object value) {
+      Core.NamedPat id,
+      Core.IdPat overloadId,
+      Core.@Nullable Exp exp,
+      Object value) {
     return new Binding(id, overloadId, exp, value, false, Kind.INST);
   }
 

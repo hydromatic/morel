@@ -21,9 +21,17 @@ package net.hydromatic.morel.type;
 /**
  * Visitor over {@link Type} objects.
  *
+ * <p>Several methods return null, because most visitors are {@code
+ * TypeVisitor<Void>}, and null is the only value of {@code Void}. NullAway
+ * cannot express "null if and only if {@code R} is nullable" -- only its
+ * JSpecify mode reasons about the nullability of type arguments -- and
+ * annotating the methods only moves the complaint to the {@code accept} methods
+ * that call them. Hence the suppression.
+ *
  * @param <R> return type from {@code visit} methods
  * @see Type#accept(TypeVisitor)
  */
+@SuppressWarnings("NullAway")
 public class TypeVisitor<R> {
   /** Visits a {@link TypeVar}. */
   public R visit(TypeVar typeVar) {

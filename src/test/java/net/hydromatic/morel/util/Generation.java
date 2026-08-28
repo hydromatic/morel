@@ -46,7 +46,7 @@ import java.util.stream.Collectors;
 import net.hydromatic.morel.SignatureChecker;
 import net.hydromatic.morel.TestUtils;
 import net.hydromatic.morel.eval.Prop;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /** Generates code from metadata. */
 public class Generation {
@@ -486,7 +486,7 @@ public class Generation {
         String type,
         String prototype,
         String description,
-        String extra,
+        @Nullable String extra,
         boolean implemented,
         String specified,
         boolean method) {
@@ -938,7 +938,7 @@ public class Generation {
       this.format = b.toString();
     }
 
-    void row(Object... values) {
+    void row(@Nullable Object... values) {
       pw.printf(format, values);
     }
 

@@ -21,7 +21,7 @@ package net.hydromatic.morel.compile;
 import java.math.BigDecimal;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.ast.Op;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Shared primitives for inspecting bound-shaped Core expressions.

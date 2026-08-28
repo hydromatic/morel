@@ -22,12 +22,12 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.util.Ord.forEachIndexed;
 import static net.hydromatic.morel.util.Pair.forEach;
+import static net.hydromatic.morel.util.Static.only;
 import static org.apache.calcite.avatica.util.DateTimeUtils.unixDateToString;
 import static org.apache.calcite.avatica.util.DateTimeUtils.unixTimeToString;
 import static org.apache.calcite.avatica.util.DateTimeUtils.unixTimestampToString;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import java.math.BigDecimal;
 import java.util.AbstractList;
 import java.util.Iterator;
@@ -151,8 +151,7 @@ public class Converters {
       return o -> Unit.INSTANCE;
     }
     if (type instanceof PrimitiveType) {
-      RelDataTypeField field =
-          requireNonNull(Iterables.getOnlyElement(fromType.getFieldList()));
+      RelDataTypeField field = only(fromType.getFieldList());
       return (Converter<E>) ofField(field.getType(), 0);
     }
     if (type instanceof RecordLikeType) {

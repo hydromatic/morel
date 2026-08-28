@@ -25,7 +25,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Abstract syntax tree nodes for Datalog programs.
@@ -65,7 +65,7 @@ public class DatalogAst {
       this.outputs = outputsBuilder.build();
     }
 
-    public Declaration getDeclaration(String name) {
+    public @Nullable Declaration getDeclaration(String name) {
       return declarations.get(name);
     }
 

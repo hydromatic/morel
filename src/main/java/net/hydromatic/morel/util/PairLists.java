@@ -44,7 +44,7 @@ import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import org.apache.calcite.linq4j.function.Functions;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /** Various implementations of {@link PairList}. */
 class PairLists {

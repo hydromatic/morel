@@ -19,6 +19,7 @@
 package net.hydromatic.morel;
 
 import static java.util.Collections.frequency;
+import static java.util.Objects.requireNonNull;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -68,7 +69,7 @@ public class SatTest {
 
     final Map<Variable, Boolean> solve = sat.solve(trueTerm);
     assertThat("satisfiable", solve, notNullValue());
-    assertThat(solve.isEmpty(), is(true));
+    assertThat(requireNonNull(solve).isEmpty(), is(true));
   }
 
   /** Tests false ("or" with zero arguments). */
@@ -103,6 +104,7 @@ public class SatTest {
     final Map<Variable, Boolean> solution = sat.solve(sat.not(cs.get(0)));
 
     assertThat("satisfiable", solution, notNullValue());
+    requireNonNull(solution);
     assertThat(
         "exactly one is true", frequency(solution.values(), true), is(1));
     assertThat("C01 is false", solution.get(cs.get(0)), is(false));

@@ -47,7 +47,7 @@ import net.hydromatic.morel.compile.TypeResolver;
 import net.hydromatic.morel.util.ImmutablePairList;
 import net.hydromatic.morel.util.Ord;
 import net.hydromatic.morel.util.PairList;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /** Various subclasses of AST nodes. */
 public class Ast {
@@ -1674,7 +1674,7 @@ public class Ast {
     public final Id id;
     public final @Nullable Type type;
 
-    TyCon(Pos pos, Id id, Type type) {
+    TyCon(Pos pos, Id id, @Nullable Type type) {
       super(pos, Op.TY_CON);
       this.id = requireNonNull(id);
       this.type = type; // optional
@@ -2456,34 +2456,52 @@ public class Ast {
       this.hi = hi;
     }
 
+    /**
+     * Returns the lower bound.
+     *
+     * <p>Throws if this item's {@link #kind} has no lower bound.
+     */
+    public Exp lo() {
+      return requireNonNull(lo, "lo");
+    }
+
+    /**
+     * Returns the upper bound.
+     *
+     * <p>Throws if this item's {@link #kind} has no upper bound.
+     */
+    public Exp hi() {
+      return requireNonNull(hi, "hi");
+    }
+
     void unparse(AstWriter w) {
       switch (kind) {
         case POINT:
-          w.append(lo, 0, 0);
+          w.append(lo(), 0, 0);
           break;
         case CLOSED:
-          w.append(lo, 0, 0).append(" .. ").append(hi, 0, 0);
+          w.append(lo(), 0, 0).append(" .. ").append(hi(), 0, 0);
           break;
         case CLOSED_OPEN:
-          w.append(lo, 0, 0).append(" ..^ ").append(hi, 0, 0);
+          w.append(lo(), 0, 0).append(" ..^ ").append(hi(), 0, 0);
           break;
         case OPEN_CLOSED:
-          w.append(lo, 0, 0).append(" ^.. ").append(hi, 0, 0);
+          w.append(lo(), 0, 0).append(" ^.. ").append(hi(), 0, 0);
           break;
         case OPEN:
-          w.append(lo, 0, 0).append(" ^..^ ").append(hi, 0, 0);
+          w.append(lo(), 0, 0).append(" ^..^ ").append(hi(), 0, 0);
           break;
         case AT_LEAST:
-          w.append(lo, 0, 0).append(" ..");
+          w.append(lo(), 0, 0).append(" ..");
           break;
         case GREATER_THAN:
-          w.append(lo, 0, 0).append(" ^..");
+          w.append(lo(), 0, 0).append(" ^..");
           break;
         case AT_MOST:
-          w.append(".. ").append(hi, 0, 0);
+          w.append(".. ").append(hi(), 0, 0);
           break;
         case LESS_THAN:
-          w.append("..^ ").append(hi, 0, 0);
+          w.append("..^ ").append(hi(), 0, 0);
           break;
         case ALL:
           w.append("..");

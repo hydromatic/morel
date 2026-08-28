@@ -31,9 +31,9 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.regex.Pattern;
-import org.checkerframework.checker.nullness.qual.Nullable;
 import org.jline.utils.AttributedStyle;
 import org.jline.utils.StyleResolver;
+import org.jspecify.annotations.Nullable;
 
 /**
  * A mapping from syntax-highlighting token categories to terminal styles.

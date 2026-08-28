@@ -77,6 +77,7 @@ License.
 
     <!-- Component and plugin versions, in alphabetical order. -->
     <!-- // lint: sort until '^$' where '##<[a-z]' -->
+    <avatica.version>1.28.0</avatica.version>
     <build-helper-maven-plugin.version>3.6.1</build-helper-maven-plugin.version>
     <calcite.version>1.42.0</calcite.version>
     <central-publishing-maven-plugin.version>0.11.0</central-publishing-maven-plugin.version>
@@ -86,7 +87,14 @@ License.
          In JDK 11 through 20, you must add '-Dcheckstyle.version=10.26.1'
          because Checkstyle 13 requires JDK 21 or higher. -->
     <checkstyle.version>13.10.0</checkstyle.version>
-    <findbugs.version>3.0.2</findbugs.version>
+    <commons-dbcp2.version>2.11.0</commons-dbcp2.version>
+    <commons-io.version>2.15.0</commons-io.version>
+    <!-- Error Prone 2.42.0 is the last version that works on JDK 17.
+         We disable Error Prone and NullAway on earlier JDK versions. -->
+    <errorprone.version>2.42.0</errorprone.version>
+    <!-- The version of the annotations that Guava uses. Unrelated to
+         'errorprone.version', above, which is the version of the analyzer. -->
+    <errorprone-annotations.version>2.47.0</errorprone-annotations.version>
     <foodmart-data-hsqldb.version>0.5</foodmart-data-hsqldb.version>
     <git-commit-id-plugin.version>4.9.10</git-commit-id-plugin.version>
     <googleformatter-maven-plugin.version>1.7.5</googleformatter-maven-plugin.version>
@@ -113,6 +121,7 @@ License.
     <maven-site-plugin.version>3.21.0</maven-site-plugin.version>
     <maven-source-plugin.version>3.2.1</maven-source-plugin.version>
     <maven-surefire-plugin.version>3.5.4</maven-surefire-plugin.version>
+    <nullaway.version>0.14.0</nullaway.version>
     <scott-data-hsqldb.version>0.3</scott-data-hsqldb.version>
     <slf4j.version>2.1.0-alpha1</slf4j.version>
     <versions-maven-plugin.version>2.21.0</versions-maven-plugin.version>
@@ -120,6 +129,7 @@ License.
     <git-commit-id.skip>false</git-commit-id.skip>
     <maven-javadoc-plugin.additionalOptions>-html5</maven-javadoc-plugin.additionalOptions>
     <maven-javadoc-plugin.excludePackageNames>net.hydromatic.morel.parse</maven-javadoc-plugin.excludePackageNames>
+    <nullaway.severity>ERROR</nullaway.severity>
   </properties>
 
   <!-- Environment settings. -->
@@ -146,14 +156,20 @@ License.
   <dependencies>
     <!-- // lint: sort until '#</dependencies>' where '##  <groupId>' -->
     <dependency>
-      <groupId>com.google.code.findbugs</groupId>
-      <artifactId>jsr305</artifactId>
-      <version>${findbugs.version}</version>
+      <groupId>com.google.errorprone</groupId>
+      <artifactId>error_prone_annotations</artifactId>
+      <version>${errorprone-annotations.version}</version>
     </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
       <version>${guava.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>commons-io</groupId>
+      <artifactId>commons-io</artifactId>
+      <version>${commons-io.version}</version>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>net.hydromatic</groupId>
@@ -166,9 +182,31 @@ License.
       <version>${scott-data-hsqldb.version}</version>
     </dependency>
     <dependency>
+      <groupId>org.apache.calcite.avatica</groupId>
+      <artifactId>avatica-core</artifactId>
+      <version>${avatica.version}</version>
+    </dependency>
+    <dependency>
       <groupId>org.apache.calcite</groupId>
       <artifactId>calcite-core</artifactId>
       <version>${calcite.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.calcite</groupId>
+      <artifactId>calcite-linq4j</artifactId>
+      <version>${calcite.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-dbcp2</artifactId>
+      <version>${commons-dbcp2.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.hamcrest</groupId>
+      <artifactId>hamcrest</artifactId>
+      <version>${hamcrest.version}</version>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.hamcrest</groupId>
@@ -527,6 +565,69 @@ License.
         <!-- Java 1.8 does not support -html5, so we pass another harmless option -->
         <maven-javadoc-html5>-notimestamp</maven-javadoc-html5>
       </properties>
+    </profile>
+    <profile>
+      <!-- Runs NullAway, which finds potential NullPointerExceptions.
+           NullAway is a plugin for Error Prone, and Error Prone requires
+           JDK 17 or higher, so on earlier JDKs we compile as before, and
+           the analysis is simply not performed.
+
+           Error Prone needs access to internal javac packages. We fork the
+           compiler and pass the necessary 'add-exports' options to it,
+           rather than putting them in '.mvn/jvm.config', because Maven
+           running on JDK 8 would not recognize them. -->
+      <id>nullaway</id>
+      <activation>
+        <jdk>[17,)</jdk>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <version>${maven-compiler-plugin.version}</version>
+            <configuration>
+              <fork>true</fork>
+              <compilerArgs>
+                <arg>-XDcompilePolicy=simple</arg>
+                <!-- Error Prone requires this option on JDK 21 and lower;
+                     later JDKs ignore it. -->
+                <arg>-XDaddTypeAnnotationsToSymbol=true</arg>
+                <arg>--should-stop=ifError=FLOW</arg>
+                <!-- Raise javac's limit of 100; there are more
+                     violations than that, and we want to see them all. -->
+                <arg>-Xmaxerrs</arg>
+                <arg>10000</arg>
+                <arg>-Xmaxwarns</arg>
+                <arg>10000</arg>
+                <arg>-Xplugin:ErrorProne -XepExcludedPaths:.*/generated-sources/.* -XepDisableAllChecks -Xep:NullAway:${nullaway.severity} -XepOpt:NullAway:AnnotatedPackages=net.hydromatic.morel -XepOpt:NullAway:AcknowledgeRestrictiveAnnotations=true -XepOpt:NullAway:AssertsEnabled=true</arg>
+                <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED</arg>
+                <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED</arg>
+                <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.main=ALL-UNNAMED</arg>
+                <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.model=ALL-UNNAMED</arg>
+                <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED</arg>
+                <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED</arg>
+                <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED</arg>
+                <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED</arg>
+                <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED</arg>
+                <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED</arg>
+              </compilerArgs>
+              <annotationProcessorPaths>
+                <path>
+                  <groupId>com.google.errorprone</groupId>
+                  <artifactId>error_prone_core</artifactId>
+                  <version>${errorprone.version}</version>
+                </path>
+                <path>
+                  <groupId>com.uber.nullaway</groupId>
+                  <artifactId>nullaway</artifactId>
+                  <version>${nullaway.version}</version>
+                </path>
+              </annotationProcessorPaths>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
   </profiles>
 </project>

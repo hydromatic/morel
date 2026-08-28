@@ -1708,9 +1708,9 @@ public class MainTest {
               protected boolean matchesSafely(List<? extends Throwable> list) {
                 return list.size() == 2
                     && list.get(0) instanceof CompileException
-                    && list.get(0).getMessage().equals("match nonexhaustive")
+                    && "match nonexhaustive".equals(list.get(0).getMessage())
                     && list.get(1) instanceof CompileException
-                    && list.get(1).getMessage().equals("match nonexhaustive");
+                    && "match nonexhaustive".equals(list.get(1).getMessage());
               }
             });
   }

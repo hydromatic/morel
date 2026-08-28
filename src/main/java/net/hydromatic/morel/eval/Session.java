@@ -36,7 +36,7 @@ import net.hydromatic.morel.compile.NameGenerator;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.ColorScheme;
 import net.hydromatic.morel.util.MorelException;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Session environment.
@@ -69,7 +69,7 @@ public class Session {
    * <p>Group/aggregate and CalciteCompiler bridge code temporarily mutate this
    * map (put + restore) during evaluation.
    */
-  public Map<String, Object> globalEnv;
+  public Map<String, Object> globalEnv = ImmutableMap.of();
 
   /** The plan of the previous command. */
   public @Nullable Code code;

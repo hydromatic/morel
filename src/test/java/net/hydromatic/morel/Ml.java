@@ -73,9 +73,9 @@ import net.hydromatic.morel.util.Pair;
 import net.hydromatic.morel.util.PairList;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
-import org.checkerframework.checker.nullness.qual.Nullable;
 import org.hamcrest.CustomTypeSafeMatcher;
 import org.hamcrest.Matcher;
+import org.jspecify.annotations.Nullable;
 
 /** Fluent test helper. */
 class Ml {
@@ -398,9 +398,9 @@ class Ml {
    * has changed after inlining.
    */
   public Ml assertCoreString(
-      @Nullable Matcher<Core.Decl> beforeMatcher,
+      Matcher<Core.Decl> beforeMatcher,
       Matcher<Core.Decl> matcher,
-      @Nullable Matcher<Core.Decl> inlinedMatcher) {
+      Matcher<Core.Decl> inlinedMatcher) {
     return with(Prop.INLINE_PASS_COUNT, 10)
         .with(Prop.RELATIONALIZE, true)
         .assertCore(0, beforeMatcher)
@@ -458,7 +458,7 @@ class Ml {
                     list,
                     e ->
                         e instanceof CompileException
-                            && e.getMessage().equals("match nonexhaustive"));
+                            && "match nonexhaustive".equals(e.getMessage()));
               }
             };
         break;

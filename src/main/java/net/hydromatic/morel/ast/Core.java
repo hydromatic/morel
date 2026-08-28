@@ -19,7 +19,6 @@
 package net.hydromatic.morel.ast;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.collect.Iterables.getOnlyElement;
 import static java.lang.String.format;
 import static java.util.Objects.hash;
 import static java.util.Objects.requireNonNull;
@@ -30,6 +29,7 @@ import static net.hydromatic.morel.util.Pair.forEach;
 import static net.hydromatic.morel.util.Pair.forEachIndexed;
 import static net.hydromatic.morel.util.Static.allMatch;
 import static net.hydromatic.morel.util.Static.last;
+import static net.hydromatic.morel.util.Static.only;
 import static net.hydromatic.morel.util.Static.transform;
 import static org.apache.calcite.util.Util.first;
 
@@ -71,7 +71,7 @@ import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.type.TypedValue;
 import net.hydromatic.morel.util.Pair;
 import net.hydromatic.morel.util.PairList;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Core expressions.
@@ -2161,11 +2161,10 @@ public class Core {
         AstWriter w, int ordinal, int left, int right) {
       if (env.atom) {
         if (aggregates.isEmpty()) {
-          w.append(" group ")
-              .append(getOnlyElement(groupExps.values()), 0, right);
+          w.append(" group ").append(only(groupExps.values()), 0, right);
         } else {
           w.append(" group {} compute ")
-              .append(getOnlyElement(aggregates.values()), 0, right);
+              .append(only(aggregates.values()), 0, right);
         }
       } else {
         w.append(" group");

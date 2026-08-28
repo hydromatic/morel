@@ -62,7 +62,7 @@ import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.type.TypeVar;
 import net.hydromatic.morel.util.Generation;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /** Validates signature declarations against enum values in {@link BuiltIn}. */
 public class SignatureChecker {
@@ -254,7 +254,7 @@ public class SignatureChecker {
       // Single-structure files are the norm; pick the first structure as the
       // owner of any commented entries.
       final String structure = result.keySet().iterator().next();
-      result.get(structure).addAll(commentedSpecs(content));
+      requireNonNull(result.get(structure)).addAll(commentedSpecs(content));
     }
     return new ParseResult(result, structureMeta);
   }

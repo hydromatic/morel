@@ -372,7 +372,9 @@ class Pretty {
         || dataType.name.equals("discrete_set")) {
       arg = Codes.setToRangeList(arg);
     }
-    final Type argType = dataType.typeConstructors(typeSystem).get(tyConName);
+    final Type argType =
+        requireNonNull(
+            dataType.typeConstructors(typeSystem).get(tyConName), tyConName);
     // Parens disambiguate when the arg is itself a multi-token constructor
     // (e.g. "SOME (INL x)").
     final boolean needParentheses =

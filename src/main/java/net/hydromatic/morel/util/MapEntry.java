@@ -20,7 +20,7 @@ package net.hydromatic.morel.util;
 
 import java.util.Map;
 import java.util.Objects;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Simple implementation of {@link Map.Entry}.

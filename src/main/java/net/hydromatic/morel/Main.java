@@ -73,7 +73,7 @@ import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.MorelException;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /** Standard ML REPL. */
 public class Main {
@@ -597,7 +597,8 @@ public class Main {
                   subShell.command(
                       statement, lineConsumer, typeOnly, expectedOutput));
         } catch (MorelParseException | CompileException e) {
-          if (e.getMessage().startsWith("Encountered \"<EOF>\" ")) {
+          final String message = e.getMessage();
+          if (message != null && message.startsWith("Encountered \"<EOF>\" ")) {
             break;
           }
           String code = in2.flush();

@@ -33,7 +33,7 @@ import java.util.function.Consumer;
 import net.hydromatic.morel.ast.Op;
 import net.hydromatic.morel.eval.Unit;
 import org.apache.calcite.runtime.FlatLists;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /** A type and a range set. */
 @SuppressWarnings("rawtypes")
@@ -97,10 +97,10 @@ public class RangeExtent {
   }
 
   /**
-   * Derives the collection of values in the range, or returns empty if the
-   * range is infinite.
+   * Derives the collection of values in the range, or returns null if the range
+   * is infinite.
    */
-  private <E extends Comparable<E>> Iterable<E> toList(
+  private <E extends Comparable<E>> @Nullable Iterable<E> toList(
       Type type, TypeSystem typeSystem) {
     final List<E> list = new ArrayList<>();
     if (populate(typeSystem, type, "/", rangeSetMap, (Consumer<E>) list::add)) {

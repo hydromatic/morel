@@ -31,9 +31,9 @@ import net.hydromatic.morel.eval.Session;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.ColorScheme;
 import net.hydromatic.morel.util.ColorScheme.Category;
-import org.checkerframework.checker.nullness.qual.Nullable;
 import org.jline.utils.AttributedString;
 import org.jline.utils.AttributedStyle;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 /** Tests {@link ShellHighlighter} and {@link ColorScheme}. */

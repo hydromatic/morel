@@ -19,6 +19,7 @@
 package net.hydromatic.morel.util;
 
 import static com.google.common.collect.Comparators.isInOrder;
+import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
@@ -40,7 +41,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import org.apache.calcite.util.Util;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /** Utilities. */
 public class Static {
@@ -104,6 +105,35 @@ public class Static {
    */
   public static <E> E last(List<E> list) {
     return list.get(list.size() - 1);
+  }
+
+  /**
+   * Returns the only element of an iterable.
+   *
+   * <p>As {@link Iterables#getOnlyElement(Iterable)}, but the result is known
+   * to be not null. Guava declares the element type as {@code T
+   * extends @Nullable Object}, and so NullAway, which does not reason about the
+   * nullability of type arguments, deduces that the result may be null.
+   *
+   * @throws java.util.NoSuchElementException if the iterable is empty
+   * @throws java.lang.IllegalArgumentException if the iterable has more than
+   *     one element
+   */
+  public static <E> E only(Iterable<E> iterable) {
+    return requireNonNull(Iterables.getOnlyElement(iterable));
+  }
+
+  /**
+   * Returns the last element of an iterable.
+   *
+   * <p>As {@link Iterables#getLast(Iterable)}, but the result is known to be
+   * not null. (See {@link #only(Iterable)} for why Guava's method appears to
+   * return a value that may be null.)
+   *
+   * @throws java.util.NoSuchElementException if the iterable is empty
+   */
+  public static <E> E last(Iterable<E> iterable) {
+    return requireNonNull(Iterables.getLast(iterable));
   }
 
   /** Returns all but the first element of a list. */

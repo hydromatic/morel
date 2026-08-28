@@ -18,18 +18,18 @@
  */
 package net.hydromatic.morel.compile;
 
-import static com.google.common.collect.Iterables.getLast;
 import static java.lang.String.format;
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.compile.Generators.maybeGenerator;
 import static net.hydromatic.morel.util.Static.append;
 import static net.hydromatic.morel.util.Static.forEachInIntersection;
+import static net.hydromatic.morel.util.Static.last;
+import static net.hydromatic.morel.util.Static.only;
 import static net.hydromatic.morel.util.Static.skip;
 import static net.hydromatic.morel.util.Static.transformEager;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Multimap;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -381,8 +381,7 @@ public class Expander {
               if (scan.env.atom
                   && fromBuilder.stepEnv().bindings.size() == 1
                   && !fromBuilder.stepEnv().atom) {
-                final Binding binding =
-                    Iterables.getOnlyElement(fromBuilder.stepEnv().bindings);
+                final Binding binding = only(fromBuilder.stepEnv().bindings);
                 fromBuilder.yield_(core.id(binding.id));
               }
               return;
@@ -773,7 +772,7 @@ public class Expander {
           final boolean ordered = generator.exp.type instanceof ListType;
           if (maybeGenerator(
               cache, pat, ordered, new Generators.Context(constraints))) {
-            Generator g = getLast(cache.generators.get(pat));
+            Generator g = last(cache.generators.get(pat));
             g.pat.expand().forEach(p2 -> generators.put(p2, g));
           }
         });

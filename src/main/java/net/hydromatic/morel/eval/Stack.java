@@ -23,6 +23,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Evaluation stack for the Morel interpreter.
@@ -119,8 +120,12 @@ public final class Stack {
     return requireNonNull(session.globalEnv, "globalEnv");
   }
 
-  /** Pushes {@code value} onto the stack. */
-  public void push(Object value) {
+  /**
+   * Pushes {@code value} onto the stack.
+   *
+   * <p>The value may be null; see {@link Codes} {@code GlobalMarshalCode}.
+   */
+  public void push(@Nullable Object value) {
     slots[top++] = value;
   }
 

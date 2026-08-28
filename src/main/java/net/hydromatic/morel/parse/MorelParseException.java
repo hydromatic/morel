@@ -20,7 +20,7 @@ package net.hydromatic.morel.parse;
 
 import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.util.MorelException;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /** Exception caused by a parse error. */
 public class MorelParseException extends RuntimeException

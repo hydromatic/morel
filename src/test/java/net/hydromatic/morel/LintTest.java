@@ -70,7 +70,7 @@ import net.hydromatic.morel.util.WordComparator;
 import org.apache.calcite.util.Puffin;
 import org.apache.calcite.util.Source;
 import org.apache.calcite.util.Sources;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 /** Runs Lint-like checks on the source code. Also tests those checks. */
@@ -196,21 +196,24 @@ public class LintTest {
 
     // Nullable
     b.add(
-        line -> line.startsWith("import javax.annotation.Nullable;"),
+        line ->
+            line.startsWith("import javax.annotation.Nullable;")
+                || line.startsWith(
+                    "import org.checkerframework.checker.nullness.qual"
+                        + ".Nullable;"),
         line ->
             line.state()
-                .message(
-                    line,
-                    "use org.checkerframework.checker.nullness.qual.Nullable"));
+                .message(line, "use org.jspecify.annotations.Nullable"));
 
     // Nonnull
     b.add(
-        line -> line.startsWith("import javax.annotation.Nonnull;"),
         line ->
-            line.state()
-                .message(
-                    line,
-                    "use org.checkerframework.checker.nullness.qual.NonNull"));
+            line.startsWith("import javax.annotation.Nonnull;")
+                || line.startsWith(
+                    "import org.checkerframework.checker.nullness.qual"
+                        + ".NonNull;"),
+        line ->
+            line.state().message(line, "use org.jspecify.annotations.NonNull"));
 
     // Use of 'Static.' other than in an import.
     b.add(
@@ -2034,7 +2037,7 @@ public class LintTest {
   /** Internal state of the lint rules, per file. */
   private static class FileState {
     final GlobalState global;
-    Language language;
+    Language language = Language.UNKNOWN;
     @Nullable String partialSort;
     @Nullable Consumer<Puffin.Line<GlobalState, FileState>> sortConsumer;
     int versionCount;

@@ -43,7 +43,7 @@ import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /** Helpers for {@link Compiler} and {@link TypeResolver}. */
 public abstract class Compiles {

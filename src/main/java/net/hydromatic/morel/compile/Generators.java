@@ -19,10 +19,10 @@
 package net.hydromatic.morel.compile;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.collect.Iterables.getLast;
 import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.compile.FreeFinder.freePats;
+import static net.hydromatic.morel.util.Static.last;
 import static net.hydromatic.morel.util.Static.transformEager;
 
 import com.google.common.collect.ImmutableList;
@@ -60,7 +60,7 @@ import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.Ord;
 import net.hydromatic.morel.util.Pair;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /** Implementations of {@link Generator}, and supporting methods. */
 class Generators {
@@ -143,7 +143,7 @@ class Generators {
           core.list(
               typeSystem,
               typeSystem.range(elementType),
-              ImmutableList.of(rangeContainsRange));
+              ImmutableList.of(requireNonNull(rangeContainsRange)));
       final Core.Exp collection =
           core.call(
               typeSystem,
@@ -151,7 +151,8 @@ class Generators {
               elementType,
               Pos.ZERO,
               rangeListExp);
-      final Core.Pat elemPat = cache.patForExp(rangeContainsValue);
+      final Core.Pat elemPat =
+          cache.patForExp(requireNonNull(rangeContainsValue));
       CollectionGenerator.create(
           cache,
           ordered,
@@ -163,7 +164,11 @@ class Generators {
     }
     if (pointMatch != null) {
       PointGenerator.create(
-          cache, pat, ordered, pointValue, ImmutableSet.of(pointMatch));
+          cache,
+          pat,
+          ordered,
+          requireNonNull(pointValue),
+          ImmutableSet.of(pointMatch));
       return true;
     }
     if (hasBounds && pat.type.isDiscrete(cache.typeSystem)) {
@@ -178,7 +183,11 @@ class Generators {
     }
     if (prefixMatch != null) {
       StringPrefixGenerator.create(
-          cache, pat, ordered, prefixString, ImmutableSet.of(prefixMatch));
+          cache,
+          pat,
+          ordered,
+          requireNonNull(prefixString),
+          ImmutableSet.of(prefixMatch));
       return true;
     }
 
@@ -1904,7 +1913,7 @@ class Generators {
       return null;
     }
     final Generator baseGenerator =
-        getLast(baseCache.generators.get((Core.NamedPat) goalPat));
+        last(baseCache.generators.get((Core.NamedPat) goalPat));
 
     // 2. Similarly, substitute and invert the step predicate
     final Core.Exp substitutedStep =
@@ -1927,7 +1936,7 @@ class Generators {
       return null;
     }
     final Generator stepGenerator =
-        getLast(stepCache.generators.get((Core.NamedPat) stepGoalPat));
+        last(stepCache.generators.get((Core.NamedPat) stepGoalPat));
 
     // 3. Build the unrolled iteration
     return unrollBoundedIterate(
@@ -2886,7 +2895,7 @@ class Generators {
             }
             continue next_constraint;
           }
-          generators.add(getLast(cache.generators.get((Core.NamedPat) pat)));
+          generators.add(last(cache.generators.get((Core.NamedPat) pat)));
         }
         generateUnion(cache, ordered, generators, constraint);
         return true;

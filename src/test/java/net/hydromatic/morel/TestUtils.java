@@ -44,9 +44,9 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.calcite.util.Sources;
-import org.checkerframework.checker.nullness.qual.Nullable;
 import org.incava.diff.Diff;
 import org.incava.diff.Difference;
+import org.jspecify.annotations.Nullable;
 
 /** Utility methods for testing. */
 public class TestUtils {
@@ -140,14 +140,14 @@ public class TestUtils {
   static File findDirectory() {
     final URL inUrl = MainTest.class.getResource("/");
     assertThat(inUrl, notNullValue());
-    return urlToFile(inUrl);
+    return requireNonNull(urlToFile(inUrl));
   }
 
   /** Returns the root directory of production resources. */
   static File resourceDirectory() {
     final URL inUrl = Main.class.getResource("/");
     assertThat(inUrl, notNullValue());
-    return urlToFile(inUrl);
+    return requireNonNull(urlToFile(inUrl));
   }
 
   @SuppressWarnings("unused")

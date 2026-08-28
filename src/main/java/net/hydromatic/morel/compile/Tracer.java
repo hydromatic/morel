@@ -21,7 +21,7 @@ package net.hydromatic.morel.compile;
 import java.util.List;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.eval.Code;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /** Called on various events during compilation. */
 public interface Tracer {

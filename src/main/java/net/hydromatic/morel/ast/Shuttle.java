@@ -18,6 +18,7 @@
  */
 package net.hydromatic.morel.ast;
 
+import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.ast.AstBuilder.ast;
 import static net.hydromatic.morel.util.Static.transformEager;
 
@@ -385,8 +386,9 @@ public class Shuttle {
   protected Ast.Scan visit(Ast.Scan scan) {
     return ast.scan(
         scan.pos,
+        scan.op,
         scan.pat.accept(this),
-        scan.exp.accept(this),
+        scan.exp == null ? null : scan.exp.accept(this),
         scan.condition == null ? null : scan.condition.accept(this));
   }
 
@@ -444,7 +446,7 @@ public class Shuttle {
   }
 
   protected AstNode visit(Ast.Compute compute) {
-    return ast.compute(compute.pos, compute.aggregate);
+    return ast.compute(compute.pos, requireNonNull(compute.aggregate));
   }
 
   protected AstNode visit(Ast.Group group) {

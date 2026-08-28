@@ -186,7 +186,7 @@ public class DatalogEvaluator {
       Type type = evaluator.compiled.getType();
       return type.toString();
     } catch (DatalogException e) {
-      return e.getMessage();
+      return requireNonNull(e.getMessage());
     }
   }
 
@@ -279,7 +279,8 @@ public class DatalogEvaluator {
       }
       int[] declToSorted = new int[decl.params.size()];
       for (int i = 0; i < decl.params.size(); i++) {
-        declToSorted[i] = sortedIndex.get(decl.params.get(i).name);
+        declToSorted[i] =
+            requireNonNull(sortedIndex.get(decl.params.get(i).name));
       }
 
       // Convert each row to a Fact

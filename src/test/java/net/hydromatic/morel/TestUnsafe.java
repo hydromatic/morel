@@ -35,7 +35,7 @@ import java.io.Writer;
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.stream.Stream;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
 /**

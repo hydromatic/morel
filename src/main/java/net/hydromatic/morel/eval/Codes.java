@@ -99,8 +99,8 @@ import net.hydromatic.morel.util.MorelHighlighter;
 import net.hydromatic.morel.util.Ord;
 import net.hydromatic.morel.util.PairList;
 import org.apache.calcite.runtime.FlatLists;
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 /** Helpers for {@link Code}. */
 @SuppressWarnings({"rawtypes", "unchecked"})
@@ -2245,8 +2245,8 @@ public abstract class Codes {
     private Object stream;
     /** Next character, or -1 at the end of the stream. */
     private int c;
-    /** Stream that follows {@link #c}. */
-    private Object nextStream;
+    /** Stream that follows {@link #c}; null at the end of the stream. */
+    private @Nullable Object nextStream;
 
     CharSource(Applicable1<List, Object> reader, Object stream) {
       this.reader = reader;
@@ -2272,7 +2272,7 @@ public abstract class Codes {
 
     /** Consumes the next character. */
     void advance() {
-      stream = nextStream;
+      stream = requireNonNull(nextStream);
       read();
     }
 
@@ -4897,9 +4897,10 @@ public abstract class Codes {
       }
       final Ordering ordering =
           Ordering.from(requireNonNull(comparator, "comparator"));
-      return builtIn == BuiltIn.RELATIONAL_MAX
-          ? ordering.max(list)
-          : ordering.min(list);
+      return requireNonNull(
+          builtIn == BuiltIn.RELATIONAL_MAX
+              ? ordering.max(list)
+              : ordering.min(list));
     }
   }
 
@@ -7995,7 +7996,7 @@ public abstract class Codes {
     @Override
     public Object eval(Stack stack) {
       final Map<String, Object> env = stack.currentEnv();
-      return env.get(name);
+      return requireNonNull(env.get(name), name);
     }
   }
 
@@ -8032,6 +8033,10 @@ public abstract class Codes {
       final int savedTop = stack.save();
       final Map<String, Object> env = stack.currentEnv();
       for (String name : names) {
+        // A global may be absent from the environment -- a datatype
+        // constructor, for instance -- and its slot is then null. The slots
+        // must still line up with what the body reads, so we push one for
+        // every name.
         stack.push(env.get(name));
       }
       final Object result = body.eval(stack);
@@ -9551,7 +9556,7 @@ public abstract class Codes {
               range.get(0))) {
             throw new MorelRuntimeException(BuiltInExn.SIZE, pos);
           }
-          result.add(Bound.lowerBound(range).value);
+          result.add(requireNonNull(Bound.lowerBound(range).value));
         } else {
           final Bound lo = Bound.lowerBound(range);
           final Bound hi = Bound.upperBound(range);

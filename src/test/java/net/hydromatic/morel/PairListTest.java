@@ -316,6 +316,7 @@ class PairListTest {
    * PairList#rightList()}}.
    */
   @Test
+  @SuppressWarnings("NullAway") // deliberate null keys and values
   void testRemove() {
     final PairList<String, Integer> list = PairList.copyOf("a", 1, "b", null);
     assertThat(list, hasSize(2));
@@ -446,6 +447,7 @@ class PairListTest {
 
   /** Tests {@link PairList#of()} and {@link PairList#copyOf(Iterable)}. */
   @Test
+  @SuppressWarnings("NullAway") // deliberate null keys and values
   void testPairListOf() {
     final PairList<String, Integer> list0 = PairList.of();
     assertThat(list0, hasSize(0));
@@ -492,6 +494,7 @@ class PairListTest {
   }
 
   @Test
+  @SuppressWarnings("NullAway") // deliberate null keys and values
   void testTransform() {
     final PairList<String, Integer> mutableList3 =
         PairList.copyOf("a", 1, null, 5, "c", 3);
@@ -578,6 +581,7 @@ class PairListTest {
   }
 
   @Test
+  @SuppressWarnings("NullAway") // deliberate null keys and values
   void testBuilder() {
     final PairList.Builder<String, Integer> b = PairList.builder();
     final List<Pair<String, Integer>> list = new ArrayList<>();

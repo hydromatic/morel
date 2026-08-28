@@ -35,7 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 import net.hydromatic.morel.util.MorelHighlighter;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Morel notebook kernel: processes documents containing {@code <!-- morel ...

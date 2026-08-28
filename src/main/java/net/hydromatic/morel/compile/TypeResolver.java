@@ -120,7 +120,7 @@ import net.hydromatic.morel.util.Unifier.Term;
 import net.hydromatic.morel.util.Unifier.TermTerm;
 import net.hydromatic.morel.util.Unifier.Variable;
 import org.apache.calcite.util.Holder;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /** Resolves all the types within an expression. */
 // @SuppressWarnings("StaticPseudoFunctionalStyleMethod")
@@ -332,7 +332,8 @@ public class TypeResolver {
       while (!preferredTypes.isEmpty()) {
         Map.Entry<Variable, PrimitiveType> x = preferredTypes.remove(0);
         final Type type =
-            typeMap.termToType(typeMap.substitution.resultMap.get(x.getKey()));
+            typeMap.termToType(
+                requireNonNull(typeMap.substitution.resultMap.get(x.getKey())));
         if (type instanceof TypeVar) {
           equiv(x.getKey(), toTerm(x.getValue()));
           continue tryAgain;
@@ -1826,7 +1827,7 @@ public class TypeResolver {
           //     share the same orderedness,
           //   * c0 matches the type deduced for "[(1, true), (2, false)]"
           //   * v is a record type composed of the fields "{i, j}"
-          sameOrderedness(c0, v0, c, v);
+          sameOrderedness(requireNonNull(c0), v0, c, v);
         } else {
           // Consider processing the second step in
           //   "from i in [1, 2],
@@ -1844,8 +1845,13 @@ public class TypeResolver {
           //   * c0 matches the type deduced for "[true, false]"
           //   * v is a record type composed of the fields "{i, j}"
           meetCollections(
-              p.c, unifier.variable(), c0, unifier.variable(), c, v);
-          isCollectionOf(c0, v0);
+              p.c,
+              unifier.variable(),
+              requireNonNull(c0),
+              unifier.variable(),
+              c,
+              v);
+          isCollectionOf(requireNonNull(c0), v0);
         }
     }
 
@@ -2257,31 +2263,31 @@ public class TypeResolver {
   private static Ast.Exp rangeItemToExp(Pos pos, Ast.RangeListItem item) {
     switch (item.kind) {
       case POINT:
-        return ast.apply(ast.id(pos, "POINT"), item.lo);
+        return ast.apply(ast.id(pos, "POINT"), item.lo());
       case CLOSED:
         return ast.apply(
             ast.id(pos, "CLOSED"),
-            ast.tuple(pos, ImmutableList.of(item.lo, item.hi)));
+            ast.tuple(pos, ImmutableList.of(item.lo(), item.hi())));
       case CLOSED_OPEN:
         return ast.apply(
             ast.id(pos, "CLOSED_OPEN"),
-            ast.tuple(pos, ImmutableList.of(item.lo, item.hi)));
+            ast.tuple(pos, ImmutableList.of(item.lo(), item.hi())));
       case OPEN_CLOSED:
         return ast.apply(
             ast.id(pos, "OPEN_CLOSED"),
-            ast.tuple(pos, ImmutableList.of(item.lo, item.hi)));
+            ast.tuple(pos, ImmutableList.of(item.lo(), item.hi())));
       case OPEN:
         return ast.apply(
             ast.id(pos, "OPEN"),
-            ast.tuple(pos, ImmutableList.of(item.lo, item.hi)));
+            ast.tuple(pos, ImmutableList.of(item.lo(), item.hi())));
       case AT_LEAST:
-        return ast.apply(ast.id(pos, "AT_LEAST"), item.lo);
+        return ast.apply(ast.id(pos, "AT_LEAST"), item.lo());
       case GREATER_THAN:
-        return ast.apply(ast.id(pos, "GREATER_THAN"), item.lo);
+        return ast.apply(ast.id(pos, "GREATER_THAN"), item.lo());
       case AT_MOST:
-        return ast.apply(ast.id(pos, "AT_MOST"), item.hi);
+        return ast.apply(ast.id(pos, "AT_MOST"), item.hi());
       case LESS_THAN:
-        return ast.apply(ast.id(pos, "LESS_THAN"), item.hi);
+        return ast.apply(ast.id(pos, "LESS_THAN"), item.hi());
       case ALL:
         return ast.id(pos, "ALL");
       default:
@@ -2325,7 +2331,8 @@ public class TypeResolver {
    */
   private Ast.Exp deduceUnresolvedRecordType(
       TypeEnv env, Ast.Record record, Variable v) {
-    final Ast.Exp base2 = deduceExpType(env, record.base, unifier.variable());
+    final Ast.Exp base2 =
+        deduceExpType(env, requireNonNull(record.base), unifier.variable());
     final List<Ast.Modifier> modifiers =
         transformEager(
             record.modifiers, modifier -> deduceModifierTypes(env, modifier));
@@ -3183,9 +3190,10 @@ public class TypeResolver {
     if (candidates.size() == 1) {
       best = candidates.iterator().next();
     } else {
+      final String hint = requireNonNull(innerHint);
       best =
           candidates.stream()
-              .filter(b -> receiverTypeOpIs(b, innerHint))
+              .filter(b -> receiverTypeOpIs(b, hint))
               .findFirst()
               .orElse(null);
       if (best == null) {
@@ -3252,9 +3260,10 @@ public class TypeResolver {
           if (candidates.size() == 1) {
             best = candidates.iterator().next();
           } else {
+            final String hint = requireNonNull(innerHint);
             best =
                 candidates.stream()
-                    .filter(b -> receiverTypeOpIs(b, innerHint))
+                    .filter(b -> receiverTypeOpIs(b, hint))
                     .findFirst()
                     .orElse(null);
             if (best == null) {
@@ -4887,7 +4896,7 @@ public class TypeResolver {
                 "parameter or result constraints of "
                     + "clauses don't agree [tycon mismatch]",
                 false,
-                prevReturnTypePos.plus(funMatch.pos));
+                requireNonNull(prevReturnTypePos).plus(funMatch.pos));
           }
           returnType = funMatch.returnType;
           prevReturnTypePos = funMatch.pos;
@@ -5226,10 +5235,12 @@ public class TypeResolver {
         disjunction =
             (disjunction == null) ? test : ast.orElse(disjunction, test);
       }
+      // The list is not empty, so the loop assigned 'disjunction'.
+      final Ast.Exp disjunction2 = requireNonNull(disjunction);
       result =
           (call.op == Op.NOT_ELEM)
-              ? ast.apply(ast.id(pos, "not"), disjunction)
-              : disjunction;
+              ? ast.apply(ast.id(pos, "not"), disjunction2)
+              : disjunction2;
     }
     return deduceExpType(env, result, v);
   }

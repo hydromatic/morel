@@ -23,12 +23,12 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.util.Ord.forEachIndexed;
+import static net.hydromatic.morel.util.Static.only;
 import static net.hydromatic.morel.util.Static.transformEager;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import java.util.AbstractList;
 import java.util.ArrayList;
@@ -50,7 +50,7 @@ import net.hydromatic.morel.eval.Unit;
 import net.hydromatic.morel.eval.Variants;
 import net.hydromatic.morel.type.Type.Key;
 import net.hydromatic.morel.util.ComparableSingletonList;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * A table that contains all types in use, indexed by their description (e.g.
@@ -79,7 +79,9 @@ public class TypeSystem {
 
   /** Creates a binding of a type constructor value. */
   public Binding bindTyCon(DataType dataType, String tyConName) {
-    final Type type = dataType.typeConstructors(this).get(tyConName);
+    final Type type =
+        requireNonNull(
+            dataType.typeConstructors(this).get(tyConName), tyConName);
     if (type == DummyType.INSTANCE) {
       Object o = ComparableSingletonList.of(tyConName);
       if (dataType.name.equals(BuiltIn.Datatype.VARIANT.mlName())) {
@@ -134,7 +136,7 @@ public class TypeSystem {
   }
 
   /** Looks up a type by name, returning null if not found. */
-  public Type lookupOpt(String name) {
+  public @Nullable Type lookupOpt(String name) {
     // TODO: only use this for names, e.g. 'option',
     // not monikers e.g. 'int option';
     // assert !name.contains(" ") : name;
@@ -417,7 +419,7 @@ public class TypeSystem {
       Collection<Map.Entry<String, Type>> argNameTypes) {
     switch (argNameTypes.size()) {
       case 1:
-        return Iterables.getOnlyElement(argNameTypes).getValue();
+        return only(argNameTypes).getValue();
       default:
         return recordType(argNameTypes);
     }

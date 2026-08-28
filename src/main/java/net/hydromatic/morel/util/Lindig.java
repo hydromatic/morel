@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.function.BinaryOperator;
 import java.util.function.IntFunction;
 import org.apache.calcite.avatica.util.Spaces;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Pretty-printer that lays out a document within a line-width limit.

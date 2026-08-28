@@ -39,7 +39,7 @@ import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeCon;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.Sat;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Checks whether patterns are exhaustive and/or redundant.

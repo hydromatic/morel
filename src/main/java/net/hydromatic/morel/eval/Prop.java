@@ -36,7 +36,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 import net.hydromatic.morel.util.JavaVersion;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Property.
@@ -613,7 +613,7 @@ public enum Prop {
    * Removes the value of this property from a map, returning the previous value
    * or null.
    */
-  public Object remove(Map<Prop, Object> map) {
+  public @Nullable Object remove(Map<Prop, Object> map) {
     return map.remove(this);
   }
 

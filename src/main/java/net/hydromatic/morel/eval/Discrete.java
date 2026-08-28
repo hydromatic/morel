@@ -20,7 +20,7 @@ package net.hydromatic.morel.eval;
 
 import java.math.BigInteger;
 import java.util.Comparator;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Represents a discrete ordered type, supporting enumeration of its values.

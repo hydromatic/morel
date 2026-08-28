@@ -21,7 +21,7 @@ package net.hydromatic.morel.eval;
 import com.google.common.collect.ImmutableMap;
 import java.util.Map;
 import java.util.function.BiConsumer;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /** Helpers for {@link EvalEnv}. */
 public class EvalEnvs {

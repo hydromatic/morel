@@ -18,6 +18,7 @@
  */
 package net.hydromatic.morel.compile;
 
+import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 
 import com.google.common.collect.ImmutableList;
@@ -33,7 +34,7 @@ import net.hydromatic.morel.type.FnType;
 import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Rewrites scans whose expression is an infinite single-constructor range list
@@ -251,6 +252,8 @@ final class RangePushdown {
     if (bestConjunct == null) {
       return null;
     }
+    // 'bestValue' is assigned whenever 'bestConjunct' is.
+    final BigDecimal bestValue2 = requireNonNull(bestValue);
     final Core.@Nullable Literal scanLit = Bounds.scalarLiteral(info.value);
     if (scanLit == null) {
       return null;
@@ -263,10 +266,10 @@ final class RangePushdown {
     if (needUpper) {
       lowerValue = scanValue;
       lowerStrict = info.op == BuiltIn.OP_GT || info.op == BuiltIn.CHAR_OP_GT;
-      upperValue = bestValue;
+      upperValue = bestValue2;
       upperStrict = bestStrict;
     } else {
-      lowerValue = bestValue;
+      lowerValue = bestValue2;
       lowerStrict = bestStrict;
       upperValue = scanValue;
       upperStrict = info.op == BuiltIn.OP_LT || info.op == BuiltIn.CHAR_OP_LT;

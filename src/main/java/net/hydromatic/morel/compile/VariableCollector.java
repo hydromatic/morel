@@ -27,7 +27,7 @@ import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.Pair;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Shuttle that identifies variables that are defined outside the scope of a

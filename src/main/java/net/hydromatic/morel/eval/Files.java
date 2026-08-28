@@ -45,7 +45,7 @@ import net.hydromatic.morel.type.TypedValue;
 import net.hydromatic.morel.util.ImmutablePairList;
 import net.hydromatic.morel.util.PairList;
 import org.apache.calcite.util.Util;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /** Implementations of {@link File}. */
 public class Files {
@@ -207,7 +207,12 @@ public class Files {
 
     @Override
     public File get(int index) {
-      return Iterables.get(entries.values(), index);
+      return entry(index);
+    }
+
+    /** Returns the {@code index}th entry. */
+    private File entry(int index) {
+      return requireNonNull(Iterables.get(entries.values(), index));
     }
 
     @Override
@@ -225,12 +230,12 @@ public class Files {
 
     @Override
     public <V> V fieldValueAs(String fieldName, Class<V> clazz) {
-      return clazz.cast(entries.get(fieldName));
+      return clazz.cast(requireNonNull(entries.get(fieldName), fieldName));
     }
 
     @Override
     public <V> V fieldValueAs(int fieldIndex, Class<V> clazz) {
-      return clazz.cast(Iterables.get(entries.values(), fieldIndex));
+      return clazz.cast(entry(fieldIndex));
     }
   }
 
@@ -254,7 +259,9 @@ public class Files {
       try (BufferedReader r = fileType.open(ioFile)) {
         String firstLine = r.readLine();
         if (firstLine == null) {
-          return null;
+          // The file is empty, and therefore has no records, just as a file
+          // that has only a header line has none.
+          return clazz.cast(ImmutableList.of());
         }
         final Object[] values = new Object[parsers.size()];
         final List<List<Object>> list = new ArrayList<>();
@@ -269,8 +276,8 @@ public class Files {
           list.add(ImmutableList.copyOf(values));
         }
       } catch (IOException e) {
-        // ignore
-        return null;
+        // The file cannot be read; treat it as if it had no records.
+        return clazz.cast(ImmutableList.of());
       }
     }
 

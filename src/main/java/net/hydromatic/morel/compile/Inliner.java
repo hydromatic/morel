@@ -51,7 +51,7 @@ import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.type.TypeVar;
 import net.hydromatic.morel.type.TypeVisitor;
 import net.hydromatic.morel.util.PairList;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /** Shuttle that inlines constant values. */
 public class Inliner extends EnvShuttle {
@@ -59,7 +59,9 @@ public class Inliner extends EnvShuttle {
 
   /** Private constructor. */
   private Inliner(
-      TypeSystem typeSystem, Environment env, Analyzer.Analysis analysis) {
+      TypeSystem typeSystem,
+      Environment env,
+      Analyzer.@Nullable Analysis analysis) {
     super(typeSystem, env);
     this.analysis = analysis;
   }
@@ -241,9 +243,9 @@ public class Inliner extends EnvShuttle {
                   r.set(
                       core.let(
                           core.nonRecValDecl(caseOf.pos, pat, null, e),
-                          r.get()));
+                          requireNonNull(r.get())));
                 });
-            return r.get();
+            return requireNonNull(r.get());
           }
           // Unknown pattern type; try next pattern
         }
@@ -450,7 +452,9 @@ public class Inliner extends EnvShuttle {
         if (list.size() == 1) {
           return core.valueLiteral(id, list.get(0));
         }
-        Type argType = ((DataType) type).typeConstructors(typeSystem).get(name);
+        Type argType =
+            requireNonNull(
+                ((DataType) type).typeConstructors(typeSystem).get(name), name);
         Core.Exp arg = valueToExp(typeSystem, argType, list.get(1));
         return core.apply(Pos.ZERO, type, id, arg);
 

@@ -21,6 +21,7 @@ package net.hydromatic.morel.ast;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.Maps.transformValues;
 import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.type.RecordType.ORDERING;
 import static net.hydromatic.morel.util.Pair.forEach;
 import static net.hydromatic.morel.util.PairList.fromTransformed;
@@ -74,7 +75,7 @@ import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.type.TypedValue;
 import net.hydromatic.morel.util.Pair;
 import net.hydromatic.morel.util.PairList;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /** Builds parse tree nodes. */
 public enum CoreBuilder {
@@ -261,7 +262,10 @@ public enum CoreBuilder {
       TypeSystem typeSystem, BuiltIn.Constructor constructor) {
     Type type = typeSystem.lookup(constructor.datatype);
     DataType dataType = (DataType) typeSystem.unqualified(type);
-    Type x = dataType.typeConstructors(typeSystem).get(constructor.constructor);
+    Type x =
+        requireNonNull(
+            dataType.typeConstructors(typeSystem).get(constructor.constructor),
+            constructor.constructor);
     Core.IdPat idPat = idPat(x, constructor.constructor, 0);
     return new Core.Id(Pos.ZERO, idPat);
   }
@@ -1443,7 +1447,7 @@ public enum CoreBuilder {
         // Field access is not in order, e.g. "(#2 x, #1 x)".
         return null;
       }
-      if (i == 0) {
+      if (arg == null) {
         arg = apply.arg;
       } else if (!arg.equals(apply.arg)) {
         // Arguments are not the same, e.g. "(#1 x, #2 y)".

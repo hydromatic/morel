@@ -19,6 +19,7 @@
 package net.hydromatic.morel.compile;
 
 import static com.google.common.collect.Lists.reverse;
+import static java.util.Objects.requireNonNull;
 import static org.apache.calcite.util.Util.first;
 
 import java.util.ArrayList;
@@ -39,7 +40,7 @@ import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.type.TypedValue;
 import net.hydromatic.morel.util.Pair;
 import net.hydromatic.morel.util.TriConsumer;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Environment for validation/compilation.
@@ -171,9 +172,9 @@ public abstract class Environment {
     visit(
         binding -> {
           if (binding.kind == Binding.Kind.INST
-              && names.add(binding.overloadId.name)) {
+              && names.add(requireNonNull(binding.overloadId).name)) {
             consumer.accept(
-                binding.overloadId.name,
+                requireNonNull(binding.overloadId).name,
                 Binding.Kind.OVER,
                 typeSystem.lookup(BuiltIn.Datatype.OVERLOAD));
           }

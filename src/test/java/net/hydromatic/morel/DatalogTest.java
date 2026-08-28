@@ -18,6 +18,7 @@
  */
 package net.hydromatic.morel;
 
+import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.Ml.ml;
 import static net.hydromatic.morel.parse.Parsers.stringToString;
 import static org.hamcrest.CoreMatchers.containsString;
@@ -380,7 +381,7 @@ public class DatalogTest {
     assertThat(program.hasDeclaration("path"), is(true));
     assertThat(program.hasDeclaration("missing"), is(false));
 
-    Declaration edgeDecl = program.getDeclaration("edge");
+    Declaration edgeDecl = requireNonNull(program.getDeclaration("edge"));
     assertThat(edgeDecl.name, is("edge"));
     assertThat(edgeDecl.arity(), is(2));
 
