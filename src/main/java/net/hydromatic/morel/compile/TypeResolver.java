@@ -812,8 +812,8 @@ public class TypeResolver {
    * or null if {@code fn} is not an identifier or names a built-in overload.
    * Only user overloads can generalize to a qualified type.
    */
-  private static @Nullable String overloadName(TypeEnv env, Ast.Exp fn) {
-    if (fn instanceof Ast.Id && env.hasOverloaded(((Ast.Id) fn).name)) {
+  private static @Nullable String overloadName(TypeEnv e, Ast.Exp fn) {
+    if (fn instanceof Ast.Id && e.hasOverloaded(((Ast.Id) fn).name)) {
       return ((Ast.Id) fn).name;
     }
     return null;
@@ -878,13 +878,13 @@ public class TypeResolver {
    * the function expression with its raw type (which would overwrite the
    * instantiated type registered by {@code deduceApplyFnType}).
    */
-  private AggKind aggKind(TypeEnv env, Ast.Exp fn) {
+  private AggKind aggKind(TypeEnv e, Ast.Exp fn) {
     if (fn instanceof Ast.Id) {
       final Ast.Id id = (Ast.Id) fn;
-      if (env.hasOverloaded(id.name)) {
+      if (e.hasOverloaded(id.name)) {
         return AggKind.POLYMORPHIC;
       }
-      Type type = env.getTypeOpt(id.name);
+      Type type = e.getTypeOpt(id.name);
       if (type == null) {
         // Type not available (user-defined function in current compilation
         // unit).
@@ -897,7 +897,7 @@ public class TypeResolver {
     if (fn instanceof Ast.Apply) {
       final Ast.Apply apply = (Ast.Apply) fn;
       if (apply.fn.op == Op.RECORD_SELECTOR && apply.arg instanceof Ast.Id) {
-        Type argType = env.getTypeOpt(((Ast.Id) apply.arg).name);
+        Type argType = e.getTypeOpt(((Ast.Id) apply.arg).name);
         if (argType instanceof RecordType) {
           String fieldName = ((Ast.RecordSelector) apply.fn).name;
           Type fieldType = ((RecordType) argType).argNameTypes.get(fieldName);
@@ -1093,8 +1093,8 @@ public class TypeResolver {
    * effect as {@code yield y}, except that it introduces {@code x} into the
    * namespace.
    */
-  private Ast.Exp deduceYieldType(TypeEnv env, Ast.Exp node, Variable v) {
-    return deduceExpType(env, node, v);
+  private Ast.Exp deduceYieldType(TypeEnv e, Ast.Exp node, Variable v) {
+    return deduceExpType(e, node, v);
   }
 
   /**
@@ -1154,13 +1154,13 @@ public class TypeResolver {
     }
   }
 
-  private Ast.Exp deduceExpType(TypeEnv env, Ast.Exp node, Variable v) {
+  private Ast.Exp deduceExpType(TypeEnv e, Ast.Exp node, Variable v) {
     final List<Ast.Exp> args2;
     final Variable v2;
     final PairList<Ast.IdPat, Term> termMap;
     switch (node.op) {
       case ATTRIBUTED_EXP:
-        return deduceExpType(env, ((Ast.AttributedExp) node).exp, v);
+        return deduceExpType(e, ((Ast.AttributedExp) node).exp, v);
       case BOOL_LITERAL:
         return reg(node, v, toTerm(PrimitiveType.BOOL));
       case CHAR_LITERAL:
@@ -1183,15 +1183,15 @@ public class TypeResolver {
 
       case ANNOTATED_EXP:
         final Ast.AnnotatedExp annotatedExp = (Ast.AnnotatedExp) node;
-        final Ast.Type type2 = deduceTypeType(env, annotatedExp.type, v);
-        final Ast.Exp exp2 = deduceExpType(env, annotatedExp.exp, v);
-        final Ast.AnnotatedExp annotatedExp2 = annotatedExp.copy(exp2, type2);
+        final Ast.Type type2 = deduceTypeType(e, annotatedExp.type, v);
+        final Ast.Exp exp = deduceExpType(e, annotatedExp.exp, v);
+        final Ast.AnnotatedExp annotatedExp2 = annotatedExp.copy(exp, type2);
         return reg(annotatedExp2, v);
 
       case ANDALSO:
       case ORELSE:
       case IMPLIES:
-        return infix(env, (Ast.InfixCall) node, v, PrimitiveType.BOOL);
+        return infix(e, (Ast.InfixCall) node, v, PrimitiveType.BOOL);
 
       case TUPLE:
         final Ast.Tuple tuple = (Ast.Tuple) node;
@@ -1199,7 +1199,7 @@ public class TypeResolver {
         args2 = new ArrayList<>();
         for (Ast.Exp arg : tuple.args) {
           final Variable vArg = unifier.variable();
-          args2.add(deduceExpType(env, arg, vArg));
+          args2.add(deduceExpType(e, arg, vArg));
           types.add(vArg);
         }
         return reg(tuple.copy(args2), v, tupleTerm(types));
@@ -1209,31 +1209,31 @@ public class TypeResolver {
         final Variable vArg2 = unifier.variable();
         args2 = new ArrayList<>();
         for (Ast.Exp arg : list.args) {
-          args2.add(deduceExpType(env, arg, vArg2));
+          args2.add(deduceExpType(e, arg, vArg2));
         }
         return reg(list.copy(args2), v, listTerm(vArg2));
       case RANGE_LIST:
-        return deduceRangeListType(env, (Ast.RangeList) node, v);
+        return deduceRangeListType(e, (Ast.RangeList) node, v);
       case RECORD:
-        return deduceRecordType(env, (Ast.Record) node, v);
+        return deduceRecordType(e, (Ast.Record) node, v);
 
       case LET:
         final Ast.Let let = (Ast.Let) node;
         termMap = PairList.of();
-        TypeEnv env2 = env;
+        TypeEnv e2 = e;
         final List<Ast.Decl> decls = new ArrayList<>();
         for (Ast.Decl decl : let.decls) {
           // Snapshot the variables that exist before this declaration; any
           // variable the declaration introduces that is not reachable from one
           // of these is local, and can be generalized (let-polymorphism).
           final List<Variable> priorVars = unifier.variables();
-          final Ast.Decl decl2 = deduceDeclType(env2, decl, termMap);
+          final Ast.Decl decl2 = deduceDeclType(e2, decl, termMap);
           decls.add(decl2);
-          env2 = bindDeclGeneralized(env2, termMap, priorVars, decl2);
+          e2 = bindDeclGeneralized(e2, termMap, priorVars, decl2);
           termMap.clear();
         }
-        final Ast.Exp e2 = deduceExpType(env2, let.exp, v);
-        final Ast.Let let2 = let.copy(decls, e2);
+        final Ast.Exp exp2 = deduceExpType(e2, let.exp, v);
+        final Ast.Let let2 = let.copy(decls, exp2);
         return reg(let2, v);
 
       case RECORD_SELECTOR:
@@ -1246,13 +1246,13 @@ public class TypeResolver {
             recordSelector.pos);
 
       case IF:
-        return deduceIfType(env, (Ast.If) node, v);
+        return deduceIfType(e, (Ast.If) node, v);
 
       case RAISE:
-        return deduceRaiseType(env, (Ast.Raise) node, v);
+        return deduceRaiseType(e, (Ast.Raise) node, v);
 
       case CASE:
-        return deduceCaseType(env, (Ast.Case) node, v);
+        return deduceCaseType(e, (Ast.Case) node, v);
 
       case FROM:
       case EXISTS:
@@ -1263,35 +1263,35 @@ public class TypeResolver {
         //  [where filterExp: v5] [yield yieldExp: v4]): v" (v boolean)
         // "(forall exp: v50 as id: v60 [, exp: v51 as id: v61]...
         //   require requireExp: v21): v" (v boolean)
-        return deduceQueryType(env, (Ast.Query) node, v);
+        return deduceQueryType(e, (Ast.Query) node, v);
 
       case ID:
         final Ast.Id id = (Ast.Id) node;
-        final Term term = env.get(typeSystem, id.name, TypeEnv.unbound(id));
+        final Term term = e.get(typeSystem, id.name, TypeEnv.unbound(id));
         return reg(id, v, term);
 
       case OP_SECTION:
         final Ast.OpSection opSection = (Ast.OpSection) node;
         final String opName = "op " + opSection.name;
         final Term opTerm =
-            env.get(typeSystem, opName, TypeEnv.unbound(opSection));
+            e.get(typeSystem, opName, TypeEnv.unbound(opSection));
         preferredOverload(BuiltIn.BY_ML_NAME.get(opName), v);
         return reg(opSection, v, opTerm);
 
       case ORDINAL:
-        return deduceOrdinalType(env, (Ast.Ordinal) node, v);
+        return deduceOrdinalType(e, (Ast.Ordinal) node, v);
 
       case CURRENT:
         final Ast.Current current = (Ast.Current) node;
-        final Term term2 = checkInQuery(env, current);
+        final Term term2 = checkInQuery(e, current);
         return reg(current, v, term2);
 
       case TYPE_STRING:
-        return deduceTypeStringType(env, (Ast.TypeString) node, v);
+        return deduceTypeStringType(e, (Ast.TypeString) node, v);
 
       case ELEMENTS:
         final Ast.Elements elements = (Ast.Elements) node;
-        checkInCompute(env, elements);
+        checkInCompute(e, elements);
         final Triple step4 = last(computeStack.rightList());
         return reg(elements, v, requireNonNull(step4.c));
 
@@ -1300,15 +1300,15 @@ public class TypeResolver {
         final Variable resultVariable = unifier.variable();
         final List<Ast.Match> matchList = new ArrayList<>();
         for (Ast.Match match : fn.matchList) {
-          matchList.add(deduceMatchType(env, match, v, resultVariable));
+          matchList.add(deduceMatchType(e, match, v, resultVariable));
         }
         final Ast.Fn fn2b = fn.copy(matchList);
         return reg(fn2b, v);
 
       case APPLY:
-        return deduceApplyOrPostfixType(env, (Ast.Apply) node, v);
+        return deduceApplyOrPostfixType(e, (Ast.Apply) node, v);
       case POSTFIX_APP:
-        return deducePostfixAppType(env, (Ast.PostfixApp) node, v);
+        return deducePostfixAppType(e, (Ast.PostfixApp) node, v);
 
       case AGGREGATE:
         final AggFrame aggFrame = aggregateTripleStack.peek();
@@ -1340,10 +1340,10 @@ public class TypeResolver {
       case ELEM:
       case NOT_ELEM:
       case CONS:
-        return infix(env, (Ast.InfixCall) node, v);
+        return infix(e, (Ast.InfixCall) node, v);
 
       case NEGATE:
-        return prefix(env, (Ast.PrefixCall) node, v);
+        return prefix(e, (Ast.PrefixCall) node, v);
 
       default:
         throw new AssertionError("cannot deduce type for " + node.op);
@@ -1384,8 +1384,8 @@ public class TypeResolver {
 
   /** Throws if the current expression is not within a query. */
   @CanIgnoreReturnValue
-  private Term checkInQuery(TypeEnv env, Ast.Exp node) {
-    return env.get(
+  private Term checkInQuery(TypeEnv e, Ast.Exp node) {
+    return e.get(
         typeSystem, BuiltIn.Z_CURRENT.mlName, TypeEnv.onlyValidInQuery(node));
   }
 
@@ -1399,9 +1399,9 @@ public class TypeResolver {
    * anything &mdash; which is not known until the types are resolved.
    */
   private Ast.Exp deduceOrdinalType(
-      TypeEnv env, Ast.Ordinal ordinal, Variable v) {
+      TypeEnv e, Ast.Ordinal ordinal, Variable v) {
     final Term c =
-        env.get(
+        e.get(
             typeSystem,
             BuiltIn.Z_ORDINAL.mlName,
             TypeEnv.onlyValidInQuery(ordinal));
@@ -1421,9 +1421,9 @@ public class TypeResolver {
    * resolver to render) but never evaluated.
    */
   private Ast.Exp deduceTypeStringType(
-      TypeEnv env, Ast.TypeString typeString, Variable v) {
+      TypeEnv e, Ast.TypeString typeString, Variable v) {
     final Variable vOperand = unifier.variable();
-    final Ast.Exp operand = deduceExpType(env, typeString.exp, vOperand);
+    final Ast.Exp operand = deduceExpType(e, typeString.exp, vOperand);
     return reg(typeString.copy(operand), v, toTerm(PrimitiveType.STRING));
   }
 
@@ -1431,27 +1431,27 @@ public class TypeResolver {
    * Throws if the current expression is not within a {@code compute} clause.
    */
   @CanIgnoreReturnValue
-  private Term checkInCompute(TypeEnv env, Ast.Exp node) {
-    return env.get(
+  private Term checkInCompute(TypeEnv e, Ast.Exp node) {
+    return e.get(
         typeSystem,
         BuiltIn.Z_ELEMENTS.mlName,
         TypeEnv.onlyValidInCompute(node));
   }
 
-  private Ast.Type deduceTypeType(TypeEnv env, Ast.Type type, Variable v) {
+  private Ast.Type deduceTypeType(TypeEnv e, Ast.Type type, Variable v) {
     final Map<String, Variable> scope =
         tyVarScopes.isEmpty() ? ImmutableMap.of() : tyVarScopes.peek();
-    return new TypeToTermConverter(env, scope).typeTerm(type, v);
+    return new TypeToTermConverter(e, scope).typeTerm(type, v);
   }
 
-  private Ast.Query deduceQueryType(TypeEnv env, Ast.Query query, Variable v) {
+  private Ast.Query deduceQueryType(TypeEnv e, Ast.Query query, Variable v) {
     final PairList<Ast.Id, Variable> fieldVars = PairList.of();
     final List<Ast.FromStep> steps2 = new ArrayList<>();
 
     // An empty "from" is "unit list". Ordered.
     final Variable v11 = toVariable(recordTerm(ImmutableSortedMap.of()));
     final Sequence c11 = listTerm(v11);
-    Triple p = new Triple(env, env, v11, toVariable(c11));
+    Triple p = new Triple(e, e, v11, toVariable(c11));
     for (Ord<Ast.FromStep> step : Ord.zip(query.steps)) {
       // Whether this is the last step. (The synthetic "yield" counts as a last
       // step.)
@@ -1512,7 +1512,7 @@ public class TypeResolver {
       case WHERE:
         final Ast.Where where = (Ast.Where) step;
         final Variable v5 = unifier.variable();
-        final Ast.Exp filter2 = deduceExpType(p.env, where.exp, v5);
+        final Ast.Exp filter2 = deduceExpType(p.e, where.exp, v5);
         equiv(v5, toTerm(PrimitiveType.BOOL));
         steps.add(where.copy(filter2));
         return p;
@@ -1520,7 +1520,7 @@ public class TypeResolver {
       case REQUIRE:
         final Ast.Require require = (Ast.Require) step;
         final Variable v21 = unifier.variable();
-        final Ast.Exp filter3 = deduceExpType(p.env, require.exp, v21);
+        final Ast.Exp filter3 = deduceExpType(p.e, require.exp, v21);
         equiv(v21, toTerm(PrimitiveType.BOOL));
         steps.add(require.copy(filter3));
         return p;
@@ -1537,7 +1537,7 @@ public class TypeResolver {
         // same type as the input. The skip expression must be an int.
         final Ast.Skip skip = (Ast.Skip) step;
         final Variable v11 = unifier.variable();
-        final Ast.Exp skipCount = deduceExpType(p.rootEnv, skip.exp, v11);
+        final Ast.Exp skipCount = deduceExpType(p.root, skip.exp, v11);
         equiv(v11, toTerm(PrimitiveType.INT));
         steps.add(skip.copy(skipCount));
         return p;
@@ -1548,7 +1548,7 @@ public class TypeResolver {
         // same type as the input. The take expression must be an int.
         final Ast.Take take = (Ast.Take) step;
         final Variable v12 = unifier.variable();
-        final Ast.Exp takeCount = deduceExpType(p.rootEnv, take.exp, v12);
+        final Ast.Exp takeCount = deduceExpType(p.root, take.exp, v12);
         equiv(v12, toTerm(PrimitiveType.INT));
         steps.add(take.copy(takeCount));
         return p;
@@ -1563,12 +1563,12 @@ public class TypeResolver {
         for (Ast.Exp arg : setStep.args) {
           final Variable v15 = unifier.variable();
           terms.add(v15);
-          args2.add(deduceExpType(p.rootEnv, arg, v15));
+          args2.add(deduceExpType(p.root, arg, v15));
         }
         final Variable c4 = unifier.variable();
         meetCollections(terms, c4, p.v);
         steps.add(setStep.copy(setStep.distinct, args2));
-        return Triple.of(p.rootEnv, p.env, p.v, c4);
+        return Triple.of(p.root, p.e, p.v, c4);
 
       case YIELD:
         return deduceYieldStepType((Ast.Yield) step, p, fieldVars, steps);
@@ -1579,15 +1579,14 @@ public class TypeResolver {
       case ORDER:
         final Ast.Order order = (Ast.Order) step;
         final Ast.Order order2 = validateOrder(order);
-        final Ast.Exp exp =
-            deduceExpType(p.env, order2.exp, unifier.variable());
+        final Ast.Exp exp = deduceExpType(p.e, order2.exp, unifier.variable());
         steps.add(order2.copy(exp));
-        return Triple.of(p.rootEnv, p.env, p.v, toVariable(listTerm(p.v)));
+        return Triple.of(p.root, p.e, p.v, toVariable(listTerm(p.v)));
 
       case UNORDER:
         final Ast.Unorder unorder = (Ast.Unorder) step;
         steps.add(unorder);
-        return Triple.of(p.rootEnv, p.env, p.v, toVariable(bagTerm(p.v)));
+        return Triple.of(p.root, p.e, p.v, toVariable(bagTerm(p.v)));
 
       case GROUP:
       case COMPUTE:
@@ -1614,13 +1613,12 @@ public class TypeResolver {
 
         final List<PatTerm> termMap = new ArrayList<>();
         pat =
-            deducePatType(
-                p.rootEnv, through.pat, termMap::add, null, v18, t -> t);
+            deducePatType(p.root, through.pat, termMap::add, null, v18, t -> t);
         final Variable v17 = toVariable(fnTerm(p.c, c18));
         // "f" is applied to the whole collection - 'through p in f' is
         // 'from p in f (from ...)' - so it is evaluated before the query's
         // first row, and cannot see the query's own rows.
-        final Ast.Exp throughExp = deduceExpType(p.rootEnv, through.exp, v17);
+        final Ast.Exp throughExp = deduceExpType(p.root, through.exp, v17);
         isCollectionOf(c18, v18);
         // Register the rewritten node (the one added to 'steps', which the
         // resolver later looks up), not only the original: type resolution may
@@ -1629,13 +1627,13 @@ public class TypeResolver {
         final Ast.Through through2 = through.copy(pat, throughExp);
         reg(through2, c18);
         steps.add(through2);
-        TypeEnv env5 = p.rootEnv;
+        TypeEnv e5 = p.root;
         fieldVars.clear();
         for (PatTerm e : termMap) {
-          env5 = env5.bind(e.id.name, e.term);
+          e5 = e5.bind(e.id.name, e.term);
           fieldVars.add(ast.id(Pos.ZERO, e.id.name), (Variable) e.term);
         }
-        return Triple.of(p.rootEnv, env5, v18, c18);
+        return Triple.of(p.root, e5, v18, c18);
 
       default:
         throw new AssertionError("unknown step type " + step.op);
@@ -1653,14 +1651,13 @@ public class TypeResolver {
     requireNonNull(p.c);
     final Variable rv = unifier.variable();
     final Ast.Exp intoExp;
-    switch (aggKind(p.rootEnv, into.exp)) {
+    switch (aggKind(p.root, into.exp)) {
       case COLLECTION:
       case USER_UNKNOWN:
         // A collection parameter, or a user-defined function whose type is not
         // yet available. Link directly to p.c to preserve record type
         // propagation.
-        intoExp =
-            deduceExpType(p.rootEnv, into.exp, toVariable(fnTerm(p.c, rv)));
+        intoExp = deduceExpType(p.root, into.exp, toVariable(fnTerm(p.c, rv)));
         break;
       case BAG:
         {
@@ -1670,7 +1667,7 @@ public class TypeResolver {
           equiv(intoCArg0, bagTerm(p.v));
           intoExp =
               deduceExpType(
-                  p.rootEnv, into.exp, toVariable(fnTerm(intoCArg0, rv)));
+                  p.root, into.exp, toVariable(fnTerm(intoCArg0, rv)));
           break;
         }
       case LIST:
@@ -1680,7 +1677,7 @@ public class TypeResolver {
           equiv(intoCArg1, listTerm(p.v));
           intoExp =
               deduceExpType(
-                  p.rootEnv, into.exp, toVariable(fnTerm(intoCArg1, rv)));
+                  p.root, into.exp, toVariable(fnTerm(intoCArg1, rv)));
           break;
         }
       default:
@@ -1690,15 +1687,14 @@ public class TypeResolver {
           final Variable intoCArg = unifier.variable();
           sameOrderedness(intoCArg, p.v, p.c, p.v);
           final Variable intoVFn = unifier.variable();
-          intoExp =
-              deduceApplyFnType(p.rootEnv, into.exp, intoVFn, intoCArg, rv);
+          intoExp = deduceApplyFnType(p.root, into.exp, intoVFn, intoCArg, rv);
           reg(into.exp, intoVFn);
           equiv(intoVFn, fnTerm(intoCArg, rv));
           break;
         }
     }
     steps.add(into.copy(intoExp));
-    return Triple.singleton(p.rootEnv, p.env, rv);
+    return Triple.singleton(p.root, p.e, rv);
   }
 
   private Triple deduceScanStepType(
@@ -1715,15 +1711,15 @@ public class TypeResolver {
     requireNonNull(p.c);
     // The source of a 'right join' or 'full join' may have rows that match no
     // input row, so it must not depend on the query's input. We resolve it in
-    // the outer environment ('rootEnv'), so that a reference to an input
+    // the outer environment ('root'), so that a reference to an input
     // variable fails to resolve, and we check explicitly for 'current' and
     // 'ordinal' (which resolve via the step stack, not the environment).
     final TypeEnv scanEnv;
     if (scan.op.optionalizesLeft() && scan.exp != null) {
       checkJoinSourceIndependent(scan.exp, fieldVars);
-      scanEnv = p.rootEnv;
+      scanEnv = p.root;
     } else {
-      scanEnv = p.env;
+      scanEnv = p.e;
     }
     if (scan.exp == null) {
       scanExp3 = null;
@@ -1748,8 +1744,8 @@ public class TypeResolver {
     // Fields bound by earlier steps; if this is a 'right join' or 'full join'
     // they become optional downstream.
     final int priorCount = fieldVars.size();
-    pat = deducePatType(p.env, scan.pat, termMap::add, null, v0, t -> t);
-    final TypeEnvHolder typeEnvs = new TypeEnvHolder(p.env);
+    pat = deducePatType(p.e, scan.pat, termMap::add, null, v0, t -> t);
+    final TypeEnvHolder typeEnvs = new TypeEnvHolder(p.e);
     for (PatTerm patTerm : termMap) {
       typeEnvs.bind(patTerm.id.name, patTerm.term);
       Ast.Id id1 = ast.id(Pos.ZERO, patTerm.id.name);
@@ -1758,7 +1754,7 @@ public class TypeResolver {
     }
     // The 'on' clause sees the non-optional ('unwrapped') types, so resolve it
     // before wrapping any fields in 'option' below.
-    final TypeEnv env4 = typeEnvs.typeEnv;
+    final TypeEnv e4 = typeEnvs.typeEnv;
     // The collection of candidate pairs. It is created here, before the
     // constraints that give it a type, because the 'on' condition is evaluated
     // once per candidate pair: an 'ordinal' in it counts pairs, so this is the
@@ -1772,7 +1768,7 @@ public class TypeResolver {
       final Variable v5 = unifier.variable();
       scanCondition2 =
           deduceExpType(
-              env4.bind(BuiltIn.Z_ORDINAL.mlName, c), scan.condition, v5);
+              e4.bind(BuiltIn.Z_ORDINAL.mlName, c), scan.condition, v5);
       equiv(v5, toTerm(PrimitiveType.BOOL));
     } else {
       scanCondition2 = null;
@@ -1784,7 +1780,7 @@ public class TypeResolver {
     // steps. Wrapping is additive, so nested outer joins stack 'option' layers
     // (e.g. 'option option'). Only the downstream environment ('outEnv') and
     // element type ('v') are affected, not the 'on' clause resolved above.
-    TypeEnv outEnv = env4;
+    TypeEnv outEnv = e4;
     if (scan.op.optionalizesLeft() || scan.op.optionalizesRight()) {
       for (int i = 0; i < fieldVars.size(); i++) {
         final boolean wrap =
@@ -1856,7 +1852,7 @@ public class TypeResolver {
     }
 
     steps.add(scan.copy(pat, scanExp3, scanCondition2));
-    return Triple.of(p.rootEnv, outEnv, v, c);
+    return Triple.of(p.root, outEnv, v, c);
   }
 
   /**
@@ -2017,9 +2013,9 @@ public class TypeResolver {
       PairList<Ast.Id, Variable> fieldVars,
       List<Ast.FromStep> steps2) {
     final Variable v6 = unifier.variable();
-    final Ast.Exp yieldExp2 = deduceYieldType(p.env, yield.exp, v6);
+    final Ast.Exp yieldExp2 = deduceYieldType(p.e, yield.exp, v6);
     steps2.add(yield.copy(yieldExp2));
-    final TypeEnvHolder envs = new TypeEnvHolder(p.rootEnv);
+    final TypeEnvHolder envs = new TypeEnvHolder(p.root);
 
     // Output is ordered iff input is ordered. Yield behaves just like a
     // 'map' function with these overloaded forms:
@@ -2052,7 +2048,7 @@ public class TypeResolver {
       fieldVars.clear();
       fieldVars.add(label, v6);
     }
-    return Triple.of(p.rootEnv, envs.typeEnv, v6, c6);
+    return Triple.of(p.root, envs.typeEnv, v6, c6);
   }
 
   /**
@@ -2112,7 +2108,7 @@ public class TypeResolver {
       List<Ast.FromStep> steps) {
     final Variable elem = unifier.variable();
     final Variable c0 = unifier.variable();
-    final Ast.Exp exp = deduceExpType(p.env, yieldAll.exp, c0);
+    final Ast.Exp exp = deduceExpType(p.e, yieldAll.exp, c0);
     reg(yieldAll.exp, c0);
     // "e" must evaluate to a list or a bag (of element type "elem").
     isCollectionOf(c0, elem);
@@ -2127,12 +2123,12 @@ public class TypeResolver {
         c,
         elem);
     steps.add(yieldAll.copy(exp));
-    final TypeEnvHolder envs = new TypeEnvHolder(p.rootEnv);
+    final TypeEnvHolder envs = new TypeEnvHolder(p.root);
     final Ast.Id label = getLabel(yieldAll.binder, null);
     envs.bind(label.name, elem);
     fieldVars.clear();
     fieldVars.add(label, elem);
-    return Triple.of(p.rootEnv, envs.typeEnv, elem, c);
+    return Triple.of(p.root, envs.typeEnv, elem, c);
   }
 
   private Triple deduceGroupStepType(
@@ -2149,7 +2145,7 @@ public class TypeResolver {
     key.args.forEach(
         (id, exp) -> {
           final Variable v7 = unifier.variable();
-          final Ast.Exp exp2 = deduceExpType(p.env, exp, v7);
+          final Ast.Exp exp2 = deduceExpType(p.e, exp, v7);
           reg(id, v7);
           bindings.add(id.name, v7);
           fieldVars.add(id, v7);
@@ -2191,10 +2187,10 @@ public class TypeResolver {
       // Output is ordered iff input is ordered.
       final Variable c2 = unifier.variable();
       sameOrderedness(c2, v2, requireNonNull(p.c), p.v);
-      return Triple.of(p.rootEnv, p.rootEnv.bindAll(bindings), v2, c2);
+      return Triple.of(p.root, p.root.bindAll(bindings), v2, c2);
     } else {
       steps.add(((Ast.Compute) group).copy(compute2));
-      return Triple.singleton(p.rootEnv, p.rootEnv.bindAll(bindings), v2);
+      return Triple.singleton(p.root, p.root.bindAll(bindings), v2);
     }
   }
 
@@ -2210,9 +2206,7 @@ public class TypeResolver {
     // referenced, and crash, in a following step such as 'yield').
     final Term elementsTerm = requireNonNull(p.c);
     final TypeEnv groupEnv =
-        p.rootEnv
-            .bindAll(bindings)
-            .bind(BuiltIn.Z_ELEMENTS.mlName, elementsTerm);
+        p.root.bindAll(bindings).bind(BuiltIn.Z_ELEMENTS.mlName, elementsTerm);
     compute.args.forEach(
         (id, exp) -> {
           final Variable v8 = unifier.variable();
@@ -2221,7 +2215,7 @@ public class TypeResolver {
           final AggFrame aggFrame =
               new AggFrame(
                   p.withEnv(
-                      p.env
+                      p.e
                           .bindAll(bindings)
                           .bind(BuiltIn.Z_ELEMENTS.mlName, elementsTerm)));
           try {
@@ -2244,7 +2238,7 @@ public class TypeResolver {
    * {@code CLOSED (lo, hi)}, etc.), then type-resolves the desugared form.
    */
   private Ast.Exp deduceRangeListType(
-      TypeEnv env, Ast.RangeList rangeList, Variable v) {
+      TypeEnv e, Ast.RangeList rangeList, Variable v) {
     final Pos pos = rangeList.pos;
     final List<Ast.Exp> rangeExps = new ArrayList<>(rangeList.items.size());
     for (Ast.RangeListItem item : rangeList.items) {
@@ -2253,7 +2247,7 @@ public class TypeResolver {
     final Ast.Exp flattenFn =
         ast.apply(ast.recordSelector(pos, "flatten"), ast.id(pos, "Range"));
     final Ast.Exp call = ast.apply(flattenFn, ast.list(pos, rangeExps));
-    return deduceExpType(env, call, v);
+    return deduceExpType(e, call, v);
   }
 
   /**
@@ -2296,25 +2290,23 @@ public class TypeResolver {
   }
 
   /** Deduces a record constructor expression's type. */
-  private Ast.Exp deduceRecordType(
-      TypeEnv env, Ast.Record record0, Variable v) {
+  private Ast.Exp deduceRecordType(TypeEnv e, Ast.Record record0, Variable v) {
     final Ast.Record record = record0.validate();
 
     if (record.base == null) {
       final NavigableMap<String, Term> labelTypes = new TreeMap<>();
       final PairList<Ast.Id, Ast.Exp> map = PairList.of();
-      deduceFieldTypes(env, record.sortedArgs(), labelTypes::put, map::add);
+      deduceFieldTypes(e, record.sortedArgs(), labelTypes::put, map::add);
       return reg(record.copy(null, map), v, recordTerm(labelTypes));
     }
 
     // A record with modifiers becomes nested 'let's, but only once we know
     // which fields there are to destructure.
-    final Map<Ast.Exp, List<String>> fieldNames =
-        modifierFieldNames(env, record);
+    final Map<Ast.Exp, List<String>> fieldNames = modifierFieldNames(e, record);
     if (fieldNames == null) {
-      return deduceUnresolvedRecordType(env, record, v);
+      return deduceUnresolvedRecordType(e, record, v);
     }
-    return deduceExpType(env, desugarModifiers(record, fieldNames), v);
+    return deduceExpType(e, desugarModifiers(record, fieldNames), v);
   }
 
   /**
@@ -2330,29 +2322,29 @@ public class TypeResolver {
    * flex record.
    */
   private Ast.Exp deduceUnresolvedRecordType(
-      TypeEnv env, Ast.Record record, Variable v) {
+      TypeEnv e, Ast.Record record, Variable v) {
     final Ast.Exp base2 =
-        deduceExpType(env, requireNonNull(record.base), unifier.variable());
+        deduceExpType(e, requireNonNull(record.base), unifier.variable());
     final List<Ast.Modifier> modifiers =
         transformEager(
-            record.modifiers, modifier -> deduceModifierTypes(env, modifier));
+            record.modifiers, modifier -> deduceModifierTypes(e, modifier));
     return reg(record.copy(base2, ImmutableList.of(), modifiers), v);
   }
 
   /** Deduces the types of the expressions of a modifier. */
-  private Ast.Modifier deduceModifierTypes(TypeEnv env, Ast.Modifier modifier) {
+  private Ast.Modifier deduceModifierTypes(TypeEnv e, Ast.Modifier modifier) {
     switch (modifier.op) {
       case ASSIGN_MODIFIER:
         final Ast.AssignModifier assign = (Ast.AssignModifier) modifier;
         final PairList<Ast.Id, Ast.Exp> args = PairList.of();
         assign.args.forEach(
             (id, exp) ->
-                args.add(id, deduceExpType(env, exp, unifier.variable())));
+                args.add(id, deduceExpType(e, exp, unifier.variable())));
         return assign.copy(args);
 
       case ALL_MODIFIER:
         final Ast.AllModifier all = (Ast.AllModifier) modifier;
-        return all.copy(deduceExpType(env, all.exp, unifier.variable()));
+        return all.copy(deduceExpType(e, all.exp, unifier.variable()));
 
       default:
         // The arguments of 'rename' and 'remove' are labels, not expressions.
@@ -2371,7 +2363,7 @@ public class TypeResolver {
    * is deduced again.
    */
   private @Nullable Map<Ast.Exp, List<String>> modifierFieldNames(
-      TypeEnv env, Ast.Record record) {
+      TypeEnv e, Ast.Record record) {
     final List<Ast.Exp> exps = new ArrayList<>();
     exps.add(requireNonNull(record.base));
     record.modifiers.forEach(
@@ -2389,7 +2381,7 @@ public class TypeResolver {
         map.put(exp, names);
       } else {
         final Variable v = unifier.variable();
-        deduceExpType(env, exp, v);
+        deduceExpType(e, exp, v);
         unknown.add(exp, v);
       }
     }
@@ -2733,14 +2725,14 @@ public class TypeResolver {
   }
 
   private void deduceFieldTypes(
-      TypeEnv env,
+      TypeEnv e,
       SortedMap<Ast.Id, Ast.Exp> args,
       BiConsumer<String, Term> labelTypes,
       BiConsumer<Ast.Id, Ast.Exp> map) {
     args.forEach(
         (id, exp) -> {
           final Variable vArg = unifier.variable();
-          final Ast.Exp e2 = deduceExpType(env, exp, vArg);
+          final Ast.Exp e2 = deduceExpType(e, exp, vArg);
           labelTypes.accept(id.name, vArg);
           map.accept(id, e2);
         });
@@ -2856,7 +2848,7 @@ public class TypeResolver {
    * <p>Otherwise, the call is forwarded to {@link #deduceApplyType}.
    */
   private Ast.Exp deduceApplyOrPostfixType(
-      TypeEnv env, Ast.Apply apply, Variable v) {
+      TypeEnv e, Ast.Apply apply, Variable v) {
     // Pattern: Apply(Apply(RecordSelector(name), Id(receiver)), arg)
     if (apply.fn instanceof Ast.Apply) {
       final Ast.Apply fnApply = (Ast.Apply) apply.fn;
@@ -2864,22 +2856,22 @@ public class TypeResolver {
           && fnApply.arg instanceof Ast.Id) {
         final String name = ((Ast.RecordSelector) fnApply.fn).name;
         final Ast.Id receiverId = (Ast.Id) fnApply.arg;
-        final Type receiverType = env.getTypeOpt(receiverId.name);
+        final Type receiverType = e.getTypeOpt(receiverId.name);
         // Intercept only when the receiver is a known non-record type and
         // 'name' is a method.
         if (receiverType != null
             && !(receiverType instanceof RecordType)
             && (!BuiltIn.BY_METHOD_NAME.get(name).isEmpty()
-                || methodNames.contains(name) && env.has(name))) {
+                || methodNames.contains(name) && e.has(name))) {
           return deducePostfixAppType(
-              env, ast.postfixApp(apply.pos, receiverId, name, apply.arg), v);
+              e, ast.postfixApp(apply.pos, receiverId, name, apply.arg), v);
         }
       }
     }
-    return deduceApplyType(env, apply, v);
+    return deduceApplyType(e, apply, v);
   }
 
-  private Ast.Apply deduceApplyType(TypeEnv env, Ast.Apply apply, Variable v) {
+  private Ast.Apply deduceApplyType(TypeEnv e, Ast.Apply apply, Variable v) {
     final Variable vFn = unifier.variable();
     final Variable vArg = unifier.variable();
     Term term1 = fnTerm(vArg, v);
@@ -2892,11 +2884,10 @@ public class TypeResolver {
       // When we resolve "vRec" we can then deduce "vField".
       final Variable vRec = unifier.variable();
       final Variable vField = unifier.variable();
-      deduceRecordSelectorType(
-          env, (Ast.RecordSelector) apply.arg, vRec, vField);
+      deduceRecordSelectorType((Ast.RecordSelector) apply.arg, vRec, vField);
       arg2 = reg(apply.arg, vArg, fnTerm(vRec, vField));
     } else {
-      arg2 = deduceExpType(env, apply.arg, vArg);
+      arg2 = deduceExpType(e, apply.arg, vArg);
     }
 
     final Ast.Exp fn2;
@@ -2905,10 +2896,9 @@ public class TypeResolver {
       // "#field" has type "vArg -> v";
       // "arg" has type "vArg".
       // When we resolve "vArg" we can then deduce "v".
-      fn2 =
-          deduceRecordSelectorType(env, (Ast.RecordSelector) apply.fn, vArg, v);
+      fn2 = deduceRecordSelectorType((Ast.RecordSelector) apply.fn, vArg, v);
     } else {
-      fn2 = deduceApplyFnType(env, apply.fn, vFn, vArg, v);
+      fn2 = deduceApplyFnType(e, apply.fn, vFn, vArg, v);
     }
 
     if (fn2 instanceof Ast.Id) {
@@ -2933,7 +2923,7 @@ public class TypeResolver {
    * </ul>
    */
   private Ast.Exp deducePostfixAppType(
-      TypeEnv env, Ast.PostfixApp postfixApp, Variable v) {
+      TypeEnv e, Ast.PostfixApp postfixApp, Variable v) {
     final String name = postfixApp.methodName;
     final Pos pos = postfixApp.pos;
 
@@ -2943,27 +2933,26 @@ public class TypeResolver {
     // {@code String.size "hello"} and {@code Sys.set ("x", 1)}.
     if (postfixApp.receiver instanceof Ast.Id) {
       final Type receiverType =
-          env.getTypeOpt(((Ast.Id) postfixApp.receiver).name);
+          e.getTypeOpt(((Ast.Id) postfixApp.receiver).name);
       if (receiverType instanceof RecordType
           && ((RecordType) receiverType).argNameTypes.containsKey(name)) {
-        return deduceFieldProjectionApp(env, postfixApp, v);
+        return deduceFieldProjectionApp(e, postfixApp, v);
       }
     }
 
     // Collect built-in candidates.
     final ImmutableCollection<BuiltIn> builtInCandidates =
         BuiltIn.BY_METHOD_NAME.get(name);
-    final boolean hasUserFn = methodNames.contains(name) && env.has(name);
+    final boolean hasUserFn = methodNames.contains(name) && e.has(name);
 
     if (builtInCandidates.isEmpty() && !hasUserFn) {
       // No postfix-eligible function found; fall back to field projection.
-      return deduceFieldProjectionApp(env, postfixApp, v);
+      return deduceFieldProjectionApp(e, postfixApp, v);
     }
 
     // Elaborate the receiver.
     final Variable vReceiver = unifier.variable();
-    final Ast.Exp receiver2 =
-        deduceExpType(env, postfixApp.receiver, vReceiver);
+    final Ast.Exp receiver2 = deduceExpType(e, postfixApp.receiver, vReceiver);
 
     // Pick a candidate and determine the calling form.
     final Ast.Exp fnExp;
@@ -2971,7 +2960,7 @@ public class TypeResolver {
     if (!builtInCandidates.isEmpty()) {
       final BuiltIn builtIn =
           pickBuiltInCandidate(
-              env,
+              e,
               postfixApp.receiver,
               vReceiver,
               postfixApp.arg,
@@ -2986,7 +2975,7 @@ public class TypeResolver {
     // Desugar the postfix call to a regular application.
     if (postfixApp.arg.op == Op.UNIT_LITERAL) {
       // x.f () → f x  (curried, no extra argument)
-      return deduceExpType(env, ast.apply(fnExp, receiver2), v);
+      return deduceExpType(e, ast.apply(fnExp, receiver2), v);
     } else if (isTuple) {
       // x.f y → f (x, y)  or  x.f (a, b) → f (x, a, b)
       final List<Ast.Exp> elems = new ArrayList<>();
@@ -2997,11 +2986,11 @@ public class TypeResolver {
         elems.add(postfixApp.arg);
       }
       final Ast.Tuple spliced = ast.tuple(pos, elems);
-      return deduceExpType(env, ast.apply(fnExp, spliced), v);
+      return deduceExpType(e, ast.apply(fnExp, spliced), v);
     } else {
       // x.f y → f x y  (curried with one extra argument)
       return deduceExpType(
-          env, ast.apply(ast.apply(fnExp, receiver2), postfixApp.arg), v);
+          e, ast.apply(ast.apply(fnExp, receiver2), postfixApp.arg), v);
     }
   }
 
@@ -3011,11 +3000,11 @@ public class TypeResolver {
    * x) ()}.
    */
   private Ast.Exp deduceFieldProjectionApp(
-      TypeEnv env, Ast.PostfixApp postfixApp, Variable v) {
+      TypeEnv e, Ast.PostfixApp postfixApp, Variable v) {
     final Pos pos = postfixApp.pos;
     final Ast.Exp selector = ast.recordSelector(pos, postfixApp.methodName);
     final Ast.Exp projected = ast.apply(selector, postfixApp.receiver);
-    return deduceExpType(env, ast.apply(projected, postfixApp.arg), v);
+    return deduceExpType(e, ast.apply(projected, postfixApp.arg), v);
   }
 
   /**
@@ -3080,7 +3069,7 @@ public class TypeResolver {
    * if the type is wrong).
    */
   private BuiltIn pickBuiltInCandidate(
-      TypeEnv env,
+      TypeEnv e,
       Ast.Exp receiver,
       Variable vReceiver,
       Ast.Exp arg,
@@ -3093,10 +3082,10 @@ public class TypeResolver {
       op = solvedTermOperatorOf(vReceiver);
     }
     if (op == null) {
-      op = receiverTypeHint(env, receiver);
+      op = receiverTypeHint(e, receiver);
     }
     if (op == null) {
-      op = argTypeHint(env, arg, candidates);
+      op = argTypeHint(e, arg, candidates);
     }
     if (op != null) {
       for (BuiltIn b : candidates) {
@@ -3122,8 +3111,8 @@ public class TypeResolver {
    * disambiguation.
    */
   private @Nullable String argTypeHint(
-      TypeEnv env, Ast.Exp arg, ImmutableCollection<BuiltIn> candidates) {
-    final Type argType = getType(env, arg);
+      TypeEnv e, Ast.Exp arg, ImmutableCollection<BuiltIn> candidates) {
+    final Type argType = getType(e, arg);
     if (argType == null) {
       return null;
     }
@@ -3146,19 +3135,19 @@ public class TypeResolver {
    * nodes (e.g. {@code bag [1,2]}) where the type variable is only indirectly
    * constrained.
    */
-  private @Nullable String receiverTypeHint(TypeEnv env, Ast.Exp receiver) {
+  private @Nullable String receiverTypeHint(TypeEnv e, Ast.Exp receiver) {
     switch (receiver.op) {
       case LIST:
         return LIST_TY_CON;
       case ID:
         {
-          final Type type = env.getTypeOpt(((Ast.Id) receiver).name);
+          final Type type = e.getTypeOpt(((Ast.Id) receiver).name);
           return type != null ? headTypeTermOp(type) : null;
         }
       case APPLY:
-        return applyReceiverTypeHint(env, (Ast.Apply) receiver);
+        return applyReceiverTypeHint(e, (Ast.Apply) receiver);
       case POSTFIX_APP:
-        return postfixReceiverTypeHint(env, (Ast.PostfixApp) receiver);
+        return postfixReceiverTypeHint(e, (Ast.PostfixApp) receiver);
       default:
         return null;
     }
@@ -3175,14 +3164,14 @@ public class TypeResolver {
    * Vector.drop).
    */
   private @Nullable String postfixReceiverTypeHint(
-      TypeEnv env, Ast.PostfixApp postfixApp) {
+      TypeEnv e, Ast.PostfixApp postfixApp) {
     final String name = postfixApp.methodName;
     final ImmutableCollection<BuiltIn> candidates =
         BuiltIn.BY_METHOD_NAME.get(name);
     if (candidates.isEmpty()) {
       return null;
     }
-    final String innerHint = receiverTypeHint(env, postfixApp.receiver);
+    final String innerHint = receiverTypeHint(e, postfixApp.receiver);
     if (innerHint == null && candidates.size() > 1) {
       return null;
     }
@@ -3210,7 +3199,7 @@ public class TypeResolver {
    * <p>Handles three shapes:
    *
    * <ol>
-   *   <li>{@code Id(f) arg} — result type of function {@code f} in env.
+   *   <li>{@code Id(f) arg} — result type of function {@code f} in e.
    *   <li>{@code RecordSelector(field) Id(r)} — type of field {@code field} in
    *       the record type of {@code r}.
    *   <li>{@code Apply(RecordSelector(name), Id(r)) arg} — result type of
@@ -3222,16 +3211,16 @@ public class TypeResolver {
    *       BuiltIn#BY_STRUCTURE}).
    * </ol>
    */
-  private @Nullable String applyReceiverTypeHint(TypeEnv env, Ast.Apply apply) {
+  private @Nullable String applyReceiverTypeHint(TypeEnv e, Ast.Apply apply) {
     if (apply.fn instanceof Ast.Id) {
       // e.g. bag [1, 2] → result type of bag()
-      final Type fnType = env.getTypeOpt(((Ast.Id) apply.fn).name);
+      final Type fnType = e.getTypeOpt(((Ast.Id) apply.fn).name);
       return fnType != null ? fnResultTypeTermOp(fnType) : null;
     }
     if (apply.fn instanceof Ast.RecordSelector && apply.arg instanceof Ast.Id) {
       // e.g. Apply(#i, r) where r : {i:int, ...} → "int"
       final String fieldName = ((Ast.RecordSelector) apply.fn).name;
-      final Type argType = env.getTypeOpt(((Ast.Id) apply.arg).name);
+      final Type argType = e.getTypeOpt(((Ast.Id) apply.arg).name);
       if (argType instanceof RecordType) {
         final Type fieldType =
             ((RecordType) argType).argNameTypes.get(fieldName);
@@ -3252,7 +3241,7 @@ public class TypeResolver {
         final ImmutableCollection<BuiltIn> candidates =
             BuiltIn.BY_METHOD_NAME.get(name);
         if (!candidates.isEmpty()) {
-          final String innerHint = receiverTypeHint(env, innerApply.arg);
+          final String innerHint = receiverTypeHint(e, innerApply.arg);
           if (innerHint == null && candidates.size() > 1) {
             return null;
           }
@@ -3524,7 +3513,7 @@ public class TypeResolver {
    * Deduces the datatype of a function being applied to an argument. If the
    * function is overloaded, the argument will help us resolve the overloading.
    *
-   * @param env Compile-time environment
+   * @param e Compile-time environment
    * @param fn Function expression (often an identifier)
    * @param vFn Variable for the function type
    * @param vArg Variable for the argument type
@@ -3532,8 +3521,8 @@ public class TypeResolver {
    * @return the function expression with its type deduced
    */
   private Ast.Exp deduceApplyFnType(
-      TypeEnv env, Ast.Exp fn, Variable vFn, Variable vArg, Variable vResult) {
-    @Nullable Type type = getType(env, fn);
+      TypeEnv e, Ast.Exp fn, Variable vFn, Variable vArg, Variable vResult) {
+    @Nullable Type type = getType(e, fn);
     if (type instanceof MultiType) {
       final MultiType multiType = (MultiType) type;
       final PairList<Term, Term> argResults = PairList.of();
@@ -3554,16 +3543,16 @@ public class TypeResolver {
       // declaration) can still yield a qualified type, so pass its name. A
       // built-in overloaded operator (e.g. '+') is not 'hasOverloaded', so its
       // name stays null and it continues to resolve or default as before.
-      constrain(overloadName(env, fn), vArg, vResult, argResults);
+      constrain(overloadName(e, fn), vArg, vResult, argResults);
       return reg(fn, vFn);
     }
 
     if (!(fn instanceof Ast.Id)) {
-      return deduceExpType(env, fn, vFn);
+      return deduceExpType(e, fn, vFn);
     }
     final Ast.Id id = (Ast.Id) fn;
-    if (!env.hasOverloaded(id.name)) {
-      return deduceExpType(env, fn, vFn);
+    if (!e.hasOverloaded(id.name)) {
+      return deduceExpType(e, fn, vFn);
     }
     // "apply" is "f arg" and has type "v";
     // "f" is an overloaded name, and has type "vArg -> v";
@@ -3571,7 +3560,7 @@ public class TypeResolver {
     // To resolve overloading, we gather all known overloads, and apply
     // them as constraints to "vArg".
     final List<Variable> variables = new ArrayList<>();
-    env.collectInstances(
+    e.collectInstances(
         typeSystem,
         id.name,
         term -> {
@@ -3604,7 +3593,7 @@ public class TypeResolver {
    * If the function is overloaded, the argument will help us resolve the
    * overloading.
    *
-   * @param env Compile-time environment
+   * @param e Compile-time environment
    * @param fn Function expression (often an identifier)
    * @param vFn Variable for the function type
    * @param vArg Variable for the argument type
@@ -3612,13 +3601,13 @@ public class TypeResolver {
    * @return the function expression with its type deduced
    */
   private Ast.Exp deduceAggFnType(
-      TypeEnv env,
+      TypeEnv e,
       Ast.Exp fn,
       Variable vFn,
       Variable vArg,
       Variable vResult,
       AtomicBoolean overloaded) {
-    @Nullable Type type = getType(env, fn);
+    @Nullable Type type = getType(e, fn);
     if (type instanceof MultiType) {
       final MultiType multiType = (MultiType) type;
       final PairList<Term, Term> argResults = PairList.of();
@@ -3634,14 +3623,14 @@ public class TypeResolver {
         argResults.add(
             toTerm(fnType.paramType, subst), toTerm(fnType.resultType, subst));
       }
-      constrain(overloadName(env, fn), vArg, vResult, argResults);
+      constrain(overloadName(e, fn), vArg, vResult, argResults);
       overloaded.set(true);
       return reg(fn, vFn);
     }
 
-    if (!(fn instanceof Ast.Id) || !env.hasOverloaded(((Ast.Id) fn).name)) {
+    if (!(fn instanceof Ast.Id) || !e.hasOverloaded(((Ast.Id) fn).name)) {
       overloaded.set(false);
-      return deduceExpType(env, fn, vFn);
+      return deduceExpType(e, fn, vFn);
     }
 
     // "apply" is "f arg" and has type "v";
@@ -3652,7 +3641,7 @@ public class TypeResolver {
     overloaded.set(true);
     final Ast.Id id = (Ast.Id) fn;
     final List<Variable> variables = new ArrayList<>();
-    env.collectInstances(
+    e.collectInstances(
         typeSystem,
         id.name,
         term -> {
@@ -3680,7 +3669,7 @@ public class TypeResolver {
     return reg(id, vFn);
   }
 
-  private @Nullable Type getType(TypeEnv env, Ast.Exp exp) {
+  private @Nullable Type getType(TypeEnv e, Ast.Exp exp) {
     switch (exp.op) {
       case BOOL_LITERAL:
         return PrimitiveType.BOOL;
@@ -3698,7 +3687,7 @@ public class TypeResolver {
         return PrimitiveType.WORD;
       case ID:
         final Ast.Id id = (Ast.Id) exp;
-        Type type = env.getTypeOpt(id.name);
+        Type type = e.getTypeOpt(id.name);
         if (type != null) {
           reg(exp, toTerm(type, Subst.EMPTY));
         }
@@ -3706,7 +3695,7 @@ public class TypeResolver {
       case APPLY:
         final Ast.Apply apply = (Ast.Apply) exp;
         if (apply.fn.op == Op.RECORD_SELECTOR) {
-          Type argType = getType(env, apply.arg);
+          Type argType = getType(e, apply.arg);
           if (argType instanceof RecordType) {
             final Ast.RecordSelector recordSelector =
                 (Ast.RecordSelector) apply.fn;
@@ -3720,10 +3709,7 @@ public class TypeResolver {
   }
 
   private Ast.RecordSelector deduceRecordSelectorType(
-      TypeEnv env,
-      Ast.RecordSelector recordSelector,
-      Variable vArg,
-      Variable vResult) {
+      Ast.RecordSelector recordSelector, Variable vArg, Variable vResult) {
     final String fieldName = recordSelector.name;
     if (recordSelector.safe) {
       // Safe navigation "e?.f": the receiver "e" is a record wrapped in one or
@@ -3868,7 +3854,7 @@ public class TypeResolver {
   }
 
   private Ast.Match deduceMatchType(
-      TypeEnv env,
+      TypeEnv e,
       Ast.Match match,
       Variable argVariable,
       Variable resultVariable) {
@@ -3876,15 +3862,15 @@ public class TypeResolver {
     final PairList<Ast.IdPat, Term> termMap1 = PairList.of();
     final Consumer<PatTerm> consumer = p -> termMap1.add(p.id, p.term);
     final Ast.Pat pat =
-        deducePatType(env, match.pat, consumer, null, vPat, t -> t);
-    TypeEnv env2 = bindAll(env, termMap1);
-    Ast.Exp exp2 = deduceExpType(env2, match.exp, resultVariable);
+        deducePatType(e, match.pat, consumer, null, vPat, t -> t);
+    TypeEnv e2 = bindAll(e, termMap1);
+    Ast.Exp exp2 = deduceExpType(e2, match.exp, resultVariable);
     Ast.Match match2 = match.copy(pat, exp2);
     return reg(match2, argVariable, fnTerm(vPat, resultVariable));
   }
 
   private List<Ast.Match> deduceMatchListType(
-      TypeEnv env,
+      TypeEnv e,
       List<Ast.Match> matchList,
       NavigableSet<String> labelNames,
       Variable argVariable,
@@ -3900,35 +3886,35 @@ public class TypeResolver {
       final Consumer<PatTerm> consumer = p -> termMap.add(p.id, p.term);
       final Ast.Pat pat2 =
           deducePatType(
-              env, match.pat, consumer, labelNames, argVariable, t -> t);
-      final TypeEnv env2 = bindAll(env, termMap);
-      final Ast.Exp exp2 = deduceExpType(env2, match.exp, resultVariable);
+              e, match.pat, consumer, labelNames, argVariable, t -> t);
+      final TypeEnv e2 = bindAll(e, termMap);
+      final Ast.Exp exp2 = deduceExpType(e2, match.exp, resultVariable);
       matchList2.add(match.copy(pat2, exp2));
     }
     return matchList2;
   }
 
-  private Ast.If deduceIfType(TypeEnv env, Ast.If if_, Variable v) {
+  private Ast.If deduceIfType(TypeEnv e, Ast.If if_, Variable v) {
     final Variable v2 = unifier.variable();
-    final Ast.Exp condition2 = deduceExpType(env, if_.condition, v2);
+    final Ast.Exp condition2 = deduceExpType(e, if_.condition, v2);
     equiv(v2, toTerm(PrimitiveType.BOOL));
-    final Ast.Exp ifTrue2 = deduceExpType(env, if_.ifTrue, v);
-    final Ast.Exp ifFalse2 = deduceExpType(env, if_.ifFalse, v);
+    final Ast.Exp ifTrue2 = deduceExpType(e, if_.ifTrue, v);
+    final Ast.Exp ifFalse2 = deduceExpType(e, if_.ifFalse, v);
     return reg(if_.copy(condition2, ifTrue2, ifFalse2), v);
   }
 
-  private Ast.Raise deduceRaiseType(TypeEnv env, Ast.Raise raise, Variable v) {
+  private Ast.Raise deduceRaiseType(TypeEnv e, Ast.Raise raise, Variable v) {
     // 'raise' takes an expression of type 'exn' and returns a value of any
     // type, since it never returns.
     final Variable vExn = unifier.variable();
     equiv(vExn, toTerm(typeSystem.lookup("exn"), Subst.EMPTY));
-    final Ast.Exp exp2 = deduceExpType(env, raise.exp, vExn);
+    final Ast.Exp exp2 = deduceExpType(e, raise.exp, vExn);
     return reg(raise.copy(exp2), v);
   }
 
-  private Ast.Case deduceCaseType(TypeEnv env, Ast.Case case_, Variable v) {
+  private Ast.Case deduceCaseType(TypeEnv e, Ast.Case case_, Variable v) {
     final Variable v2 = unifier.variable();
-    final Ast.Exp e2b = deduceExpType(env, case_.exp, v2);
+    final Ast.Exp e2b = deduceExpType(e, case_.exp, v2);
     final NavigableSet<String> labelNames = new TreeSet<>();
     final Term argType = map.get(e2b);
     if (argType instanceof Sequence) {
@@ -3938,7 +3924,7 @@ public class TypeResolver {
       }
     }
     final List<Ast.Match> matchList2 =
-        deduceMatchListType(env, case_.matchList, labelNames, v2, v);
+        deduceMatchListType(e, case_.matchList, labelNames, v2, v);
     return reg(case_.copy(e2b, matchList2), v);
   }
 
@@ -3954,20 +3940,20 @@ public class TypeResolver {
     final Ast.Exp arg2;
     try {
       ++aggFrame.activeCount;
-      arg2 = deduceExpType(p.env, aggregate.argument, vArg);
+      arg2 = deduceExpType(p.e, aggregate.argument, vArg);
     } finally {
       --aggFrame.activeCount;
     }
 
     final Variable vAgg = unifier.variable();
     final Ast.Exp aggregateFn2 =
-        deduceApplyFnType(p.env, aggregate.aggregate, vAgg, cArg, v);
+        deduceApplyFnType(p.e, aggregate.aggregate, vAgg, cArg, v);
     reg(aggregate.aggregate, vAgg);
 
     final Sequence fnType = fnTerm(cArg, v);
     equiv(vAgg, fnType);
 
-    switch (aggKind(p.env, aggregate.aggregate)) {
+    switch (aggKind(p.e, aggregate.aggregate)) {
       case COLLECTION:
       case USER_UNKNOWN:
         isCollectionOf(cArg, vArg);
@@ -3995,7 +3981,7 @@ public class TypeResolver {
   }
 
   private AstNode deduceValBindType(
-      TypeEnv env,
+      TypeEnv e,
       Ast.ValBind valBind,
       PairList<Ast.IdPat, Term> termMap,
       Variable vPat) {
@@ -4003,11 +3989,11 @@ public class TypeResolver {
     try {
       final Consumer<PatTerm> consumer = p -> termMap.add(p.id, p.term);
       final Ast.Pat pat =
-          deducePatType(env, valBind.pat, consumer, null, vPat, t -> t);
-      final Ast.Exp exp = deduceExpType(env, valBind.exp, vPat);
+          deducePatType(e, valBind.pat, consumer, null, vPat, t -> t);
+      final Ast.Exp exp = deduceExpType(e, valBind.exp, vPat);
       final Ast.ValBind valBind2 = valBind.copy(pat, exp);
       if (valBind2.pat instanceof Ast.IdPat) {
-        if (env.hasOverloaded(((Ast.IdPat) valBind2.pat).name)) {
+        if (e.hasOverloaded(((Ast.IdPat) valBind2.pat).name)) {
           // We are assigning to an overloaded name. Morel only allows overloads
           // for function values. So, create a function type so that we can
           // (after resolution) access the argument and result type. In
@@ -4030,12 +4016,11 @@ public class TypeResolver {
     }
   }
 
-  private static TypeEnv bindAll(
-      TypeEnv env, PairList<Ast.IdPat, Term> termMap) {
+  private static TypeEnv bindAll(TypeEnv e, PairList<Ast.IdPat, Term> termMap) {
     for (Map.Entry<Ast.IdPat, Term> entry : termMap) {
-      env = env.bind(entry.getKey().name, entry.getValue());
+      e = e.bind(entry.getKey().name, entry.getValue());
     }
-    return env;
+    return e;
   }
 
   /**
@@ -4051,13 +4036,13 @@ public class TypeResolver {
    * overload instances are bound monomorphically, exactly as before.
    */
   private TypeEnv bindDeclGeneralized(
-      TypeEnv env,
+      TypeEnv e,
       PairList<Ast.IdPat, Term> termMap,
       List<Variable> priorVars,
       Ast.Decl decl) {
     final Set<String> valueNames = generalizableNames(decl);
     if (valueNames.isEmpty()) {
-      return bindAll(env, termMap);
+      return bindAll(e, termMap);
     }
 
     // Solve the constraints accumulated so far. Actions (e.g. flex-record
@@ -4072,7 +4057,7 @@ public class TypeResolver {
     final Result result =
         unifier.unify(termPairs, actionMap, constraints, Tracers.nullTracer());
     if (!(result instanceof Substitution)) {
-      return bindAll(env, termMap);
+      return bindAll(e, termMap);
     }
     final Substitution subst = (Substitution) result;
 
@@ -4098,12 +4083,12 @@ public class TypeResolver {
       }
     }
 
-    TypeEnv env2 = env;
+    TypeEnv e2 = e;
     for (Map.Entry<Ast.IdPat, Term> entry : termMap) {
       final String name = entry.getKey().name;
       final Term term = entry.getValue();
       if (!valueNames.contains(name)) {
-        env2 = env2.bind(name, term);
+        e2 = e2.bind(name, term);
         continue;
       }
       final Term resolved = subst.resolve(term);
@@ -4114,14 +4099,14 @@ public class TypeResolver {
         // (a flex/progressive record whose fields come from how it is used).
         // Generalizing creates fresh variables that would not carry that
         // action, so bind it monomorphically.
-        env2 = env2.bind(name, term);
+        e2 = e2.bind(name, term);
         continue;
       }
       final Set<Variable> genVars = new LinkedHashSet<>(bindingVars);
       genVars.removeAll(envVars);
       if (genVars.isEmpty()) {
         // Monomorphic.
-        env2 = env2.bind(name, term);
+        e2 = e2.bind(name, term);
       } else if (intersects(bindingVars, constrainedVars)) {
         // Qualified binding: generalize as a 'forall ... => ...' scheme so
         // that each use re-emits the overload constraints (and the resolver's
@@ -4133,16 +4118,16 @@ public class TypeResolver {
                 ? null
                 : qualifiedScheme(resolved, bindingVars, subst, result);
         if (scheme == null) {
-          env2 = env2.bind(name, term);
+          e2 = e2.bind(name, term);
         } else {
-          env2 = env2.bind(name, Kind.VAL, ts -> toTerm(scheme, Subst.EMPTY));
+          e2 = e2.bind(name, Kind.VAL, ts -> toTerm(scheme, Subst.EMPTY));
         }
       } else {
         // Non-qualified: bind a factory that copies the resolved type term with
         // fresh variables for the generalizable variables on each use. (Unlike
         // a scheme, this keeps the free environment variables shared.)
-        env2 =
-            env2.bind(
+        e2 =
+            e2.bind(
                 name,
                 Kind.VAL,
                 ts -> {
@@ -4154,7 +4139,7 @@ public class TypeResolver {
                 });
       }
     }
-    return env2;
+    return e2;
   }
 
   /**
@@ -4309,26 +4294,26 @@ public class TypeResolver {
   }
 
   private Ast.Decl deduceDeclType(
-      TypeEnv env, Ast.Decl node, PairList<Ast.IdPat, Term> termMap) {
+      TypeEnv e, Ast.Decl node, PairList<Ast.IdPat, Term> termMap) {
     switch (node.op) {
       case OVER_DECL:
         final Ast.OverDecl overDecl = (Ast.OverDecl) node;
-        return deduceOverDeclType(env, overDecl, termMap);
+        return deduceOverDeclType(overDecl, termMap);
 
       case VAL_DECL:
-        return deduceValDeclType(env, (Ast.ValDecl) node, termMap);
+        return deduceValDeclType(e, (Ast.ValDecl) node, termMap);
 
       case FUN_DECL:
-        final Ast.ValDecl valDecl = toValDecl(env, (Ast.FunDecl) node);
-        return deduceValDeclType(env, valDecl, termMap);
+        final Ast.ValDecl valDecl = toValDecl(e, (Ast.FunDecl) node);
+        return deduceValDeclType(e, valDecl, termMap);
 
       case TYPE_DECL:
         final Ast.TypeDecl typeDecl = (Ast.TypeDecl) node;
-        return deduceTypeDeclType(env, typeDecl, termMap);
+        return deduceTypeDeclType(e, typeDecl, termMap);
 
       case DATATYPE_DECL:
         final Ast.DatatypeDecl datatypeDecl = (Ast.DatatypeDecl) node;
-        return deduceDataTypeDeclType(env, datatypeDecl, termMap);
+        return deduceDataTypeDeclType(datatypeDecl, termMap);
 
       case SIGNATURE_DECL:
         // Signatures are interface declarations that don't evaluate to anything
@@ -4340,7 +4325,7 @@ public class TypeResolver {
         // Attributes are inert: type-check the inner decl, discard the
         // wrapper. (Tooling that wants the attributes can use Sys.parseTree
         // on the original source.)
-        return deduceDeclType(env, ((Ast.AttributedDecl) node).decl, termMap);
+        return deduceDeclType(e, ((Ast.AttributedDecl) node).decl, termMap);
 
       case FLOATING_ATTR_DECL:
         // Floating attributes evaluate to unit; they carry no runtime
@@ -4355,7 +4340,7 @@ public class TypeResolver {
   }
 
   private Ast.Decl deduceTypeDeclType(
-      TypeEnv env, Ast.TypeDecl typeDecl, PairList<Ast.IdPat, Term> termMap) {
+      TypeEnv e, Ast.TypeDecl typeDecl, PairList<Ast.IdPat, Term> termMap) {
     // The bindings in a 'type ... and ...' group are simultaneous, so every
     // name the group binds is displaced throughout it, not just in the body
     // of its own binding. Resolve them all before converting any body.
@@ -4416,9 +4401,7 @@ public class TypeResolver {
   }
 
   private Ast.Decl deduceDataTypeDeclType(
-      TypeEnv env,
-      Ast.DatatypeDecl datatypeDecl,
-      PairList<Ast.IdPat, Term> termMap) {
+      Ast.DatatypeDecl datatypeDecl, PairList<Ast.IdPat, Term> termMap) {
     final List<Keys.DataTypeKey> keys = new ArrayList<>();
     final Set<String> declaring = new HashSet<>();
     for (Ast.DatatypeBind bind : datatypeDecl.binds) {
@@ -4512,7 +4495,7 @@ public class TypeResolver {
   }
 
   private Ast.Decl deduceOverDeclType(
-      TypeEnv env, Ast.OverDecl overDecl, PairList<Ast.IdPat, Term> termMap) {
+      Ast.OverDecl overDecl, PairList<Ast.IdPat, Term> termMap) {
     map.put(overDecl, toTerm(PrimitiveType.UNIT));
     termMap.add(
         overDecl.pat,
@@ -4521,8 +4504,8 @@ public class TypeResolver {
   }
 
   private Ast.Decl deduceValDeclType(
-      TypeEnv env, Ast.ValDecl valDecl, PairList<Ast.IdPat, Term> termMap) {
-    final Holder<TypeEnv> envHolder = Holder.of(env);
+      TypeEnv e, Ast.ValDecl valDecl, PairList<Ast.IdPat, Term> termMap) {
+    final Holder<TypeEnv> envHolder = Holder.of(e);
     final PairList<Ast.ValBind, Supplier<Variable>> map0 = PairList.of();
     //noinspection FunctionalExpressionCanBeFolded
     valDecl.valBinds.forEach(
@@ -4540,13 +4523,13 @@ public class TypeResolver {
           }
         });
     final List<Ast.ValBind> valBinds = new ArrayList<>();
-    final TypeEnv env2 = envHolder.get();
+    final TypeEnv e2 = envHolder.get();
     map0.forEach(
         (valBind, vPatSupplier) ->
             valBinds.add(
                 (Ast.ValBind)
                     deduceValBindType(
-                        env2, valBind, termMap, vPatSupplier.get())));
+                        e2, valBind, termMap, vPatSupplier.get())));
     Ast.Decl node2 = valDecl.copy(valBinds);
     map.put(node2, toTerm(PrimitiveType.UNIT));
     return node2;
@@ -4664,10 +4647,10 @@ public class TypeResolver {
   /** Workspace for converting types to terms. */
   private class TypeToTermConverter {
     final Map<String, Variable> tyVarMap;
-    final TypeEnv env;
+    final TypeEnv e;
 
-    TypeToTermConverter(TypeEnv env, Map<String, Variable> tyVarMap) {
-      this.env = env;
+    TypeToTermConverter(TypeEnv e, Map<String, Variable> tyVarMap) {
+      this.e = e;
       this.tyVarMap = tyVarMap;
     }
 
@@ -4689,7 +4672,7 @@ public class TypeResolver {
       switch (type.op) {
         case EXPRESSION_TYPE:
           final Ast.ExpressionType expressionType = (Ast.ExpressionType) type;
-          final Ast.Exp exp2 = deduceExpType(env, expressionType.exp, v);
+          final Ast.Exp exp2 = deduceExpType(e, expressionType.exp, v);
           return reg(expressionType.copy(exp2), v);
 
         case TUPLE_TYPE:
@@ -4825,10 +4808,10 @@ public class TypeResolver {
    *     (a, 0) => a
    *   | (a, b) = gcd b (a mod b)}</pre>
    */
-  private Ast.ValDecl toValDecl(TypeEnv env, Ast.FunDecl funDecl) {
+  private Ast.ValDecl toValDecl(TypeEnv e, Ast.FunDecl funDecl) {
     final List<Ast.ValBind> valBindList = new ArrayList<>();
     for (Ast.FunBind funBind : funDecl.funBinds) {
-      valBindList.add(toValBind(env, funBind));
+      valBindList.add(toValBind(e, funBind));
       registerMethod(funBind);
     }
     return ast.valDecl(funDecl.pos, true, false, valBindList);
@@ -4870,7 +4853,7 @@ public class TypeResolver {
     return pat;
   }
 
-  private Ast.ValBind toValBind(TypeEnv env, Ast.FunBind funBind) {
+  private Ast.ValBind toValBind(TypeEnv e, Ast.FunBind funBind) {
     final List<Ast.Pat> vars;
     Ast.Exp exp;
     Ast.Type returnType = null;
@@ -4889,7 +4872,7 @@ public class TypeResolver {
       for (Ast.FunMatch funMatch : funBind.matchList) {
         matchList.add(
             ast.match(
-                funMatch.pos, patTuple(env, funMatch.patList), funMatch.exp));
+                funMatch.pos, patTuple(e, funMatch.patList), funMatch.exp));
         if (funMatch.returnType != null) {
           if (returnType != null && !returnType.equals(funMatch.returnType)) {
             throw new CompileException(
@@ -4930,17 +4913,16 @@ public class TypeResolver {
 
   /** Converts a list of patterns to a singleton pattern or tuple pattern. */
   @SuppressWarnings("SwitchStatementWithTooFewBranches")
-  private Ast.Pat patTuple(TypeEnv env, List<Ast.Pat> patList) {
+  private Ast.Pat patTuple(TypeEnv e, List<Ast.Pat> patList) {
     final List<Ast.Pat> list2 = new ArrayList<>();
     for (int i = 0; i < patList.size(); i++) {
       final Ast.Pat pat = patList.get(i);
       switch (pat.op) {
         case ID_PAT:
           final Ast.IdPat idPat = (Ast.IdPat) pat;
-          if (env.has(idPat.name)
-              && typeSystem.lookupTyCon(idPat.name) != null) {
+          if (e.has(idPat.name) && typeSystem.lookupTyCon(idPat.name) != null) {
             final Term term =
-                env.get(typeSystem, idPat.name, TypeEnv.oops(idPat));
+                e.get(typeSystem, idPat.name, TypeEnv.oops(idPat));
             if (term instanceof Sequence
                 && ((Sequence) term).operator.equals(FN_TY_CON)) {
               list2.add(
@@ -4972,7 +4954,7 @@ public class TypeResolver {
    * <p>Unlike {@link #deduceExpType(TypeEnv, Ast.Exp, Variable)}, return is
    * {@code void}, because the pattern is never modified.
    *
-   * @param env Compile-time environment
+   * @param e Compile-time environment
    * @param pat Pattern AST
    * @param termMap Map from names to bound terms, populated by this method
    * @param labelNames List of names of labels in this pattern and sibling
@@ -4984,7 +4966,7 @@ public class TypeResolver {
    *     sub-pattern
    */
   private Ast.Pat deducePatType(
-      TypeEnv env,
+      TypeEnv e,
       Ast.Pat pat,
       Consumer<PatTerm> termMap,
       @Nullable NavigableSet<String> labelNames,
@@ -5030,13 +5012,13 @@ public class TypeResolver {
       case AS_PAT:
         final Ast.AsPat asPat = (Ast.AsPat) pat;
         termMap.accept(new PatTerm(asPat.id, v, accessor));
-        pat2 = deducePatType(env, asPat.pat, termMap, null, v, accessor);
+        pat2 = deducePatType(e, asPat.pat, termMap, null, v, accessor);
         return reg(asPat.copy(asPat.id, pat2), v);
 
       case ANNOTATED_PAT:
         final Ast.AnnotatedPat annotatedPat = (Ast.AnnotatedPat) pat;
-        pat2 = deducePatType(env, annotatedPat.pat, termMap, null, v, accessor);
-        final Ast.Type type2 = deduceTypeType(env, annotatedPat.type, v);
+        pat2 = deducePatType(e, annotatedPat.pat, termMap, null, v, accessor);
+        final Ast.Type type2 = deduceTypeType(e, annotatedPat.type, v);
         final Ast.AnnotatedPat annotatedPat2 = annotatedPat.copy(pat2, type2);
         return reg(annotatedPat2, v);
 
@@ -5049,7 +5031,7 @@ public class TypeResolver {
               final UnaryOperator<Term> accessor2 =
                   term -> ((Sequence) accessor.apply(term)).terms.get(i);
               final Ast.Pat arg2 =
-                  deducePatType(env, arg, termMap, null, vArg, accessor2);
+                  deducePatType(e, arg, termMap, null, vArg, accessor2);
               typeTerms.add(arg2, vArg);
             });
         final Ast.TuplePat tuplePat2 = tuplePat.copy(typeTerms.leftList());
@@ -5082,7 +5064,7 @@ public class TypeResolver {
                 final UnaryOperator<Term> accessor2 =
                     term -> ((Sequence) accessor.apply(term)).terms.get(i);
                 final Ast.Pat arg2 =
-                    deducePatType(env, arg, termMap, null, vArg, accessor2);
+                    deducePatType(e, arg, termMap, null, vArg, accessor2);
                 args.put(labelName, arg2);
               }
             });
@@ -5137,7 +5119,7 @@ public class TypeResolver {
         final DataType dataType = typeCon1.dataType;
         final Type argType = typeCon1.argTypeKey.toType(typeSystem);
         final Variable vArg = unifier.variable();
-        pat2 = deducePatType(env, conPat.pat, termMap, null, vArg, t -> vArg);
+        pat2 = deducePatType(e, conPat.pat, termMap, null, vArg, t -> vArg);
         final Term argTerm = toTerm(argType, Subst.EMPTY);
         equiv(vArg, argTerm);
         final Term term = toTerm(dataType, Subst.EMPTY);
@@ -5168,8 +5150,7 @@ public class TypeResolver {
         final List<Ast.Pat> argList = new ArrayList<>();
         final Variable vArg2 = unifier.variable();
         for (Ast.Pat arg : listPat.args) {
-          argList.add(
-              deducePatType(env, arg, termMap, null, vArg2, t -> vArg2));
+          argList.add(deducePatType(e, arg, termMap, null, vArg2, t -> vArg2));
         }
         return reg(listPat.copy(argList), v, listTerm(vArg2));
 
@@ -5178,9 +5159,9 @@ public class TypeResolver {
         final Ast.InfixPat call = (Ast.InfixPat) pat;
         final Ast.Pat p0 =
             deducePatType(
-                env, call.p0, termMap, null, elementType, t -> elementType);
+                e, call.p0, termMap, null, elementType, t -> elementType);
         final Ast.Pat p1 =
-            deducePatType(env, call.p1, termMap, null, v, accessor);
+            deducePatType(e, call.p1, termMap, null, v, accessor);
         return reg(call.copy(p0, p1), v, listTerm(elementType));
 
       default:
@@ -5189,16 +5170,15 @@ public class TypeResolver {
   }
 
   /** Registers an infix operator whose type is a given type. */
-  private Ast.Exp infix(
-      TypeEnv env, Ast.InfixCall call, Variable v, Type type) {
+  private Ast.Exp infix(TypeEnv e, Ast.InfixCall call, Variable v, Type type) {
     final Term term = toTerm(type, Subst.EMPTY);
-    final Ast.Exp a0 = deduceExpType(env, call.a0, v);
-    final Ast.Exp a1 = deduceExpType(env, call.a1, v);
+    final Ast.Exp a0 = deduceExpType(e, call.a0, v);
+    final Ast.Exp a1 = deduceExpType(e, call.a1, v);
     return reg(call.copy(a0, a1), v, term);
   }
 
   /** Registers an infix operator. */
-  private Ast.Exp infix(TypeEnv env, Ast.InfixCall call, Variable v) {
+  private Ast.Exp infix(TypeEnv e, Ast.InfixCall call, Variable v) {
     // Special case: 'x elem [r1, r2, ...]' (where the RHS contains range
     // items) is rewritten to
     //   Range.contains r1 x orelse Range.contains r2 x orelse ...
@@ -5206,18 +5186,18 @@ public class TypeResolver {
     // '5 elem [0..]' or 'x elem [0.0 ..^ 1.0]').
     if ((call.op == Op.ELEM || call.op == Op.NOT_ELEM)
         && call.a1 instanceof Ast.RangeList) {
-      return elemOnRangeList(env, call, v);
+      return elemOnRangeList(e, call, v);
     }
     Ast.Id id = ast.id(call.pos, requireNonNull(call.op.opName));
     Ast.Tuple arg = ast.tuple(call.pos, ImmutableList.of(call.a0, call.a1));
-    return deduceExpType(env, ast.apply(id, arg), v);
+    return deduceExpType(e, ast.apply(id, arg), v);
   }
 
   /**
    * Desugars {@code x elem [r1, r2, ...]} (and {@code notelem}) into a chain of
    * {@code Range.contains} calls combined with {@code orelse}.
    */
-  private Ast.Exp elemOnRangeList(TypeEnv env, Ast.InfixCall call, Variable v) {
+  private Ast.Exp elemOnRangeList(TypeEnv e, Ast.InfixCall call, Variable v) {
     final Ast.RangeList rangeList = (Ast.RangeList) call.a1;
     final Pos pos = call.pos;
     final Ast.Exp x = call.a0;
@@ -5242,13 +5222,13 @@ public class TypeResolver {
               ? ast.apply(ast.id(pos, "not"), disjunction2)
               : disjunction2;
     }
-    return deduceExpType(env, result, v);
+    return deduceExpType(e, result, v);
   }
 
   /** Registers a prefix operator. */
-  private Ast.Exp prefix(TypeEnv env, Ast.PrefixCall call, Variable v) {
+  private Ast.Exp prefix(TypeEnv e, Ast.PrefixCall call, Variable v) {
     Ast.Id id = ast.id(call.pos, requireNonNull(call.op.opName));
-    return deduceExpType(env, ast.apply(id, call.a), v);
+    return deduceExpType(e, ast.apply(id, call.a), v);
   }
 
   /** Converts a term to a variable. */
@@ -5571,11 +5551,11 @@ public class TypeResolver {
     }
 
     default TypeEnv bindAll(Iterable<Map.Entry<String, Term>> nameTerms) {
-      TypeEnv env = this;
+      TypeEnv e = this;
       for (Map.Entry<String, Term> pair : nameTerms) {
-        env = env.bind(pair.getKey(), pair.getValue());
+        e = e.bind(pair.getKey(), pair.getValue());
       }
-      return env;
+      return e;
     }
   }
 
@@ -6010,25 +5990,24 @@ public class TypeResolver {
      * initial step, and also the environment in which "skip" and "limit"
      * expressions execute.
      */
-    final TypeEnv rootEnv;
+    final TypeEnv root;
     /** The environment for this step. */
-    final TypeEnv env;
+    final TypeEnv e;
 
     final Variable v;
     /** Collection (list or bag) type; null if not a collection. */
     final @Nullable Variable c;
 
-    private Triple(
-        TypeEnv rootEnv, TypeEnv env, Variable v, @Nullable Variable c) {
-      this.rootEnv = requireNonNull(rootEnv);
-      this.env = requireNonNull(env);
+    private Triple(TypeEnv root, TypeEnv e, Variable v, @Nullable Variable c) {
+      this.root = requireNonNull(root);
+      this.e = requireNonNull(e);
       this.v = requireNonNull(v);
       this.c = c;
     }
 
     /** Represents a singleton, not a collection. */
-    static Triple singleton(TypeEnv rootEnv, TypeEnv env, Variable v) {
-      return new Triple(rootEnv, env, v, null);
+    static Triple singleton(TypeEnv root, TypeEnv e, Variable v) {
+      return new Triple(root, e, v, null);
     }
 
     /**
@@ -6038,20 +6017,19 @@ public class TypeResolver {
      *
      * <p>Binding them here is what attributes an occurrence to a step. An
      * expression evaluated before a query's first row is deduced in {@link
-     * #rootEnv}, which no step of this query has touched, so it reads the
-     * bindings the <i>enclosing</i> step left &mdash; which is the rule.
+     * #root}, which no step of this query has touched, so it reads the bindings
+     * the <i>enclosing</i> step left &mdash; which is the rule.
      */
-    static Triple of(TypeEnv rootEnv, TypeEnv env, Variable v, Variable c) {
+    static Triple of(TypeEnv root, TypeEnv e, Variable v, Variable c) {
       return new Triple(
-          rootEnv,
-          env.bind(BuiltIn.Z_CURRENT.mlName, v)
-              .bind(BuiltIn.Z_ORDINAL.mlName, c),
+          root,
+          e.bind(BuiltIn.Z_CURRENT.mlName, v).bind(BuiltIn.Z_ORDINAL.mlName, c),
           v,
           c);
     }
 
-    Triple withEnv(TypeEnv env) {
-      return env == this.env ? this : new Triple(rootEnv, env, v, c);
+    Triple withEnv(TypeEnv e) {
+      return e == this.e ? this : new Triple(root, e, v, c);
     }
   }
 
