@@ -7888,12 +7888,24 @@ public abstract class Codes {
    * 1.0e10} prints as "1E10").
    */
   public static String floatToString(float f) {
+    return floatToString(f, '~');
+  }
+
+  /**
+   * Converts a float to a string, using {@code negation} for the sign of a
+   * negative number or exponent.
+   *
+   * <p>Standard ML writes negation as a tilde, {@code ~2.5}; tabular output
+   * writes it as a minus sign, {@code -2.5}.
+   */
+  public static String floatToString(float f, char negation) {
     if (Float.isFinite(f)) {
-      return stripTrailingZero(FLOAT_TO_STRING.apply(f)).replace('-', '~');
+      final String s = stripTrailingZero(FLOAT_TO_STRING.apply(f));
+      return negation == '-' ? s : s.replace('-', negation);
     } else if (f == Float.POSITIVE_INFINITY) {
       return "inf";
     } else if (f == Float.NEGATIVE_INFINITY) {
-      return "~inf";
+      return negation + "inf";
     } else if (Float.isNaN(f)) {
       return "nan";
     } else {

@@ -116,6 +116,34 @@ Sys.set ("output", "tabular");
 >
 > val it : {s:string option} list
 
+(* Tabular output writes negation as a minus sign, not the tilde that
+ * Standard ML uses: negative numbers, negative infinity, and negative
+ * exponents alike. *)
+[{negExp=1.25e~6, negInf=~1.0/0.0, negInt=~1, negNegExp=~2.5e~8,
+  negReal=~2.5, posInf=1.0/0.0}];
+> negExp  negInf negInt negNegExp negReal posInf
+> ------- ------ ------ --------- ------- ------
+> 1.25E-6   -inf     -1   -2.5E-8    -2.5    inf
+>
+> val it : {negExp:real, negInf:real, negInt:int, negNegExp:real, negReal:real, posInf:real} list
+
+(* A string is shown as it stands, so text that Standard ML produced --
+ * here by 'Real.toString' -- keeps its tilde, next to the value it
+ * describes. *)
+[{r = ~1.5, s = Real.toString ~1.5}];
+> r    s
+> ---- ----
+> -1.5 ~1.5
+>
+> val it : {r:real, s:string} list
+
+(* Outside a table there is no change; a value that prints in classic
+ * style keeps the tilde, even while tabular output is on. *)
+~1.5;
+> val it = ~1.5 : real
+{r = ~1.5};
+> val it = {r=~1.5} : {r:real}
+
 (* An enum (a datatype all of whose constructors are nullary) is a scalar,
  * and so occupies a column, as do a list and an 'option' of an enum. A
  * 'NONE' prints as a blank cell, as for other scalars. *)

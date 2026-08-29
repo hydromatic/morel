@@ -317,7 +317,8 @@ class TabularPrinter {
       }
     }
     if (value instanceof Float) {
-      return Codes.floatToString((Float) value);
+      // Tabular output writes negation as '-', not the '~' of Standard ML.
+      return Codes.floatToString((Float) value, '-');
     }
     if (value instanceof Long) {
       // The only Long-backed primitive type is 'word'; print it in hexadecimal,
