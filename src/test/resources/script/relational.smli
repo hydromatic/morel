@@ -368,7 +368,7 @@ from e in [1, 2, 3]
  * error. (This is the standard type-conflict error; 'yieldAll' adds
  * no synthesized scan or yield to the message.) *)
 from i in [1, 2] yieldAll i > 1;
-> stdIn:1.1-1.32 Error: Cannot deduce type: conflict: bag(T8) vs bool
+> stdIn:1.1-1.32 Error: Cannot deduce type: conflict: T8 bag vs bool
 >   raised at: stdIn:1.1-1.32
 
 (* A 'yieldAll' expression that references an unbound variable is an

@@ -67,6 +67,8 @@ public class MartelliUnifier extends Unifier {
     // if x in vars(f(s0, ..., sk))
 
     final Map<Variable, Term> result = new LinkedHashMap<>();
+    // Alias terms that met a different type, and what they expand to.
+    final Map<Term, Term> weakened = new LinkedHashMap<>();
     final Work work = new Work(tracer, termPairs, constraints, result);
     for (int iteration = 0; ; iteration++) {
       // delete
@@ -83,6 +85,31 @@ public class MartelliUnifier extends Unifier {
 
         if (!left.operator.equals(right.operator)
             || left.terms.size() != right.terms.size()) {
+          // Head-reduce. A type alias is a term whose first argument is its
+          // expanded body; if it meets a term with a different operator, the
+          // aliases are expanded and the pair retried, so that an alias
+          // unifies with the type it abbreviates.
+          final Term left2 = headReduce(left);
+          final Term right2 = headReduce(right);
+          if (left2 != left || right2 != right) {
+            // An alias met a different type, so it is only as strong as what
+            // it abbreviates: remember to weaken it in the substitution.
+            if (left2 != left) {
+              weakened.put(left, left2);
+            }
+            if (right2 != right) {
+              weakened.put(right, right2);
+            }
+            if (conflictsAtHead(left2, right2)) {
+              // The expansions still disagree, so report the aliases that were
+              // written rather than what they expand to.
+              tracer.onConflict(left, right);
+              return failure(
+                  "conflict: " + render(left) + " vs " + render(right));
+            }
+            work.add(left2, right2);
+            continue;
+          }
           tracer.onConflict(left, right);
           return failure("conflict: " + render(left) + " vs " + render(right));
         }
@@ -165,6 +192,9 @@ public class MartelliUnifier extends Unifier {
           residualConstraints.add(constraint.constraint);
         }
       }
+      if (!weakened.isEmpty()) {
+        result.replaceAll((v, t) -> weaken(t, weakened));
+      }
       return SubstitutionResult.create(result, residualConstraints);
     }
   }
@@ -202,9 +232,9 @@ public class MartelliUnifier extends Unifier {
   }
 
   /**
-   * Renders a term for an error message, printing a collection term {@code
-   * collection(e, ordered)} as {@code list(e)} and {@code $collection(e,
-   * $unordered)} as {@code bag(e)}.
+   * Renders a term for an error message, in the syntax a type is written in
+   * rather than the unifier's internal form: {@code int * int} rather than
+   * {@code tuple(int, int)}, {@code T list} rather than {@code list(T)}.
    */
   private static String render(Term term) {
     if (term instanceof Sequence) {
@@ -220,20 +250,139 @@ public class MartelliUnifier extends Unifier {
             ORDERED_OP.equals(orderednessAtom(seq.terms.get(1)))
                 ? "list"
                 : "bag";
-        return kind + "(" + render(seq.terms.get(0)) + ")";
+        return atomic(seq.terms.get(0)) + " " + kind;
+      }
+      if (seq.operator.startsWith(ALIAS_PREFIX)) {
+        // "$alias:t(int)" reads "t (alias for int)".
+        return seq.operator.substring(ALIAS_PREFIX.length())
+            + " (alias for "
+            + render(seq.terms.get(0))
+            + ")";
+      }
+      if (seq.operator.equals(TUPLE_OP) && !seq.terms.isEmpty()) {
+        return join(seq.terms, " * ");
+      }
+      if (seq.operator.equals(FN_OP) && seq.terms.size() == 2) {
+        return render(seq.terms.get(0)) + " -> " + render(seq.terms.get(1));
+      }
+      if (seq.operator.startsWith(RECORD_OP + ":")) {
+        final List<String> names = fieldNames(seq);
+        if (names.size() == seq.terms.size()) {
+          final StringBuilder b = new StringBuilder("{");
+          for (int i = 0; i < seq.terms.size(); i++) {
+            if (i > 0) {
+              b.append(", ");
+            }
+            b.append(names.get(i)).append(':').append(render(seq.terms.get(i)));
+          }
+          return b.append('}').toString();
+        }
       }
       if (!seq.terms.isEmpty()) {
-        final StringBuilder b = new StringBuilder(seq.operator).append('(');
-        for (int i = 0; i < seq.terms.size(); i++) {
-          if (i > 0) {
-            b.append(", ");
-          }
-          b.append(render(seq.terms.get(i)));
-        }
-        return b.append(')').toString();
+        // A type constructor applied to arguments, e.g. "int option".
+        return (seq.terms.size() == 1
+                ? atomic(seq.terms.get(0))
+                : "(" + join(seq.terms, ", ") + ")")
+            + " "
+            + seq.operator;
       }
     }
     return term.toString();
+  }
+
+  /**
+   * Operator prefix of a type-alias sequence; matches {@code
+   * TypeResolver.ALIAS_TY_CON}.
+   */
+  private static final String ALIAS_PREFIX = "$alias:";
+
+  /**
+   * Replaces, throughout a term, each alias that met a different type during
+   * unification with what it expands to.
+   *
+   * <p>An alias is only as strong as what it abbreviates, so where {@code nat}
+   * meets {@code int} the result is {@code int}. Without this the first type
+   * seen would win, and {@code [n, i]} and {@code [i, n]} would differ.
+   */
+  private static Term weaken(Term term, Map<Term, Term> weakened) {
+    final Term replacement = weakened.get(term);
+    if (replacement != null) {
+      return weaken(replacement, weakened);
+    }
+    if (term instanceof Sequence) {
+      final Sequence sequence = (Sequence) term;
+      final List<Term> terms = new ArrayList<>();
+      boolean changed = false;
+      for (Term t : sequence.terms) {
+        final Term t2 = weaken(t, weakened);
+        changed |= t2 != t;
+        terms.add(t2);
+      }
+      if (changed) {
+        return new Sequence(sequence.operator, terms);
+      }
+    }
+    return term;
+  }
+
+  /**
+   * Expands a type alias, repeatedly, or returns the term unchanged.
+   *
+   * <p>A type alias is a sequence whose operator starts with "$alias:" and
+   * whose first argument is its expanded body. Expanding lets an alias unify
+   * with the type it abbreviates, while leaving it in place everywhere the two
+   * never meet, so that it survives inference.
+   */
+  private static Term headReduce(Term term) {
+    while (term instanceof Sequence
+        && ((Sequence) term).operator.startsWith(ALIAS_PREFIX)) {
+      term = ((Sequence) term).terms.get(0);
+    }
+    return term;
+  }
+
+  /**
+   * Whether two expanded terms are sequences that disagree at the head, and so
+   * can never unify.
+   */
+  private static boolean conflictsAtHead(Term left, Term right) {
+    return left instanceof Sequence
+        && right instanceof Sequence
+        && !((Sequence) left).operator.equals(((Sequence) right).operator);
+  }
+
+  private static final String TUPLE_OP = "tuple";
+  private static final String FN_OP = "fn";
+  private static final String RECORD_OP = "record";
+
+  /**
+   * Renders a term, parenthesized if it would otherwise bind less tightly than
+   * the postfix type constructor it is the argument of: {@code (int * int)
+   * list}, not {@code int * int list}.
+   */
+  private static String atomic(Term term) {
+    final String s = render(term);
+    return s.indexOf(' ') < 0 || s.startsWith("(") || s.startsWith("{")
+        ? s
+        : "(" + s + ")";
+  }
+
+  /** Renders terms, separated. */
+  private static String join(List<Term> terms, String separator) {
+    final StringBuilder b = new StringBuilder();
+    for (int i = 0; i < terms.size(); i++) {
+      if (i > 0) {
+        b.append(separator);
+      }
+      b.append(render(terms.get(i)));
+    }
+    return b.toString();
+  }
+
+  /** Field names of a record term, whose operator is e.g. "record:a:b". */
+  private static List<String> fieldNames(Sequence seq) {
+    return ImmutableList.copyOf(
+        seq.operator.substring(RECORD_OP.length() + 1).split(":"));
   }
 
   private void act(

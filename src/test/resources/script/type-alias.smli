@@ -54,6 +54,22 @@ val y: int * int = x;
 val z: intPair = y;
 > val z = (4,5) : intPair
 
+(* An alias may be the argument of a type constructor. 'option' and 'bag' are
+ * datatypes, and a datatype's arguments were not being examined, so binding a
+ * value of such a type threw. *)
+type nat = int;
+> type nat = int
+val someNat: nat option = SOME 5;
+> val someNat = SOME 5 : nat option
+val natBag: nat bag = bag [1, 2];
+> val natBag = [1,2] : nat bag
+val natList: nat list = [1, 2];
+> val natList = [1,2] : nat list
+val natFn: nat -> nat = fn i => i;
+> val natFn = fn : nat -> nat
+val nested: nat option option = SOME (SOME 5);
+> val nested = SOME (SOME 5) : nat option option
+
 (*) Define two aliases at once
 type myInt = int and myRealList = real list;
 > type myInt = int
@@ -142,5 +158,168 @@ x4;
 > val it = P4 : ?.e4
 val y4 = R4;
 > val y4 = R4 : e4
+
+(* An alias survives inference, so it is visible in the type of an expression
+ * that does not mention it. Standard ML behaves the same way. *)
+type nat2 = int;
+> type nat2 = int
+val n: nat2 = 5;
+> val n = 5 : nat2
+n;
+> val it = 5 : nat2
+[n];
+> val it = [5] : nat2 list
+{a = n};
+> val it = {a=5} : {a:nat2}
+(n, n);
+> val it = (5,5) : nat2 * nat2
+val ns: nat2 list = [1, 2];
+> val ns = [1,2] : nat2 list
+List.hd ns;
+> val it = 1 : nat2
+List.map (fn i => i) ns;
+> val it = [1,2] : nat2 list
+val p: nat2 * nat2 = (1, 2);
+> val p = (1,2) : nat2 * nat2
+#1 p;
+> val it = 1 : nat2
+
+(* It is lost where an operation needed the type it abbreviates, which is
+ * where the value may have changed. *)
+List.map (fn i => i - 1) ns;
+> val it = [0,1] : int list
+
+(*) A parameter and a result keep it.
+fun f (x: nat2) = x;
+> val f = fn : nat2 -> nat2
+fun g (x: nat2): nat2 = x;
+> val g = fn : nat2 -> nat2
+
+(* A type the compiler examines structurally has its aliases expanded, so
+ * choosing an overload, aggregating and printing all behave as they do for
+ * the underlying type. *)
+n + 1;
+> val it = 6 : int
+from x in ns compute sum over x;
+> val it = 3 : nat2
+List.length ns;
+> val it = 2 : int
+
+(*) Two aliases of the same type are interchangeable; of different types, not.
+type count = int;
+> type count = int
+val c: count = n;
+> val c = 5 : count
+type name = string;
+> type name = string
+val bad: name = n;
+> stdIn:1.1-1.18 Error: Cannot deduce type: conflict: name (alias for string) vs nat2 (alias for int)
+>   raised at: stdIn:1.1-1.18
+
+(* Where an alias meets a different type, the result is the weaker of the two,
+ * namely the type the alias abbreviates. An alias is only as strong as what
+ * it abbreviates, and the answer does not depend on which is seen first. *)
+type age = int;
+> type age = int
+val j: int = 7;
+> val j = 7 : int
+val k: age = 9;
+> val k = 9 : age
+[n, j];
+> val it = [5,7] : int list
+[j, n];
+> val it = [7,5] : int list
+[n, k];
+> val it = [5,9] : int list
+
+(* Both operands sharing one alias is not a meet with a different type, so the
+ * alias is kept. This is the case the rule exists for: expanding every alias
+ * would give 'int list' here too, and for the wrong reason. *)
+val n2: nat2 = 6;
+> val n2 = 6 : nat2
+[n, n2];
+> val it = [5,6] : nat2 list
+
+(* An alias is expanded only as far as unification requires, so an alias nested
+ * inside one that weakens survives. Here 'nats' meets 'nat2 list' and weakens,
+ * but the element type stays 'nat2'. *)
+type nats = nat2 list;
+> type nats = nat2 list
+val nsAlias: nats = [1, 2];
+> val nsAlias = [1,2] : nats
+[nsAlias, [n]];
+> val it = [[1,2],[5]] : nat2 list list
+
+(* Two aliases with identical bodies both lose: there is no principled reason
+ * to prefer one name, so the meet is the bare type. *)
+type point2 = {x: int, y: int};
+> type point2 = {x:int, y:int}
+type coord = {x: int, y: int};
+> type coord = {x:int, y:int}
+val pp: point2 = {x = 1, y = 2};
+> val pp = {x=1,y=2} : point2
+val cc: coord = {x = 3, y = 4};
+> val cc = {x=3,y=4} : coord
+[pp, cc];
+> val it = [{x=1,y=2},{x=3,y=4}] : {x:int, y:int} list
+
+(*) Components of a tuple do not meet, so each keeps its own type.
+(n, j);
+> val it = (5,7) : nat2 * int
+
+(* Arithmetic therefore yields the underlying type, as in Standard ML, because
+ * the two operand types meet. *)
+n - 100;
+> val it = ~95 : int
+n * 2;
+> val it = 10 : int
+n < 6;
+> val it = true : bool
+
+(* A record modifier must see the fields of the record it is modifying, so it
+ * looks through the alias to find them. The result is a plain record: a
+ * derived value loses the abbreviation, as it does in arithmetic. *)
+type point = {x: int, y: int};
+> type point = {x:int, y:int}
+val pt: point = {x = 1, y = 2};
+> val pt = {x=1,y=2} : point
+{pt replace x = 3};
+> val it = {x=3,y=2} : {x:int, y:int}
+{pt extend z = 4};
+> val it = {x=1,y=2,z=4} : {x:int, y:int, z:int}
+
+(* A query over a collection whose element type is an alias must be able to
+ * see the fields of that type, so field selection looks through the alias.
+ * Before this, a query that projected a field failed to convert to Core:
+ * "expected ['a bag] actual [int bag]". *)
+type rec1 = {i: int, j: string};
+> type rec1 = {i:int, j:string}
+val recs: rec1 bag = bag [{i = 1, j = "a"}, {i = 2, j = "b"}];
+> val recs = [{i=1,j="a"},{i=2,j="b"}] : rec1 bag
+from r in recs yield r.i;
+> val it = [1,2] : int bag
+Bag.length (from r in recs yield r.i);
+> val it = 2 : int
+case {i = 3, j = "c"} : rec1 of {i, j} => i;
+> val it = 3 : int
+
+(* 'type_string' renders the type as it would be displayed, so it agrees with
+ * what the shell prints, alias and all. *)
+type foo = int;
+> type foo = int
+val fv: foo = 1;
+> val fv = 1 : foo
+type_string fv;
+> val it = "foo" : string
+type_string [fv];
+> val it = "foo list" : string
+type_string 1;
+> val it = "int" : string
+
+(*) A parameterized alias is expanded.
+type 'a my_list2 = 'a list;
+> type 'a my_list2 = 'a list
+val ml: int my_list2 = [1, 2];
+> val ml = [1,2] : int list
 
 (*) End type-alias.smli

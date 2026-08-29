@@ -653,14 +653,23 @@ val y = 6 : typeof m;
 val z = [1] : typeof [m];
 > val z = [1] : int list
 
+(* 'typeof e' names the type 'e' was shown to have, so an alias survives it:
+ * it does not reduce the type to what inference made of it. *)
+type myInt = int;
+> type myInt = int
+val mi: myInt = 5;
+> val mi = 5 : myInt
+val mi2: typeof mi = 6;
+> val mi2 = 6 : myInt
+val mi3 = 6 : typeof mi;
+> val mi3 = 6 : myInt
+
 (* A type declaration may use 'typeof'. A name in the body of one refers to
  * the environment before the declaration -- that is what makes 'type t = t'
  * mean "the previous t" -- so the expression cannot mention what the
  * declaration binds, and its type is deduced on its own. *)
-val mi = 5;
-> val mi = 5 : int
 type t = typeof mi;
-> type t = int
+> type t = myInt
 val tv: t = 7;
 > val tv = 7 : t
 
@@ -672,9 +681,25 @@ val pv: pair = (2, "b");
 
 (*) A datatype constructor's argument type may use it too.
 datatype box = BOX of typeof mi;
-> datatype box = BOX of int
+> datatype box = BOX of myInt
 BOX 3;
 > val it = BOX 3 : box
+
+(* Deduction may rewrite the expression -- an 'order' step is copied so that
+ * its warning can be attached -- so the type is read from the declaration the
+ * nested deduction returned, not from the node it was given. *)
+type ordered = typeof (from i in [1,2] order {b = i, a = i});
+> stdIn:1.46-1.60 Warning: Sorting on a record whose fields are not in alphabetical order. Sort order may not be what you expect.
+>   raised at: stdIn:1.46-1.60
+> type ordered = int list
+
+(* The expression is deduced once, however many times the declaration asks
+ * for its type. A datatype converts a constructor's argument twice, and
+ * without memoizing, the warning above would be reported twice. *)
+datatype orderedBox = OB of typeof (from i in [1,2] order {b = i, a = i});
+> stdIn:1.59-1.73 Warning: Sorting on a record whose fields are not in alphabetical order. Sort order may not be what you expect.
+>   raised at: stdIn:1.59-1.73
+> datatype orderedBox = OB of int list
 
 (* The rule that a name refers to the environment before the declaration
  * applies here as everywhere, so 'typeof' cannot see what is being
@@ -722,7 +747,7 @@ type_string ("x" ^ "y") ^ "z";
  * "(type_string f) x", which applies x to the resulting string,
  * rather than the type of "f x". *)
 type_string String.size "abc";
-> stdIn:1.1-1.30 Error: Cannot deduce type: conflict: fn(T2, T0) vs string
+> stdIn:1.1-1.30 Error: Cannot deduce type: conflict: T2 -> T0 vs string
 >   raised at: stdIn:1.1-1.30
 
 fun foo list = (size list, type_string (true, list));
@@ -834,10 +859,10 @@ id_list [1,2];
 id_list ["a","b"];
 > val it = ["a","b"] : string list
 id_list (true, 1);
-> stdIn:1.1-1.18 Error: Cannot deduce type: conflict: tuple(bool, int) vs list(T6)
+> stdIn:1.1-1.18 Error: Cannot deduce type: conflict: bool * int vs T6 list
 >   raised at: stdIn:1.1-1.18
 id_list (bag [false,true]);
-> stdIn:1.1-1.27 Error: Cannot deduce type: conflict: list(T9) vs bag(T7)
+> stdIn:1.1-1.27 Error: Cannot deduce type: conflict: T9 list vs T7 bag
 >   raised at: stdIn:1.1-1.27
 
 (*) Same, without parentheses around the argument.
@@ -877,7 +902,7 @@ first_pair [("a",true),("c",false)];
 > stdIn:1.1-1.36 Error: Cannot deduce type: conflict: string vs bool
 >   raised at: stdIn:1.1-1.36
 first_pair (bag [("a","b"),("c","d")]);
-> stdIn:1.1-1.39 Error: Cannot deduce type: conflict: bag(T11) vs list(tuple(T13, T13))
+> stdIn:1.1-1.39 Error: Cannot deduce type: conflict: T11 bag vs (T13 * T13) list
 >   raised at: stdIn:1.1-1.39
 
 (* Function that uses its argument in a query and therefore requires
@@ -1585,6 +1610,32 @@ val p = (1, 2) : int pair;
 val w = [1] : my_list;
 > stdIn:1.15-1.22 Error: type constructor my_list given 0 arguments, wants 1
 >   raised at: stdIn:1.15-1.22
+
+(* A type in an error message is written in the syntax types are written in,
+ * not the unifier's internal form. *)
+val a: int * int = 1;
+> stdIn:1.1-1.21 Error: Cannot deduce type: conflict: int * int vs int
+>   raised at: stdIn:1.1-1.21
+val b: {x: int} = 1;
+> stdIn:1.1-1.20 Error: Cannot deduce type: conflict: {x:int} vs int
+>   raised at: stdIn:1.1-1.20
+val c: int list = "a";
+> stdIn:1.1-1.22 Error: Cannot deduce type: conflict: int list vs string
+>   raised at: stdIn:1.1-1.22
+val d: int -> int = 1;
+> stdIn:1.1-1.22 Error: Cannot deduce type: conflict: int -> int vs int
+>   raised at: stdIn:1.1-1.22
+val e: int option = "a";
+> stdIn:1.1-1.24 Error: Cannot deduce type: conflict: int option vs string
+>   raised at: stdIn:1.1-1.24
+val f: int bag = [1];
+> stdIn:1.1-1.21 Error: Cannot deduce type: conflict: int bag vs T2 list
+>   raised at: stdIn:1.1-1.21
+
+(*) A compound element of a postfix type constructor is parenthesized.
+val g: (int * int) list = [1];
+> stdIn:1.1-1.30 Error: Cannot deduce type: conflict: int vs int * int
+>   raised at: stdIn:1.1-1.30
 
 (* An unbound name in a type annotation is an error. Such a name reaches
  * unification as a term that no type can be made from, and unification

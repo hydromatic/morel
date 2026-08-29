@@ -51,6 +51,11 @@ public class AliasType extends ParameterizedType {
   }
 
   @Override
+  public Type unalias() {
+    return type.unalias();
+  }
+
+  @Override
   public Key key() {
     return Keys.alias(name, type.key(), transformEager(arguments, Type::key));
   }

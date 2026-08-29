@@ -832,7 +832,7 @@ from p: pair;
 > false ()
 > true  ()
 >
-> val it : {b:bool, u:unit} list
+> val it : pair list
 from i in [1, 2], p: pair where p.b;
 > i p
 >   b    u
@@ -840,7 +840,7 @@ from i in [1, 2], p: pair where p.b;
 > 1 true ()
 > 2 true ()
 >
-> val it : {i:int, p:{b:bool, u:unit}} list
+> val it : {i:int, p:pair} list
 exists p: pair where p.b;
 > val it = true : bool
 

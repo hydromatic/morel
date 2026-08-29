@@ -428,6 +428,27 @@ public class Resolver {
     };
   }
 
+  /**
+   * Gives a bound pattern the type to display for it, which keeps any type
+   * alias.
+   *
+   * <p>Everywhere else a type has its aliases expanded, so that no part of the
+   * compiler that examines a type structurally has to know that an alias
+   * exists; a binding is where the name the user wrote is worth showing.
+   */
+  private Core.Pat withDisplayType(Core.Pat corePat, Ast.Pat pat) {
+    if (corePat instanceof Core.NamedPat) {
+      Type displayType = typeMap.getRealType(pat);
+      if (displayType == null) {
+        displayType = typeMap.getAliasedType(pat);
+      }
+      if (displayType != null) {
+        return ((Core.NamedPat) corePat).withType(displayType);
+      }
+    }
+    return corePat;
+  }
+
   private ResolvedValDecl resolveValDecl(
       Ast.ValDecl valDecl, List<Binding> bindings) {
     final boolean composite = valDecl.valBinds.size() > 1;
@@ -439,7 +460,8 @@ public class Resolver {
     final boolean inst = valDecl.inst;
     if (valDecl.rec) {
       final List<Core.Pat> pats = new ArrayList<>();
-      matches.forEach((pat, exp) -> pats.add(toCore(pat, inst)));
+      matches.forEach(
+          (pat, exp) -> pats.add(withDisplayType(toCore(pat, inst), pat)));
       pats.forEach(
           p -> Compiles.acceptBinding(typeMap.typeSystem, p, bindings));
       final Resolver r = withEnv(bindings);
@@ -452,13 +474,7 @@ public class Resolver {
     } else {
       matches.forEach(
           (pat, exp) -> {
-            Core.Pat corePat = toCore(pat, inst);
-            if (corePat instanceof Core.NamedPat) {
-              final Type realType = typeMap.getRealType(pat);
-              if (realType != null) {
-                corePat = ((Core.NamedPat) corePat).withType(realType);
-              }
-            }
+            Core.Pat corePat = withDisplayType(toCore(pat, inst), pat);
             // If this binding is qualified (uses an overloaded name at an
             // abstract type), compile its value with dictionary parameters and
             // give the pattern a qualified type.
@@ -823,7 +839,13 @@ public class Resolver {
   private Core.Exp toCore(Ast.TypeString typeString) {
     // Render the operand's inferred type to a string. The operand is not
     // converted to Core, so it is never evaluated.
-    final Type type = typeMap.getType(typeString.exp);
+    //
+    // Prefer the type as it would be displayed, which keeps an alias and any
+    // condition; 'getType' expands them, and would say "int" for a value the
+    // shell prints as 'foo'.
+    final Type aliased = typeMap.getAliasedType(typeString.exp);
+    final Type type =
+        aliased != null ? aliased : typeMap.getType(typeString.exp);
     return core.stringLiteral(type.moniker());
   }
 

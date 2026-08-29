@@ -35,6 +35,7 @@ import java.util.SortedSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.AstNode;
+import net.hydromatic.morel.type.AliasType;
 import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.QualifiedType;
 import net.hydromatic.morel.type.RecordLikeType;
@@ -110,7 +111,23 @@ public class TypeMap {
   }
 
   Type termToType(Unifier.Term term) {
-    return term.accept(new TermToTypeConverter(this));
+    return term.accept(new TermToTypeConverter(this, false));
+  }
+
+  /**
+   * Returns an AST node's type, keeping any type alias, or null if the node has
+   * no type or its type has no alias.
+   *
+   * <p>This is the type displayed for a binding; {@link #getType} expands
+   * aliases, and is what the rest of the compiler sees.
+   */
+  public @Nullable Type getAliasedType(AstNode node) {
+    final Unifier.Term term = nodeTypeTerms.get(node);
+    if (term == null) {
+      return null;
+    }
+    final Type aliased = term.accept(new TermToTypeConverter(this, true));
+    return aliased.equals(termToType(term)) ? null : aliased;
   }
 
   /** Returns the overload predicates deduced for this declaration. */
@@ -126,6 +143,21 @@ public class TypeMap {
   public Type getType(AstNode node) {
     final Unifier.Term term = requireNonNull(nodeTypeTerms.get(node));
     return termToType(term);
+  }
+
+  /**
+   * Returns the key of the type displayed for an AST node -- aliases and
+   * conditions intact -- or null if it has no type.
+   *
+   * <p>This is what {@code typeof e} names: the type {@code e} was shown to
+   * have, not the type inference reduced it to.
+   */
+  public Type.@Nullable Key displayedKey(AstNode node) {
+    Type type = getAliasedType(node);
+    if (type == null) {
+      type = getTypeOpt(node);
+    }
+    return type == null ? null : type.key();
   }
 
   /** Returns an AST node's data type, or null if no type is known. */
@@ -172,7 +204,11 @@ public class TypeMap {
     // The term might be a sequence or a variable. We only materialize a type
     // if it is a variable. Materializing a type for every sequence allocated
     // lots of temporary type variables, and created a lot of noise in ref logs.
-    final Unifier.Term term = nodeTypeTerms.get(node);
+    final Unifier.Term term0 = nodeTypeTerms.get(node);
+    if (term0 == null) {
+      return null;
+    }
+    final Unifier.Term term = TypeResolver.unaliasTerm(term0);
     if (term instanceof Unifier.Sequence) {
       final Unifier.Sequence sequence = (Unifier.Sequence) term;
       // E.g. "record:a:b" becomes record type "{a:t0, b:t1}".
@@ -201,9 +237,19 @@ public class TypeMap {
   private static class TermToTypeConverter
       implements Unifier.TermVisitor<Type> {
     private final TypeMap typeMap;
+    /**
+     * Whether to keep a type alias rather than expanding it.
+     *
+     * <p>Only the type displayed for a binding keeps its aliases. Every type
+     * the compiler works with has them expanded, so that no part of the
+     * compiler that examines a type structurally -- choosing an overload,
+     * expanding a macro -- has to know that an alias exists.
+     */
+    private final boolean keepAliases;
 
-    TermToTypeConverter(TypeMap typeMap) {
+    TermToTypeConverter(TypeMap typeMap, boolean keepAliases) {
       this.typeMap = typeMap;
+      this.keepAliases = keepAliases;
     }
 
     public Type visit(Unifier.Sequence sequence) {
@@ -240,6 +286,21 @@ public class TypeMap {
         case "string":
         case "unit":
         default:
+          if (TypeResolver.isAliasTerm(sequence)) {
+            // The term's first argument is the alias's expanded body.
+            final Type body = sequence.terms.get(0).accept(this);
+            if (!keepAliases || sequence.terms.size() > 1) {
+              // Expanded, or a parameterized alias such as "int my_list",
+              // which has no representation of its own: an AliasType's
+              // parameter count is the number of parameters remaining, which
+              // is zero once it is applied.
+              return body;
+            }
+            final Type aliasType =
+                typeMap.typeSystem.lookupOpt(
+                    TypeResolver.aliasTermName(sequence));
+            return aliasType instanceof AliasType ? aliasType : body;
+          }
           // A displaced datatype is looked up first; the type system would
           // return whatever has taken over its name.
           final Type displaced = typeMap.displacedTypes.get(sequence.operator);

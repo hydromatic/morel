@@ -227,11 +227,27 @@ public class TypeResolver {
   static final String UNORDERED = "unordered";
 
   static final String OPTION_TY_CON = BuiltIn.Datatype.OPTION.mlName();
+  static final String ALIAS_TY_CON = "$alias";
   static final String RECORD_TY_CON = "record";
   static final String FN_TY_CON = "fn";
 
   /** A field of this name indicates that a record type is progressive. */
   static final String PROGRESSIVE_LABEL = "z$dummy";
+
+  /** Throws; the resolver for a caller that cannot resolve {@code typeof}. */
+  private static Type.Key rejectTypeof(Ast.ExpressionType expressionType) {
+    throw new CompileException(
+        "'typeof' is not supported here", false, expressionType.pos);
+  }
+
+  private TypeResolver(
+      TypeSystem typeSystem,
+      Environment env,
+      Consumer<CompileException> warningConsumer) {
+    this.typeSystem = requireNonNull(typeSystem);
+    this.env = requireNonNull(env);
+    this.warningConsumer = requireNonNull(warningConsumer);
+  }
 
   /** Returns a key builder that can resolve a {@code typeof}. */
   private KeyBuilder declKeyBuilder() {
@@ -240,7 +256,7 @@ public class TypeResolver {
 
   /**
    * Returns the key of the type of an expression written inside a type
-   * declaration.
+   * declaration, or null if it has none.
    *
    * <p>A type declaration is elaborated before anything in it is deduced, so
    * there is no substitution to read {@code typeof e} from. But a name in the
@@ -268,28 +284,12 @@ public class TypeResolver {
     // one -- and the type map is keyed by the node it produced, not the one it
     // was given. Ask the declaration it returned.
     final Ast.ValDecl valDecl2 = (Ast.ValDecl) resolved.node;
-    final Type type =
+    final Type.Key key =
         requireNonNull(
-            resolved.typeMap.getTypeOpt(valDecl2.valBinds.get(0).exp),
+            resolved.typeMap.displayedKey(valDecl2.valBinds.get(0).exp),
             "deduction gave no type for the expression of a 'typeof'");
-    final Type.Key key = type.key();
     declExpKeys.put(exp, key);
     return key;
-  }
-
-  /** Throws; the resolver for a caller that cannot resolve {@code typeof}. */
-  private static Type.Key rejectTypeof(Ast.ExpressionType expressionType) {
-    throw new CompileException(
-        "'typeof' is not supported here", false, expressionType.pos);
-  }
-
-  private TypeResolver(
-      TypeSystem typeSystem,
-      Environment env,
-      Consumer<CompileException> warningConsumer) {
-    this.typeSystem = requireNonNull(typeSystem);
-    this.env = requireNonNull(env);
-    this.warningConsumer = requireNonNull(warningConsumer);
   }
 
   /** Deduces the datatype of a declaration. */
@@ -309,6 +309,23 @@ public class TypeResolver {
   /** Converts a type AST to a type. */
   public static Type toType(Ast.Type type, TypeSystem typeSystem) {
     return typeSystem.typeFor(toTypeKey(type));
+  }
+
+  /**
+   * Converts a type AST to a type, resolving {@code typeof e} with {@code
+   * expKeys}.
+   *
+   * <p>The type of an expression is not known syntactically, so a caller that
+   * knows it -- one that has a {@link TypeMap} -- must supply it. One that does
+   * not calls {@link #toType(Ast.Type, TypeSystem)}, and a {@code typeof} is
+   * then an error rather than a type.
+   */
+  public static Type toType(
+      Ast.Type type,
+      TypeSystem typeSystem,
+      Function<Ast.ExpressionType, Type.Key> expKeys) {
+    return typeSystem.typeFor(
+        new KeyBuilder(ImmutableMap.of(), expKeys).toTypeKey(type));
   }
 
   /** Converts a type AST to a type key. */
@@ -724,43 +741,33 @@ public class TypeResolver {
             }
           };
       for (Ast.ValBind valBind : ((Ast.ValDecl) decl).valBinds) {
-        deduceRealType(valBind.pat, null, valBind.exp, consumer);
+        deduceRealType(
+            valBind.pat,
+            null,
+            valBind.exp,
+            consumer,
+            t -> requireNonNull(typeMap.displayedKey(t.exp)));
       }
     }
     return realTypes;
-  }
-
-  /**
-   * Whether a type AST contains a {@code typeof}, whose type only inference
-   * knows. {@link #toType} converts a type AST syntactically, and has no case
-   * for such a type; a caller that would reach one must skip it.
-   */
-  private static boolean containsExpressionType(Ast.Type type) {
-    final AtomicBoolean found = new AtomicBoolean();
-    type.accept(
-        new Visitor() {
-          @Override
-          protected void visit(Ast.ExpressionType expressionType) {
-            found.set(true);
-          }
-        });
-    return found.get();
   }
 
   private @Nullable Type deduceRealType(
       Ast.Pat pat,
       @Nullable Type annotatedType,
       Ast.Exp exp,
-      BiConsumer<Ast.Pat, Type> consumer) {
-    // An annotation that uses 'typeof' is skipped, here and below. It
-    // never names an alias -- it gives the binding exactly the type that is
-    // deduced for it -- so there is no real type to record.
-    if (pat instanceof Ast.AnnotatedPat
-        && !containsExpressionType(((Ast.AnnotatedPat) pat).type)) {
+      BiConsumer<Ast.Pat, Type> consumer,
+      Function<Ast.ExpressionType, Type.Key> expKeys) {
+    // An annotation that uses 'typeof' names the type its expression was shown
+    // to have, so it is resolved here rather than skipped: 'val x: typeof n'
+    // displays what 'val x: nat' displays.
+    if (pat instanceof Ast.AnnotatedPat) {
       final Ast.AnnotatedPat annotatedPat = (Ast.AnnotatedPat) pat;
-      final Type annotatedType2 = toType(annotatedPat.type, typeSystem);
+      final Type annotatedType2 =
+          toType(annotatedPat.type, typeSystem, expKeys);
       final Type realType =
-          deduceRealType(annotatedPat.pat, annotatedType2, exp, consumer);
+          deduceRealType(
+              annotatedPat.pat, annotatedType2, exp, consumer, expKeys);
       if (realType != null) {
         consumer.accept(pat, realType);
         return realType;
@@ -772,12 +779,13 @@ public class TypeResolver {
         return annotatedType;
       }
     }
-    if (exp instanceof Ast.AnnotatedExp
-        && !containsExpressionType(((Ast.AnnotatedExp) exp).type)) {
+    if (exp instanceof Ast.AnnotatedExp) {
       final Ast.AnnotatedExp annotatedExp = (Ast.AnnotatedExp) exp;
-      final Type annotatedType2 = toType(annotatedExp.type, typeSystem);
+      final Type annotatedType2 =
+          toType(annotatedExp.type, typeSystem, expKeys);
       final Type realType =
-          deduceRealType(pat, annotatedType2, annotatedExp.exp, consumer);
+          deduceRealType(
+              pat, annotatedType2, annotatedExp.exp, consumer, expKeys);
       if (realType != null) {
         consumer.accept(pat, realType);
         return realType;
@@ -791,7 +799,7 @@ public class TypeResolver {
                 ? annotatedType.elementType()
                 : null;
         final Type elementType =
-            deduceRealType(annotatedType2, listExp.args.get(0));
+            deduceRealType(annotatedType2, listExp.args.get(0), expKeys);
         if (elementType != null) {
           final Type realType = typeSystem.listType(elementType);
           consumer.accept(pat, realType);
@@ -803,11 +811,15 @@ public class TypeResolver {
   }
 
   private @Nullable Type deduceRealType(
-      @Nullable Type annotatedType, Ast.Exp exp) {
+      @Nullable Type annotatedType,
+      Ast.Exp exp,
+      Function<Ast.ExpressionType, Type.Key> expKeys) {
     if (exp instanceof Ast.AnnotatedExp) {
       final Ast.AnnotatedExp annotatedExp = (Ast.AnnotatedExp) exp;
-      final Type annotatedType2 = toType(annotatedExp.type, typeSystem);
-      final Type realType = deduceRealType(annotatedType2, annotatedExp.exp);
+      final Type annotatedType2 =
+          toType(annotatedExp.type, typeSystem, expKeys);
+      final Type realType =
+          deduceRealType(annotatedType2, annotatedExp.exp, expKeys);
       if (realType != null) {
         return realType;
       }
@@ -820,7 +832,7 @@ public class TypeResolver {
                 ? annotatedType.elementType()
                 : null;
         final Type elementType =
-            deduceRealType(annotatedType2, listExp.args.get(0));
+            deduceRealType(annotatedType2, listExp.args.get(0), expKeys);
         if (elementType != null) {
           return typeSystem.listType(elementType);
         }
@@ -2496,6 +2508,7 @@ public class TypeResolver {
    * as an unresolved flex record.
    */
   private static @Nullable List<String> termFieldNames(Term t) {
+    t = unaliasTerm(t);
     if (!(t instanceof Sequence)) {
       return null;
     }
@@ -3886,6 +3899,7 @@ public class TypeResolver {
    */
   private static @Nullable Term lookupField(
       Term t, String fieldName, Unifier.Substitution substitution) {
+    t = unaliasTerm(t);
     if (t instanceof Sequence) {
       final Sequence sequence = (Sequence) t;
       final List<String> fieldList = fieldList(sequence);
@@ -3982,7 +3996,8 @@ public class TypeResolver {
     final Variable v2 = unifier.variable();
     final Ast.Exp e2b = deduceExpType(e, case_.exp, v2);
     final NavigableSet<String> labelNames = new TreeSet<>();
-    final Term argType = map.get(e2b);
+    final Term argTerm = map.get(e2b);
+    final Term argType = argTerm == null ? null : unaliasTerm(argTerm);
     if (argType instanceof Sequence) {
       final List<String> fieldList = fieldList((Sequence) argType);
       if (fieldList != null) {
@@ -4629,7 +4644,9 @@ public class TypeResolver {
      * How to resolve {@code typeof e}: the type of an expression is not known
      * syntactically, so a caller that knows it must say.
      *
-     * <p>A caller that cannot uses {@link TypeResolver#rejectTypeof}.
+     * <p>A caller that cannot uses {@link TypeResolver#rejectTypeof}. One that
+     * can always finds a type: a {@code typeof} whose expression has none fails
+     * while that expression is deduced, so it never reaches here.
      */
     final Function<Ast.ExpressionType, Type.Key> expKeys;
 
@@ -4813,7 +4830,12 @@ public class TypeResolver {
                   subst.plus(
                       (TypeVar) alias.parameterTypes.get(i), argTerms.right(i));
             }
-            final Term aliasTerm = toTerm(alias.type, subst);
+            final Term body = toTerm(alias.type, subst);
+            final Term aliasTerm =
+                aliasTerm(
+                    alias.name,
+                    body,
+                    ImmutableList.copyOf(argTerms.rightList()));
             return reg(namedType.copy(argTerms.leftList()), v, aliasTerm);
           }
 
@@ -5164,8 +5186,9 @@ public class TypeResolver {
               // We now know the type of the source record, say
               // "{a: int, b: real}". So, now we can fill out the ellipsis.
               assert v == v3;
-              if (t instanceof Sequence) {
-                final Sequence sequence = (Sequence) t;
+              final Term t2 = unaliasTerm(t);
+              if (t2 instanceof Sequence) {
+                final Sequence sequence = (Sequence) t2;
                 final List<String> fieldList = fieldList(sequence);
                 if (fieldList != null) {
                   final NavigableMap<String, Term> labelTerms2 = mutableMap();
@@ -5350,6 +5373,47 @@ public class TypeResolver {
     return unifier.apply(FN_TY_CON, arg, result);
   }
 
+  /**
+   * Creates a term for a type alias.
+   *
+   * <p>The first argument is the expanded body, so that the unifier can
+   * head-reduce by replacing the term with {@code terms.get(0)}; the rest are
+   * the alias's arguments, which {@link TypeMap} needs to rebuild the {@link
+   * AliasType}.
+   */
+  private Sequence aliasTerm(
+      String name, Term body, List<? extends Term> args) {
+    final List<Term> terms = new ArrayList<>();
+    terms.add(body);
+    terms.addAll(args);
+    return unifier.apply(ALIAS_TY_CON + ":" + name, terms);
+  }
+
+  /** Returns whether a term is a type alias, as built by {@link #aliasTerm}. */
+  static boolean isAliasTerm(Term term) {
+    return term instanceof Sequence
+        && ((Sequence) term).operator.startsWith(ALIAS_TY_CON + ":");
+  }
+
+  /** Returns the name of an alias term. */
+  static String aliasTermName(Sequence sequence) {
+    return sequence.operator.substring(ALIAS_TY_CON.length() + 1);
+  }
+
+  /**
+   * Expands a term until it is not an alias term.
+   *
+   * <p>An alias is transparent, so anything that reads a term's structure --
+   * asking what fields a record has, say -- must look through it. An alias
+   * term's first argument is its body.
+   */
+  static Term unaliasTerm(Term term) {
+    while (isAliasTerm(term)) {
+      term = ((Sequence) term).terms.get(0);
+    }
+    return term;
+  }
+
   private Term recordTerm(NavigableMap<String, ? extends Term> labelTypes) {
     final NavigableSet<String> labels = labelTypes.navigableKeySet();
     if (TypeSystem.areContiguousIntegers(labels) && labelTypes.size() != 1) {
@@ -5385,14 +5449,15 @@ public class TypeResolver {
         final Variable variable = subst.get((TypeVar) type);
         return variable != null ? variable : unifier.variable();
       case ALIAS_TYPE:
-        // During type inference, we pretend that an alias type is its
-        // underlying type. For example, if we have 'type t = int', and
-        // 'val i = 1: t', we treat 'i' has having type 'int'.
-        //
-        // After type inference is complete, can can deduce the true type
-        // bottom-up. Thus, '[1: t]' has type 't list'.
+        // An alias survives inference, as in Standard ML, so that '[n]' where
+        // 'n: t' has type 't list'. The term carries the expanded body as its
+        // first argument, and the unifier expands it -- head-reduction --
+        // only when it meets a term with a different operator.
         final AliasType aliasType = (AliasType) type;
-        return toTerm(aliasType.type, subst);
+        return aliasTerm(
+            aliasType.name,
+            toTerm(aliasType.type, subst),
+            toTerms(aliasType.arguments, subst));
       case DATA_TYPE:
         final DataType dataType = (DataType) type;
         if (dataType.name.equals(BAG_TY_CON)) {

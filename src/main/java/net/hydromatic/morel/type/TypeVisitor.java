@@ -70,6 +70,10 @@ public class TypeVisitor<R> {
   /** Visits a {@link DataType}. */
   public R visit(DataType dataType) {
     dataType.parameterTypes.forEach(t -> t.accept(this));
+    // Also the types it is applied to. In 'nat option', 'parameterTypes' holds
+    // the declaration's type variable and 'arguments' holds 'nat', so a
+    // visitor that looked only at the former would not see the alias.
+    dataType.arguments.forEach(t -> t.accept(this));
     return null;
   }
 

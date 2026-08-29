@@ -86,10 +86,13 @@ class TabularPrinter {
    * #canPrintField}).
    */
   static boolean canPrint(Type type) {
+    type = type.unalias();
     if (!type.isCollection()) {
       return false;
     }
-    final Type elementType = type.elementType();
+    // An alias survives in the type displayed for a binding, so expand it
+    // before asking what shape the element is.
+    final Type elementType = type.elementType().unalias();
     if (!(elementType instanceof RecordType)
         && !(elementType instanceof TupleType)) {
       return false;
@@ -108,7 +111,9 @@ class TabularPrinter {
     if (printDepth >= 0 && depth + 1 > printDepth) {
       return false;
     }
-    final RecordLikeType recordType = (RecordLikeType) type.elementType();
+    // As in canPrint, an alias survives in a displayed type; expand it.
+    final RecordLikeType recordType =
+        (RecordLikeType) type.unalias().elementType().unalias();
     final Section root = Section.forRecord("", recordType);
     final RecordListCell rootCell =
         (RecordListCell)
@@ -149,6 +154,9 @@ class TabularPrinter {
    * </ul>
    */
   private static boolean canPrintField(Type type) {
+    // An alias survives in a displayed type; expand it before asking what
+    // shape the field is.
+    type = type.unalias();
     if (isScalar(type)) {
       return true;
     }
@@ -168,7 +176,7 @@ class TabularPrinter {
       return canPrintRecord(optionRecord) && !allFieldsOption(optionRecord);
     }
     if (type.isCollection()) {
-      Type elementType = type.elementType();
+      Type elementType = type.elementType().unalias();
       if (isScalar(elementType)) {
         return true;
       }
@@ -495,6 +503,9 @@ class TabularPrinter {
 
     /** Builds a Section for one field of a record-like type. */
     static Section forField(String name, Type type) {
+      // As in canPrintField, expand an alias before asking what shape the
+      // field is.
+      type = type.unalias();
       if (isScalar(type)) {
         return new Section(
             Kind.SCALAR, name, isNumeric(type), false, ImmutableList.of());
@@ -514,7 +525,7 @@ class TabularPrinter {
       if (optionRecord != null) {
         return forRecord(name, optionRecord, RecordShape.OPTION);
       }
-      final Type elementType = type.elementType();
+      final Type elementType = type.elementType().unalias();
       if (isScalar(elementType)) {
         return new Section(
             Kind.SCALAR_LIST,

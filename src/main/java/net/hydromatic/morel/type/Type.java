@@ -190,6 +190,18 @@ public interface Type {
     return TypeUnifier.unify(this, type);
   }
 
+  /**
+   * Expands this type if it is an alias, repeatedly, and otherwise returns it
+   * unchanged.
+   *
+   * <p>An alias survives only in the type displayed for a binding, so a caller
+   * that examines such a type structurally must expand it first. Expansion is
+   * at the head: {@code t list} is unchanged, because its head is {@code list}.
+   */
+  default Type unalias() {
+    return this;
+  }
+
   /** Returns whether this type contains an alias type. */
   default boolean containsAlias() {
     final AtomicInteger c = new AtomicInteger();
