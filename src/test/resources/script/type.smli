@@ -653,6 +653,36 @@ val y = 6 : typeof m;
 val z = [1] : typeof [m];
 > val z = [1] : int list
 
+(* A type declaration may use 'typeof'. A name in the body of one refers to
+ * the environment before the declaration -- that is what makes 'type t = t'
+ * mean "the previous t" -- so the expression cannot mention what the
+ * declaration binds, and its type is deduced on its own. *)
+val mi = 5;
+> val mi = 5 : int
+type t = typeof mi;
+> type t = int
+val tv: t = 7;
+> val tv = 7 : t
+
+(*) The expression need not be a name.
+type pair = typeof (1, "a");
+> type pair = int * string
+val pv: pair = (2, "b");
+> val pv = (2,"b") : pair
+
+(*) A datatype constructor's argument type may use it too.
+datatype box = BOX of typeof mi;
+> datatype box = BOX of int
+BOX 3;
+> val it = BOX 3 : box
+
+(* The rule that a name refers to the environment before the declaration
+ * applies here as everywhere, so 'typeof' cannot see what is being
+ * declared. *)
+type u = typeof nosuchvalue;
+> stdIn:1.17-1.28 Error: unbound variable or constructor: nosuchvalue
+>   raised at: stdIn:1.17-1.28
+
 (* type_string ---------------------------------------------------- *)
 (* The 'type_string' operator renders the inferred type of an expression as
  * a string, without evaluating the expression. *)

@@ -160,6 +160,20 @@ public class TypeResolver {
    */
   private final Map<String, Type> displacedTypes = new HashMap<>();
 
+  /** Environment this resolver was called with; see {@link #declExpKey}. */
+  private final Environment env;
+
+  /**
+   * Types of the expressions of {@code typeof} written in type declarations.
+   *
+   * <p>Resolving one is a nested deduction, and the same expression is asked
+   * for more than once: a datatype's constructor argument is converted twice,
+   * and {@link #deduceTypeWithRetries} may deduce a declaration twice. Deducing
+   * it again would be wasted, and would report any warning it produces once per
+   * attempt.
+   */
+  private final Map<Ast.Exp, Type.Key> declExpKeys = new HashMap<>();
+
   /**
    * Names of user-defined functions whose first parameter is named {@code self}
    * (curried form); these can be invoked as methods.
@@ -219,9 +233,62 @@ public class TypeResolver {
   /** A field of this name indicates that a record type is progressive. */
   static final String PROGRESSIVE_LABEL = "z$dummy";
 
+  /** Returns a key builder that can resolve a {@code typeof}. */
+  private KeyBuilder declKeyBuilder() {
+    return new KeyBuilder(ImmutableMap.of(), this::declExpKey);
+  }
+
+  /**
+   * Returns the key of the type of an expression written inside a type
+   * declaration.
+   *
+   * <p>A type declaration is elaborated before anything in it is deduced, so
+   * there is no substitution to read {@code typeof e} from. But a name in the
+   * body of a type declaration refers to the environment before the declaration
+   * -- that is what {@link #displacedKey} arranges, so that {@code type t = t}
+   * means "the previous t" -- so the expression cannot mention anything the
+   * declaration binds. It is therefore closed with respect to the enclosing
+   * environment, and its type can be deduced on its own.
+   */
+  private Type.Key declExpKey(Ast.ExpressionType expressionType) {
+    final Ast.Exp exp = expressionType.exp;
+    final Type.Key cached = declExpKeys.get(exp);
+    if (cached != null) {
+      return cached;
+    }
+    final Ast.ValDecl valDecl =
+        ast.valDecl(
+            exp.pos,
+            false,
+            false,
+            ast.valBind(exp.pos, ast.idPat(exp.pos, "it"), exp));
+    final Resolved resolved =
+        deduceType(env, valDecl, typeSystem, warningConsumer);
+    // Deduction may rewrite the expression -- an 'order' step is copied, for
+    // one -- and the type map is keyed by the node it produced, not the one it
+    // was given. Ask the declaration it returned.
+    final Ast.ValDecl valDecl2 = (Ast.ValDecl) resolved.node;
+    final Type type =
+        requireNonNull(
+            resolved.typeMap.getTypeOpt(valDecl2.valBinds.get(0).exp),
+            "deduction gave no type for the expression of a 'typeof'");
+    final Type.Key key = type.key();
+    declExpKeys.put(exp, key);
+    return key;
+  }
+
+  /** Throws; the resolver for a caller that cannot resolve {@code typeof}. */
+  private static Type.Key rejectTypeof(Ast.ExpressionType expressionType) {
+    throw new CompileException(
+        "'typeof' is not supported here", false, expressionType.pos);
+  }
+
   private TypeResolver(
-      TypeSystem typeSystem, Consumer<CompileException> warningConsumer) {
+      TypeSystem typeSystem,
+      Environment env,
+      Consumer<CompileException> warningConsumer) {
     this.typeSystem = requireNonNull(typeSystem);
+    this.env = requireNonNull(env);
     this.warningConsumer = requireNonNull(warningConsumer);
   }
 
@@ -232,9 +299,9 @@ public class TypeResolver {
       TypeSystem typeSystem,
       Consumer<CompileException> warningConsumer) {
     final TypeResolver typeResolver =
-        new TypeResolver(typeSystem, warningConsumer);
+        new TypeResolver(typeSystem, env, warningConsumer);
     final Resolved resolved =
-        typeResolver.deduceTypeWithRetries(env, decl, typeSystem);
+        typeResolver.deduceTypeWithRetries(decl, typeSystem);
     typeResolver.validations.forEach(v -> v.accept(resolved));
     return resolved;
   }
@@ -253,13 +320,12 @@ public class TypeResolver {
    * Deduces the datatype of a declaration, retrying each time a node is
    * expanded.
    */
-  private Resolved deduceTypeWithRetries(
-      Environment env, Ast.Decl decl, TypeSystem typeSystem) {
+  private Resolved deduceTypeWithRetries(Ast.Decl decl, TypeSystem typeSystem) {
     int attempt = 0;
     for (; ; ) {
       final int expandCount = typeSystem.expandCount.get();
       final int desugarCount0 = desugarCount;
-      final Resolved resolved = deduceType_(env, decl);
+      final Resolved resolved = deduceType_(decl);
       if (desugarCount != desugarCount0) {
         // A record modifier learned the fields of its base; deduce again, and
         // this time the record will desugar. Each attempt learns at least one
@@ -273,7 +339,7 @@ public class TypeResolver {
   }
 
   /** Deduces the datatype of a declaration. */
-  private Resolved deduceType_(Environment env, Ast.Decl decl) {
+  private Resolved deduceType_(Ast.Decl decl) {
     // Clean up from previous attempt.
     validations.clear();
     final int desugarCount0 = desugarCount;
@@ -4360,7 +4426,8 @@ public class TypeResolver {
       checkTypeConstructorArities(typeSystem, bind.type);
       // The body may not use a type variable that is not in the head.
       checkBoundTyVars(bind.tyVars, ImmutableList.of(bind.type));
-      final KeyBuilder keyBuilder = new KeyBuilder(displacedKeys);
+      final KeyBuilder keyBuilder =
+          new KeyBuilder(displacedKeys, this::declExpKey);
       bind.tyVars.forEach(keyBuilder::toTypeKey);
 
       keys.add(
@@ -4423,7 +4490,7 @@ public class TypeResolver {
         checkTypeConstructorArities(typeSystem, bodyType, declaring);
       }
 
-      final KeyBuilder keyBuilder = new KeyBuilder();
+      final KeyBuilder keyBuilder = declKeyBuilder();
       bind.tyVars.forEach(keyBuilder::toTypeKey);
 
       final PairList<String, Type.Key> tyCons = PairList.of();
@@ -4447,7 +4514,7 @@ public class TypeResolver {
           for (Ast.TyCon tyCon : datatypeBind.tyCons) {
             final Type tyConType;
             if (tyCon.type != null) {
-              final Type.Key conKey = toTypeKey(tyCon.type);
+              final Type.Key conKey = declKeyBuilder().toTypeKey(tyCon.type);
               tyConType =
                   typeSystem.fnType(conKey.toType(typeSystem), dataType);
             } else {
@@ -4537,7 +4604,7 @@ public class TypeResolver {
 
   private void deduceDatatypeBindType(
       Ast.DatatypeBind datatypeBind, PairList<String, Type.Key> tyCons) {
-    KeyBuilder keyBuilder = new KeyBuilder();
+    KeyBuilder keyBuilder = declKeyBuilder();
     for (Ast.TyCon tyCon : datatypeBind.tyCons) {
       tyCons.add(
           tyCon.id.name,
@@ -4558,12 +4625,23 @@ public class TypeResolver {
      */
     final ImmutableMap<String, Type.Key> displacedKeys;
 
+    /**
+     * How to resolve {@code typeof e}: the type of an expression is not known
+     * syntactically, so a caller that knows it must say.
+     *
+     * <p>A caller that cannot uses {@link TypeResolver#rejectTypeof}.
+     */
+    final Function<Ast.ExpressionType, Type.Key> expKeys;
+
     KeyBuilder() {
-      this(ImmutableMap.of());
+      this(ImmutableMap.of(), TypeResolver::rejectTypeof);
     }
 
-    KeyBuilder(Map<String, Type.Key> displacedKeys) {
+    KeyBuilder(
+        Map<String, Type.Key> displacedKeys,
+        Function<Ast.ExpressionType, Type.Key> expKeys) {
       this.displacedKeys = ImmutableMap.copyOf(displacedKeys);
+      this.expKeys = expKeys;
     }
 
     /**
@@ -4632,6 +4710,10 @@ public class TypeResolver {
           final Ast.TyVar tyVar = (Ast.TyVar) type;
           return Keys.ordinal(
               tyVarMap.computeIfAbsent(tyVar.name, name -> tyVarMap.size()));
+
+        case EXPRESSION_TYPE:
+          final Ast.ExpressionType expressionType = (Ast.ExpressionType) type;
+          return expKeys.apply(expressionType);
 
         default:
           throw new AssertionError(
