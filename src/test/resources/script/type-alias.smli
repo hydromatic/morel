@@ -322,4 +322,25 @@ type 'a my_list2 = 'a list;
 val ml: int my_list2 = [1, 2];
 > val ml = [1,2] : int list
 
+(* A name may be declared again, and the second declaration is a different
+ * type. An annotation that writes the name is resolved by the name alone,
+ * and what the name resolves to is cached, so a use between the two
+ * declarations must not leave the first type behind. *)
+type t = int;
+> type t = int
+val a: t = 0;
+> val a = 0 : t
+type t = string;
+> type t = string
+val b: t = "x";
+> val b = "x" : t
+
+(*) Without a use between the declarations there is nothing cached.
+type u = int;
+> type u = int
+type u = string;
+> type u = string
+val c: u = "x";
+> val c = "x" : u
+
 (*) End type-alias.smli

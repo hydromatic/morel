@@ -309,6 +309,7 @@ public class TypeSystem {
   Type aliasType(String name, Type type, List<Type> arguments) {
     final AliasType aliasType = new AliasType(name, type, arguments);
     typeByName.put(name, aliasType);
+    typeByKey.put(Keys.name(name), aliasType);
     return aliasType;
   }
 
