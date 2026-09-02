@@ -68,313 +68,203 @@ Sys.deduceColorScheme ();
 (*) val env : unit -> string list
 Sys.env;
 > val it = fn : unit -> (string * string) list
+Sys.set ("output", "tabular");
+> val it = () : unit
 Sys.env ();
-> val it =
->   [("$csComplement","forall 'a. 'a continuous_set -> 'a continuous_set"),
->    ("$csContains","forall 'a. 'a continuous_set -> 'a -> bool"),
->    ("$dsComplement","forall 'a. 'a discrete_set -> 'a discrete_set"),
->    ("$dsContains","forall 'a. 'a discrete_set -> 'a -> bool"),
->    ("$dsRanges","forall 'a. 'a discrete_set -> 'a range list"),
->    ("@","forall 'a. 'a list * 'a list -> 'a list"),("ALL","'a range"),
->    ("AT_LEAST","forall 'a. 'a -> 'a range"),
->    ("AT_MOST","forall 'a. 'a -> 'a range"),("Apr","month"),("Aug","month"),
->    ("BAG","variant list -> variant"),("BIN","radix"),
->    ("BOOL","bool -> variant"),
->    ("Bag",
->     "{@:forall 'a. 'a bag * 'a bag -> 'a bag, all:forall 'a. ('a -> bool) -> 'a bag -> bool, app:forall 'a. ('a -> unit) -> 'a bag -> unit, concat:forall 'a. 'a bag list -> 'a bag, drop:forall 'a. 'a bag * int -> 'a bag, `exists`:forall 'a. ('a -> bool) -> 'a bag -> bool, filter:forall 'a. ('a -> bool) -> 'a bag -> 'a bag, find:forall 'a. ('a -> bool) -> 'a bag -> 'a option, fold:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a bag -> 'b, fromList:forall 'a. 'a list -> 'a bag, getItem:forall 'a. 'a bag -> ('a * 'a bag) option, hd:forall 'a. 'a bag -> 'a, length:forall 'a. 'a bag -> int, map:forall 'a 'b. ('a -> 'b) -> 'a bag -> 'b bag, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a bag -> 'b bag, nil:forall 'a. 'a bag, nth:forall 'a. 'a bag * int -> 'a, null:forall 'a. 'a bag -> bool, only:forall 'a. 'a bag -> 'a, partition:forall 'a. ('a -> bool) -> 'a bag -> 'a bag * 'a bag, tabulate:forall 'a. int * (int -> 'a) -> 'a bag, `take`:forall 'a. 'a bag * int -> 'a bag, tl:forall 'a. 'a bag -> 'a bag, toList:forall 'a. 'a bag -> 'a list}"),
->    ("Bind","exn"),
->    ("Bool",
->     "{<:bool * bool -> bool, <>:bool * bool -> bool, =:bool * bool -> bool, >:bool * bool -> bool, `andalso`:bool * bool -> bool, fromString:string -> bool option, `implies`:bool * bool -> bool, not:bool -> bool, `orelse`:bool * bool -> bool, scan:forall 'a. ('a -> (char * 'a) option) -> 'a -> (bool * 'a) option, toString:bool -> string}"),
->    ("CHAR","char -> variant"),("CLOSED","forall 'a. 'a * 'a -> 'a range"),
->    ("CLOSED_OPEN","forall 'a. 'a * 'a -> 'a range"),
->    ("CONSTANT","string -> variant"),
->    ("CONSTRUCT","string * variant -> variant"),
->    ("CONTINUOUS_SET","forall 'a. 'a range list -> 'a continuous_set"),
->    ("Char",
->     "{<:char * char -> bool, <=:char * char -> bool, <>:char * char -> bool, =:char * char -> bool, >:char * char -> bool, >=:char * char -> bool, chr:int -> char, compare:char * char -> order, contains:string -> char -> bool, fromCString:string -> char option, fromInt:int -> char option, fromString:string -> char option, isAlpha:char -> bool, isAlphaNum:char -> bool, isAscii:char -> bool, isCntrl:char -> bool, isDigit:char -> bool, isGraph:char -> bool, isHexDigit:char -> bool, isLower:char -> bool, isOctDigit:char -> bool, isPrint:char -> bool, isPunct:char -> bool, isSpace:char -> bool, isUpper:char -> bool, maxChar:char, maxOrd:int, minChar:char, notContains:string -> char -> bool, ord:char -> int, pred:char -> char, scan:forall 'a. ('a -> (char * 'a) option) -> 'a -> (char * 'a) option, succ:char -> char, toCString:char -> string, toLower:char -> char, toString:char -> string, toUpper:char -> char}"),
->    ("Chr","exn"),("DEC","radix"),("DESC","forall 'a. 'a -> 'a descending"),
->    ("DISCRETE_SET","forall 'a. 'a range list -> 'a discrete_set"),
->    ("Datalog",
->     "{execute:string -> variant, translate:string -> string option, validate:string -> string}"),
->    ("Date",
->     "{compare:date * date -> order, date:{day:int, hour:int, minute:int, month:month, offset:time option, second:int, year:int} -> date, day:date -> int, fmt:string -> date -> string, fromString:string -> date option, fromTimeLocal:time -> date, fromTimeUniv:time -> date, hour:date -> int, isDst:date -> bool option, localOffset:unit -> time, minute:date -> int, month:date -> month, scan:forall 'a. ('a -> (char * 'a) option) -> 'a -> (date * 'a) option, second:date -> int, toString:date -> string, toTime:date -> time, weekDay:date -> weekday, year:date -> int, yearDay:date -> int}"),
->    ("Dec","month"),("Div","exn"),("Domain","exn"),("EQUAL","order"),
->    ("EXACT","realfmt"),
->    ("Either",
->     "{app:forall 'a 'b. ('a -> unit) * ('b -> unit) -> ('a,'b) either -> unit, appLeft:forall 'a 'b. ('a -> unit) -> ('a,'b) either -> unit, appRight:forall 'a 'b. ('b -> unit) -> ('a,'b) either -> unit, asLeft:forall 'a 'b. ('a,'b) either -> 'a option, asRight:forall 'a 'b. ('a,'b) either -> 'b option, fold:forall 'a 'b 'c. ('a * 'b -> 'b) * ('c * 'b -> 'b) -> 'b -> ('a,'c) either -> 'b, isLeft:forall 'a 'b. ('a,'b) either -> bool, isRight:forall 'a 'b. ('a,'b) either -> bool, map:forall 'a 'b 'c 'd. ('a -> 'c) * ('b -> 'd) -> ('a,'b) either -> ('c,'d) either, mapLeft:forall 'a 'b 'c. ('a -> 'b) -> ('a,'c) either -> ('b,'c) either, mapRight:forall 'a 'b 'c. ('b -> 'c) -> ('a,'b) either -> ('a,'c) either, partition:forall 'a 'b. ('a,'b) either list -> 'a list * 'b list, proj:forall 'a. ('a,'a) either -> 'a}"),
->    ("Empty","exn"),("FIX","int option -> realfmt"),("Fail","string -> exn"),
->    ("Feb","month"),
->    ("Fn",
->     "{apply:forall 'a 'b. ('a -> 'b) * 'a -> 'b, const:forall 'a 'b. 'a -> 'b -> 'a, curry:forall 'a 'b 'c. ('a * 'b -> 'c) -> 'a -> 'b -> 'c, equal:forall 'a. 'a -> 'a -> bool, flip:forall 'a 'b 'c. ('a * 'b -> 'c) -> 'b * 'a -> 'c, id:forall 'a. 'a -> 'a, notEqual:forall 'a 'b. 'a -> 'a -> bool, `o`:forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c, repeat:forall 'a. int -> ('a -> 'a) -> 'a -> 'a, uncurry:forall 'a 'b 'c. ('a -> 'b -> 'c) -> 'a * 'b -> 'c}"),
->    ("Fri","weekday"),("GEN","int option -> realfmt"),("GREATER","order"),
->    ("GREATER_THAN","forall 'a. 'a -> 'a range"),
->    ("General",
->     "{before:forall 'a. 'a * unit -> 'a, exnMessage:exn -> string, exnName:exn -> string, ignore:forall 'a. 'a -> unit, `o`:forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c}"),
->    ("HEX","radix"),("INL","forall 'a 'b. 'a -> ('a,'b) either"),
->    ("INR","forall 'a 'b. 'b -> ('a,'b) either"),("INT","int -> variant"),
->    ("Int",
->     "{*:int * int -> int, +:int * int -> int, -:int * int -> int, <:int * int -> bool, <=:int * int -> bool, >:int * int -> bool, >=:int * int -> bool, abs:int -> int, compare:int * int -> order, `div`:int * int -> int, fmt:radix -> int -> string, fromInt:int -> int, fromLarge:int -> int, fromString:string -> int option, max:int * int -> int, maxInt:int option, min:int * int -> int, minInt:int option, `mod`:int * int -> int, precision:int option, quot:int * int -> int, rem:int * int -> int, sameSign:int * int -> bool, scan:forall 'a. radix -> ('a -> (char * 'a) option) -> 'a -> (int * 'a) option, sign:int -> int, toInt:int -> int, toLarge:int -> int, toString:int -> string, ~:int -> int}"),
->    ("Interact","{use:string -> unit, useSilently:string -> unit}"),
->    ("Jan","month"),("Jul","month"),("Jun","month"),("LESS","order"),
->    ("LESS_THAN","forall 'a. 'a -> 'a range"),
->    ("LIST","variant list -> variant"),
->    ("List",
->     "{@:forall 'a. 'a list * 'a list -> 'a list, all:forall 'a. ('a -> bool) -> 'a list -> bool, app:forall 'a. ('a -> unit) -> 'a list -> unit, collate:forall 'a. ('a * 'a -> order) -> 'a list * 'a list -> order, concat:forall 'a. 'a list list -> 'a list, drop:forall 'a. 'a list * int -> 'a list, `except`:forall 'a. 'a list list -> 'a list, `exists`:forall 'a. ('a -> bool) -> 'a list -> bool, filter:forall 'a. ('a -> bool) -> 'a list -> 'a list, find:forall 'a. ('a -> bool) -> 'a list -> 'a option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, getItem:forall 'a. 'a list -> ('a * 'a list) option, hd:forall 'a. 'a list -> 'a, `intersect`:forall 'a. 'a list list -> 'a list, last:forall 'a. 'a list -> 'a, length:forall 'a. 'a list -> int, map:forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a list -> 'b list, mapi:forall 'a 'b. (int * 'a -> 'b) -> 'a list -> 'b list, nil:forall 'a. 'a list, nth:forall 'a. 'a list * int -> 'a, null:forall 'a. 'a list -> bool, only:forall 'a. 'a list -> 'a, partition:forall 'a. ('a -> bool) -> 'a list -> 'a list * 'a list, rev:forall 'a. 'a list -> 'a list, revAppend:forall 'a. 'a list * 'a list -> 'a list, tabulate:forall 'a. int * (int -> 'a) -> 'a list, `take`:forall 'a. 'a list * int -> 'a list, tl:forall 'a. 'a list -> 'a list}"),
->    ("ListPair",
->     "{all:forall 'a 'b. ('a * 'b -> bool) -> 'a list * 'b list -> bool, allEq:forall 'a 'b. ('a * 'b -> bool) -> 'a list * 'b list -> bool, app:forall 'a 'b. ('a * 'b -> unit) -> 'a list * 'b list -> unit, appEq:forall 'a 'b. ('a * 'b -> unit) -> 'a list * 'b list -> unit, `exists`:forall 'a 'b. ('a * 'b -> bool) -> 'a list * 'b list -> bool, foldl:forall 'a 'b 'c. ('a * 'b * 'c -> 'c) -> 'c -> 'a list * 'b list -> 'c, foldlEq:forall 'a 'b 'c. ('a * 'b * 'c -> 'c) -> 'c -> 'a list * 'b list -> 'c, foldr:forall 'a 'b 'c. ('a * 'b * 'c -> 'c) -> 'c -> 'a list * 'b list -> 'c, foldrEq:forall 'a 'b 'c. ('a * 'b * 'c -> 'c) -> 'c -> 'a list * 'b list -> 'c, map:forall 'a 'b 'c. ('a * 'b -> 'c) -> 'a list * 'b list -> 'c list, mapEq:forall 'a 'b 'c. ('a * 'b -> 'c) -> 'a list * 'b list -> 'c list, unzip:forall 'a 'b. ('a * 'b) list -> 'a list * 'b list, zip:forall 'a 'b. 'a list * 'b list -> ('a * 'b) list, zipEq:forall 'a 'b. 'a list * 'b list -> ('a * 'b) list}"),
->    ("Mar","month"),("Match","exn"),
->    ("Math",
->     "{acos:real -> real, asin:real -> real, atan:real -> real, atan2:real * real -> real, cos:real -> real, cosh:real -> real, e:real, exp:real -> real, ln:real -> real, log10:real -> real, pi:real, pow:real * real -> real, sin:real -> real, sinh:real -> real, sqrt:real -> real, tan:real -> real, tanh:real -> real}"),
->    ("May","month"),("Mon","weekday"),("NONE","'a option"),("Nov","month"),
->    ("OCT","radix"),("OPEN","forall 'a. 'a * 'a -> 'a range"),
->    ("OPEN_CLOSED","forall 'a. 'a * 'a -> 'a range"),("Oct","month"),
->    ("Option",
->     "{app:forall 'a. ('a -> unit) -> 'a option -> unit, compose:forall 'a 'b 'c. ('a -> 'b) * ('c -> 'a option) -> 'c -> 'b option, composePartial:forall 'a 'b 'c. ('a -> 'b option) * ('c -> 'a option) -> 'c -> 'b option, filter:forall 'a. ('a -> bool) -> 'a -> 'a option, getOpt:forall 'a. 'a option * 'a -> 'a, isSome:forall 'a. 'a option -> bool, `join`:forall 'a. 'a option option -> 'a option, map:forall 'a 'b. ('a -> 'b) -> 'a option -> 'b option, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a option -> 'b option, valOf:forall 'a. 'a option -> 'a}"),
->    ("Overflow","exn"),("POINT","forall 'a. 'a -> 'a range"),
->    ("PP",
->     "{align:doc -> doc, beside:doc * doc -> doc, braces:doc -> doc, brackets:doc -> doc, cat:doc list -> doc, empty:doc, encloseSep:doc * doc * doc * doc list -> doc, fillCat:doc list -> doc, fillSep:doc list -> doc, `group`:doc -> doc, hang:int * doc -> doc, hardLine:doc, hcat:doc list -> doc, hsep:doc list -> doc, indent:int * doc -> doc, line:doc, lineBreak:doc, nest:int * doc -> doc, pack:doc * doc list -> doc, parens:doc -> doc, punctuate:doc * doc list -> doc list, render:int * doc -> string, sep:doc list -> doc, softBreak:doc, softLine:doc, text:string -> doc, vcat:doc list -> doc, vsep:doc list -> doc}"),
->    ("REAL","real -> variant"),
->    ("RECORD","(string * variant) list -> variant"),
->    ("Range",
->     "{complement:forall 'a. 'a continuous_set -> 'a continuous_set, contains:forall 'a. 'a range -> 'a -> bool, continuousSetOf:forall 'a. 'a range list -> 'a continuous_set, discreteSetOf:forall 'a. 'a range list -> 'a discrete_set, flatten:forall 'a. 'a range list -> 'a list, ranges:forall 'a. 'a continuous_set -> 'a range list, toBag:forall 'a. 'a discrete_set -> 'a bag, toList:forall 'a. 'a discrete_set -> 'a list}"),
->    ("Real",
->     "{*:real * real -> real, +:real * real -> real, -:real * real -> real, /:real * real -> real, <:real * real -> bool, <=:real * real -> bool, <>:real * real -> bool, =:real * real -> bool, >:real * real -> bool, >=:real * real -> bool, abs:real -> real, ceil:real -> int, checkFloat:real -> real, compare:real * real -> order, copySign:real * real -> real, floor:real -> int, fmt:realfmt -> real -> string, fromInt:int -> real, fromManExp:{exp:int, man:real} -> real, fromString:string -> real option, isFinite:real -> bool, isNan:real -> bool, isNormal:real -> bool, max:real * real -> real, maxFinite:real, min:real * real -> real, minNormalPos:real, minPos:real, negInf:real, posInf:real, precision:int, radix:int, realCeil:real -> real, realFloor:real -> real, realMod:real -> real, realRound:real -> real, realTrunc:real -> real, rem:real * real -> real, round:real -> int, sameSign:real * real -> bool, scan:forall 'a. ('a -> (char * 'a) option) -> 'a -> (real * 'a) option, sign:real -> int, signBit:real -> bool, split:real -> {frac:real, whole:real}, toManExp:real -> {exp:int, man:real}, toString:real -> string, trunc:real -> int, unordered:real * real -> bool, ~:real -> real}"),
->    ("Relational",
->     "{compare:forall 'a. 'a * 'a -> order, count:forall 'a. 'a bag -> int, empty:forall 'a. 'a bag -> bool, iterate:multi(forall 'a. 'a bag -> ('a bag * 'a bag -> 'a bag) -> 'a bag,forall 'a. 'a list -> ('a list * 'a list -> 'a list) -> 'a list), max:forall 'a. 'a bag -> 'a, min:forall 'a. 'a bag -> 'a, nonEmpty:forall 'a. 'a bag -> bool, only:forall 'a. 'a bag -> 'a, sum:forall 'a. 'a bag -> 'a}"),
->    ("SCI","int option -> realfmt"),("SOME","forall 'a. 'a -> 'a option"),
->    ("STRING","string -> variant"),("Sat","weekday"),("Sep","month"),
->    ("Size","exn"),("Span","exn"),
->    ("String",
->     "{<:string * string -> bool, <=:string * string -> bool, <>:string * string -> bool, =:string * string -> bool, >:string * string -> bool, >=:string * string -> bool, ^:string * string -> string, collate:(char * char -> order) -> string * string -> order, compare:string * string -> order, concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int * int option -> string, fields:(char -> bool) -> string -> string list, fromCString:string -> string option, fromString:string -> string option, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, scan:forall 'a. ('a -> (char * 'a) option) -> 'a -> (string * 'a) option, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, toCString:string -> string, toString:string -> string, tokens:(char -> bool) -> string -> string list, translate:(char -> string) -> string -> string}"),
->    ("StringCvt",
->     "{dropl:forall 'a. (char -> bool) -> ('a -> (char * 'a) option) -> 'a -> 'a, padLeft:char -> int -> string -> string, padRight:char -> int -> string -> string, scanString:forall 'a 'b. (('a -> (char * 'a) option) -> 'a -> ('b * 'a) option) -> string -> 'b option, skipWS:forall 'a. ('a -> (char * 'a) option) -> 'a -> 'a, splitl:forall 'a. (char -> bool) -> ('a -> (char * 'a) option) -> 'a -> string * 'a, takel:forall 'a. (char -> bool) -> ('a -> (char * 'a) option) -> 'a -> string}"),
->    ("Subscript","exn"),("Sun","weekday"),
->    ("Sys",
->     "{clearEnv:unit -> unit, colorSchemes:unit -> {comment:string, constant:string, error:string, identifier:string, keyword:string, name:string, numeric:string, string:string, symbol:string, typeVar:string} list, deduceColorScheme:unit -> string, env:unit -> (string * string) list, file:{...}, parseTree:string -> string, plan:unit -> string, planEx:string -> string, set:forall 'a. string * 'a -> unit, show:string -> string option, showAll:unit -> (string * string option) list, unset:string -> unit}"),
->    ("Thu","weekday"),
->    ("Time",
->     "{+:time * time -> time, -:time * time -> time, <:time * time -> bool, <=:time * time -> bool, >:time * time -> bool, >=:time * time -> bool, compare:time * time -> order, fmt:int -> time -> string, fromMicroseconds:int -> time, fromMilliseconds:int -> time, fromNanoseconds:int -> time, fromReal:real -> time, fromSeconds:int -> time, fromString:string -> time option, now:unit -> time, scan:forall 'a. ('a -> (char * 'a) option) -> 'a -> (time * 'a) option, toMicroseconds:time -> int, toMilliseconds:time -> int, toNanoseconds:time -> int, toReal:time -> real, toSeconds:time -> int, toString:time -> string, zeroTime:time}"),
->    ("Tue","weekday"),("UNIT","variant"),("UnequalLengths","exn"),
->    ("Unordered","exn"),("VARIANT_NONE","variant"),
->    ("VARIANT_SOME","variant -> variant"),
->    ("VECTOR","variant list -> variant"),
->    ("Variant","{parse:string -> variant, print:variant -> string}"),
->    ("Vector",
->     "{all:forall 'a. ('a -> bool) -> 'a vector -> bool, app:forall 'a. ('a -> unit) -> 'a vector -> unit, appi:forall 'a. (int * 'a -> unit) -> 'a vector -> unit, collate:forall 'a. ('a * 'a -> order) -> 'a vector * 'a vector -> order, concat:forall 'a. 'a vector list -> 'a vector, `exists`:forall 'a. ('a -> bool) -> 'a vector -> bool, find:forall 'a. ('a -> bool) -> 'a vector -> 'a option, findi:forall 'a 'b. (int * 'a -> bool) -> 'a vector -> (int * 'a) option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldli:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldri:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, fromList:forall 'a. 'a list -> 'a vector, length:forall 'a. 'a vector -> int, map:forall 'a 'b. ('a -> 'b) -> 'a vector -> 'b vector, mapi:forall 'a 'b. (int * 'a -> 'b) -> 'a vector -> 'b vector, maxLen:int, sub:forall 'a. 'a vector * int -> 'a, tabulate:forall 'a. int * (int -> 'a) -> 'a vector, update:forall 'a. 'a vector * int * 'a -> 'a vector}"),
->    ("Wed","weekday"),
->    ("Word",
->     "{*:word * word -> word, +:word * word -> word, -:word * word -> word, <:word * word -> bool, <<:word * word -> word, <=:word * word -> bool, >:word * word -> bool, >=:word * word -> bool, >>:word * word -> word, andb:word * word -> word, compare:word * word -> order, `div`:word * word -> word, fmt:radix -> word -> string, fromInt:int -> word, fromLarge:word -> word, fromLargeInt:int -> word, fromLargeWord:word -> word, fromString:string -> word option, max:word * word -> word, min:word * word -> word, `mod`:word * word -> word, notb:word -> word, orb:word * word -> word, scan:forall 'a. radix -> ('a -> (char * 'a) option) -> 'a -> (word * 'a) option, toInt:word -> int, toIntX:word -> int, toLarge:word -> word, toLargeInt:word -> int, toLargeIntX:word -> int, toLargeWord:word -> word, toLargeWordX:word -> word, toLargeX:word -> word, toString:word -> string, wordSize:int, xorb:word * word -> word, ~:word -> word, ~>>:word * word -> word}"),
->    ("^","string * string -> string"),("abs","forall 'a. 'a -> 'a"),
->    ("app","forall 'a. ('a -> unit) -> 'a list -> unit"),
->    ("bag","forall 'a. 'a list -> 'a bag"),
->    ("before","forall 'a. 'a * unit -> 'a"),("ceil","real -> int"),
->    ("chr","int -> char"),("compare","forall 'a. 'a * 'a -> order"),
->    ("concat","string list -> string"),("count","forall 'a. 'a bag -> int"),
->    ("empty","forall 'a. 'a bag -> bool"),
->    ("env","unit -> (string * string) list"),("exnMessage","exn -> string"),
->    ("exnName","exn -> string"),("explode","string -> char list"),
->    ("false","bool"),("fields","(char -> bool) -> string -> string list"),
->    ("file","{...}"),("floor","real -> int"),
->    ("foldl","forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b"),
->    ("foldr","forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b"),
->    ("getOpt","forall 'a. 'a option * 'a -> 'a"),
->    ("hd","forall 'a. 'a list -> 'a"),("ignore","forall 'a. 'a -> unit"),
->    ("implode","char list -> string"),
->    ("isSome","forall 'a. 'a option -> bool"),
->    ("it","unit -> (string * string) list"),
->    ("iterate","forall 'a. 'a bag -> ('a bag * 'a bag -> 'a bag) -> 'a bag"),
->    ("length","forall 'a. 'a list -> int"),
->    ("map","forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list"),
->    ("max","forall 'a. 'a bag -> 'a"),("min","forall 'a. 'a bag -> 'a"),
->    ("nil","forall 'a. 'a list"),("nonEmpty","forall 'a. 'a bag -> bool"),
->    ("not","bool -> bool"),("null","forall 'a. 'a list -> bool"),
->    ("o","forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c"),
->    ("only","forall 'a. 'a bag -> 'a"),("op *","forall 'a. 'a * 'a -> 'a"),
->    ("op +","forall 'a. 'a * 'a -> 'a"),("op -","forall 'a. 'a * 'a -> 'a"),
->    ("op /","real * real -> real"),
->    ("op ::","forall 'a. 'a * 'a list -> 'a list"),
->    ("op <","forall 'a. 'a * 'a -> bool"),
->    ("op <=","forall 'a. 'a * 'a -> bool"),
->    ("op <>","forall 'a. 'a * 'a -> bool"),
->    ("op =","forall 'a. 'a * 'a -> bool"),
->    ("op >","forall 'a. 'a * 'a -> bool"),
->    ("op >=","forall 'a. 'a * 'a -> bool"),
->    ("op @","forall 'a. 'a list * 'a list -> 'a list"),
->    ("op ^","string * string -> string"),
->    ("op div","forall 'a. 'a * 'a -> 'a"),
->    ("op elem","forall 'a. 'a * 'a bag -> bool"),
->    ("op mod","forall 'a. 'a * 'a -> 'a"),
->    ("op notelem","forall 'a. 'a * 'a bag -> bool"),
->    ("op o","forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c"),
->    ("op ~","forall 'a. 'a -> 'a"),("ord","char -> int"),
->    ("plan","unit -> string"),("real","int -> real"),
->    ("rev","forall 'a. 'a list -> 'a list"),("round","real -> int"),
->    ("set","forall 'a. string * 'a -> unit"),
->    ("show","string -> string option"),
->    ("showAll","unit -> (string * string option) list"),
->    ("size","string -> int"),("str","char -> string"),
->    ("substring","string * int * int -> string"),
->    ("sum","forall 'a. 'a bag -> 'a"),("tl","forall 'a. 'a list -> 'a list"),
->    ("tokens","(char -> bool) -> string -> string list"),("true","bool"),
->    ("trunc","real -> int"),("unset","string -> unit"),
->    ("use","string -> unit"),("useSilently","string -> unit"),
->    ("valOf","forall 'a. 'a option -> 'a"),
->    ("vector","forall 'a. 'a list -> 'a vector")] : (string * string) list
+> 1              2
+> -------------- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+> $csComplement  forall 'a. 'a continuous_set -> 'a continuous_set
+> $csContains    forall 'a. 'a continuous_set -> 'a -> bool
+> $dsComplement  forall 'a. 'a discrete_set -> 'a discrete_set
+> $dsContains    forall 'a. 'a discrete_set -> 'a -> bool
+> $dsRanges      forall 'a. 'a discrete_set -> 'a range list
+> @              forall 'a. 'a list * 'a list -> 'a list
+> ALL            'a range
+> AT_LEAST       forall 'a. 'a -> 'a range
+> AT_MOST        forall 'a. 'a -> 'a range
+> Apr            month
+> Aug            month
+> BAG            variant list -> variant
+> BIN            radix
+> BOOL           bool -> variant
+> Bag            {@:forall 'a. 'a bag * 'a bag -> 'a bag, all:forall 'a. ('a -> bool) -> 'a bag -> bool, app:forall 'a. ('a -> unit) -> 'a bag -> unit, concat:forall 'a. 'a bag list -> 'a bag, drop:forall 'a. 'a bag * int -> 'a bag, `exists`:forall 'a. ('a -> bool) -> 'a bag -> bool, filter:forall 'a. ('a -> bool) -> 'a bag -> 'a bag, find:forall 'a. ('a -> bool) -> 'a bag -> 'a option, fold:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a bag -> 'b, fromList:forall 'a. 'a list -> 'a bag, getItem:forall 'a. 'a bag -> ('a * 'a bag) option, hd:forall 'a. 'a bag -> 'a, length:forall 'a. 'a bag -> int, map:forall 'a 'b. ('a -> 'b) -> 'a bag -> 'b bag, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a bag -> 'b bag, nil:forall 'a. 'a bag, nth:forall 'a. 'a bag * int -> 'a, null:forall 'a. 'a bag -> bool, only:forall 'a. 'a bag -> 'a, partition:forall 'a. ('a -> bool) -> 'a bag -> 'a bag * 'a bag, tabulate:forall 'a. int * (int -> 'a) -> 'a bag, `take`:forall 'a. 'a bag * int -> 'a bag, tl:forall 'a. 'a bag -> 'a bag, toList:forall 'a. 'a bag -> 'a list}
+> Bind           exn
+> Bool           {<:bool * bool -> bool, <>:bool * bool -> bool, =:bool * bool -> bool, >:bool * bool -> bool, `andalso`:bool * bool -> bool, fromString:string -> bool option, `implies`:bool * bool -> bool, not:bool -> bool, `orelse`:bool * bool -> bool, scan:forall 'a. ('a -> (char * 'a) option) -> 'a -> (bool * 'a) option, toString:bool -> string}
+> CHAR           char -> variant
+> CLOSED         forall 'a. 'a * 'a -> 'a range
+> CLOSED_OPEN    forall 'a. 'a * 'a -> 'a range
+> CONSTANT       string -> variant
+> CONSTRUCT      string * variant -> variant
+> CONTINUOUS_SET forall 'a. 'a range list -> 'a continuous_set
+> Char           {<:char * char -> bool, <=:char * char -> bool, <>:char * char -> bool, =:char * char -> bool, >:char * char -> bool, >=:char * char -> bool, chr:int -> char, compare:char * char -> order, contains:string -> char -> bool, fromCString:string -> char option, fromInt:int -> char option, fromString:string -> char option, isAlpha:char -> bool, isAlphaNum:char -> bool, isAscii:char -> bool, isCntrl:char -> bool, isDigit:char -> bool, isGraph:char -> bool, isHexDigit:char -> bool, isLower:char -> bool, isOctDigit:char -> bool, isPrint:char -> bool, isPunct:char -> bool, isSpace:char -> bool, isUpper:char -> bool, maxChar:char, maxOrd:int, minChar:char, notContains:string -> char -> bool, ord:char -> int, pred:char -> char, scan:forall 'a. ('a -> (char * 'a) option) -> 'a -> (char * 'a) option, succ:char -> char, toCString:char -> string, toLower:char -> char, toString:char -> string, toUpper:char -> char}
+> Chr            exn
+> DEC            radix
+> DESC           forall 'a. 'a -> 'a descending
+> DISCRETE_SET   forall 'a. 'a range list -> 'a discrete_set
+> Datalog        {execute:string -> variant, translate:string -> string option, validate:string -> string}
+> Date           {compare:date * date -> order, date:{day:int, hour:int, minute:int, month:month, offset:time option, second:int, year:int} -> date, day:date -> int, fmt:string -> date -> string, fromString:string -> date option, fromTimeLocal:time -> date, fromTimeUniv:time -> date, hour:date -> int, isDst:date -> bool option, localOffset:unit -> time, minute:date -> int, month:date -> month, scan:forall 'a. ('a -> (char * 'a) option) -> 'a -> (date * 'a) option, second:date -> int, toString:date -> string, toTime:date -> time, weekDay:date -> weekday, year:date -> int, yearDay:date -> int}
+> Dec            month
+> Div            exn
+> Domain         exn
+> EQUAL          order
+> EXACT          realfmt
+> Either         {app:forall 'a 'b. ('a -> unit) * ('b -> unit) -> ('a,'b) either -> unit, appLeft:forall 'a 'b. ('a -> unit) -> ('a,'b) either -> unit, appRight:forall 'a 'b. ('b -> unit) -> ('a,'b) either -> unit, asLeft:forall 'a 'b. ('a,'b) either -> 'a option, asRight:forall 'a 'b. ('a,'b) either -> 'b option, fold:forall 'a 'b 'c. ('a * 'b -> 'b) * ('c * 'b -> 'b) -> 'b -> ('a,'c) either -> 'b, isLeft:forall 'a 'b. ('a,'b) either -> bool, isRight:forall 'a 'b. ('a,'b) either -> bool, map:forall 'a 'b 'c 'd. ('a -> 'c) * ('b -> 'd) -> ('a,'b) either -> ('c,'d) either, mapLeft:forall 'a 'b 'c. ('a -> 'b) -> ('a,'c) either -> ('b,'c) either, mapRight:forall 'a 'b 'c. ('b -> 'c) -> ('a,'b) either -> ('a,'c) either, partition:forall 'a 'b. ('a,'b) either list -> 'a list * 'b list, proj:forall 'a. ('a,'a) either -> 'a}
+> Empty          exn
+> FIX            int option -> realfmt
+> Fail           string -> exn
+> Feb            month
+> Fn             {apply:forall 'a 'b. ('a -> 'b) * 'a -> 'b, const:forall 'a 'b. 'a -> 'b -> 'a, curry:forall 'a 'b 'c. ('a * 'b -> 'c) -> 'a -> 'b -> 'c, equal:forall 'a. 'a -> 'a -> bool, flip:forall 'a 'b 'c. ('a * 'b -> 'c) -> 'b * 'a -> 'c, id:forall 'a. 'a -> 'a, notEqual:forall 'a 'b. 'a -> 'a -> bool, `o`:forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c, repeat:forall 'a. int -> ('a -> 'a) -> 'a -> 'a, uncurry:forall 'a 'b 'c. ('a -> 'b -> 'c) -> 'a * 'b -> 'c}
+> Fri            weekday
+> GEN            int option -> realfmt
+> GREATER        order
+> GREATER_THAN   forall 'a. 'a -> 'a range
+> General        {before:forall 'a. 'a * unit -> 'a, exnMessage:exn -> string, exnName:exn -> string, ignore:forall 'a. 'a -> unit, `o`:forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c}
+> HEX            radix
+> INL            forall 'a 'b. 'a -> ('a,'b) either
+> INR            forall 'a 'b. 'b -> ('a,'b) either
+> INT            int -> variant
+> Int            {*:int * int -> int, +:int * int -> int, -:int * int -> int, <:int * int -> bool, <=:int * int -> bool, >:int * int -> bool, >=:int * int -> bool, abs:int -> int, compare:int * int -> order, `div`:int * int -> int, fmt:radix -> int -> string, fromInt:int -> int, fromLarge:int -> int, fromString:string -> int option, max:int * int -> int, maxInt:int option, min:int * int -> int, minInt:int option, `mod`:int * int -> int, precision:int option, quot:int * int -> int, rem:int * int -> int, sameSign:int * int -> bool, scan:forall 'a. radix -> ('a -> (char * 'a) option) -> 'a -> (int * 'a) option, sign:int -> int, toInt:int -> int, toLarge:int -> int, toString:int -> string, ~:int -> int}
+> Interact       {use:string -> unit, useSilently:string -> unit}
+> Jan            month
+> Jul            month
+> Jun            month
+> LESS           order
+> LESS_THAN      forall 'a. 'a -> 'a range
+> LIST           variant list -> variant
+> List           {@:forall 'a. 'a list * 'a list -> 'a list, all:forall 'a. ('a -> bool) -> 'a list -> bool, app:forall 'a. ('a -> unit) -> 'a list -> unit, collate:forall 'a. ('a * 'a -> order) -> 'a list * 'a list -> order, concat:forall 'a. 'a list list -> 'a list, drop:forall 'a. 'a list * int -> 'a list, `except`:forall 'a. 'a list list -> 'a list, `exists`:forall 'a. ('a -> bool) -> 'a list -> bool, filter:forall 'a. ('a -> bool) -> 'a list -> 'a list, find:forall 'a. ('a -> bool) -> 'a list -> 'a option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, getItem:forall 'a. 'a list -> ('a * 'a list) option, hd:forall 'a. 'a list -> 'a, `intersect`:forall 'a. 'a list list -> 'a list, last:forall 'a. 'a list -> 'a, length:forall 'a. 'a list -> int, map:forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a list -> 'b list, mapi:forall 'a 'b. (int * 'a -> 'b) -> 'a list -> 'b list, nil:forall 'a. 'a list, nth:forall 'a. 'a list * int -> 'a, null:forall 'a. 'a list -> bool, only:forall 'a. 'a list -> 'a, partition:forall 'a. ('a -> bool) -> 'a list -> 'a list * 'a list, rev:forall 'a. 'a list -> 'a list, revAppend:forall 'a. 'a list * 'a list -> 'a list, tabulate:forall 'a. int * (int -> 'a) -> 'a list, `take`:forall 'a. 'a list * int -> 'a list, tl:forall 'a. 'a list -> 'a list}
+> ListPair       {all:forall 'a 'b. ('a * 'b -> bool) -> 'a list * 'b list -> bool, allEq:forall 'a 'b. ('a * 'b -> bool) -> 'a list * 'b list -> bool, app:forall 'a 'b. ('a * 'b -> unit) -> 'a list * 'b list -> unit, appEq:forall 'a 'b. ('a * 'b -> unit) -> 'a list * 'b list -> unit, `exists`:forall 'a 'b. ('a * 'b -> bool) -> 'a list * 'b list -> bool, foldl:forall 'a 'b 'c. ('a * 'b * 'c -> 'c) -> 'c -> 'a list * 'b list -> 'c, foldlEq:forall 'a 'b 'c. ('a * 'b * 'c -> 'c) -> 'c -> 'a list * 'b list -> 'c, foldr:forall 'a 'b 'c. ('a * 'b * 'c -> 'c) -> 'c -> 'a list * 'b list -> 'c, foldrEq:forall 'a 'b 'c. ('a * 'b * 'c -> 'c) -> 'c -> 'a list * 'b list -> 'c, map:forall 'a 'b 'c. ('a * 'b -> 'c) -> 'a list * 'b list -> 'c list, mapEq:forall 'a 'b 'c. ('a * 'b -> 'c) -> 'a list * 'b list -> 'c list, unzip:forall 'a 'b. ('a * 'b) list -> 'a list * 'b list, zip:forall 'a 'b. 'a list * 'b list -> ('a * 'b) list, zipEq:forall 'a 'b. 'a list * 'b list -> ('a * 'b) list}
+> Mar            month
+> Match          exn
+> Math           {acos:real -> real, asin:real -> real, atan:real -> real, atan2:real * real -> real, cos:real -> real, cosh:real -> real, e:real, exp:real -> real, ln:real -> real, log10:real -> real, pi:real, pow:real * real -> real, sin:real -> real, sinh:real -> real, sqrt:real -> real, tan:real -> real, tanh:real -> real}
+> May            month
+> Mon            weekday
+> NONE           'a option
+> Nov            month
+> OCT            radix
+> OPEN           forall 'a. 'a * 'a -> 'a range
+> OPEN_CLOSED    forall 'a. 'a * 'a -> 'a range
+> Oct            month
+> Option         {app:forall 'a. ('a -> unit) -> 'a option -> unit, compose:forall 'a 'b 'c. ('a -> 'b) * ('c -> 'a option) -> 'c -> 'b option, composePartial:forall 'a 'b 'c. ('a -> 'b option) * ('c -> 'a option) -> 'c -> 'b option, filter:forall 'a. ('a -> bool) -> 'a -> 'a option, getOpt:forall 'a. 'a option * 'a -> 'a, isSome:forall 'a. 'a option -> bool, `join`:forall 'a. 'a option option -> 'a option, map:forall 'a 'b. ('a -> 'b) -> 'a option -> 'b option, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a option -> 'b option, valOf:forall 'a. 'a option -> 'a}
+> Overflow       exn
+> POINT          forall 'a. 'a -> 'a range
+> PP             {align:doc -> doc, beside:doc * doc -> doc, braces:doc -> doc, brackets:doc -> doc, cat:doc list -> doc, empty:doc, encloseSep:doc * doc * doc * doc list -> doc, fillCat:doc list -> doc, fillSep:doc list -> doc, `group`:doc -> doc, hang:int * doc -> doc, hardLine:doc, hcat:doc list -> doc, hsep:doc list -> doc, indent:int * doc -> doc, line:doc, lineBreak:doc, nest:int * doc -> doc, pack:doc * doc list -> doc, parens:doc -> doc, punctuate:doc * doc list -> doc list, render:int * doc -> string, sep:doc list -> doc, softBreak:doc, softLine:doc, text:string -> doc, vcat:doc list -> doc, vsep:doc list -> doc}
+> REAL           real -> variant
+> RECORD         (string * variant) list -> variant
+> Range          {complement:forall 'a. 'a continuous_set -> 'a continuous_set, contains:forall 'a. 'a range -> 'a -> bool, continuousSetOf:forall 'a. 'a range list -> 'a continuous_set, discreteSetOf:forall 'a. 'a range list -> 'a discrete_set, flatten:forall 'a. 'a range list -> 'a list, ranges:forall 'a. 'a continuous_set -> 'a range list, toBag:forall 'a. 'a discrete_set -> 'a bag, toList:forall 'a. 'a discrete_set -> 'a list}
+> Real           {*:real * real -> real, +:real * real -> real, -:real * real -> real, /:real * real -> real, <:real * real -> bool, <=:real * real -> bool, <>:real * real -> bool, =:real * real -> bool, >:real * real -> bool, >=:real * real -> bool, abs:real -> real, ceil:real -> int, checkFloat:real -> real, compare:real * real -> order, copySign:real * real -> real, floor:real -> int, fmt:realfmt -> real -> string, fromInt:int -> real, fromManExp:{exp:int, man:real} -> real, fromString:string -> real option, isFinite:real -> bool, isNan:real -> bool, isNormal:real -> bool, max:real * real -> real, maxFinite:real, min:real * real -> real, minNormalPos:real, minPos:real, negInf:real, posInf:real, precision:int, radix:int, realCeil:real -> real, realFloor:real -> real, realMod:real -> real, realRound:real -> real, realTrunc:real -> real, rem:real * real -> real, round:real -> int, sameSign:real * real -> bool, scan:forall 'a. ('a -> (char * 'a) option) -> 'a -> (real * 'a) option, sign:real -> int, signBit:real -> bool, split:real -> {frac:real, whole:real}, toManExp:real -> {exp:int, man:real}, toString:real -> string, trunc:real -> int, unordered:real * real -> bool, ~:real -> real}
+> Relational     {compare:forall 'a. 'a * 'a -> order, count:forall 'a. 'a bag -> int, empty:forall 'a. 'a bag -> bool, iterate:multi(forall 'a. 'a bag -> ('a bag * 'a bag -> 'a bag) -> 'a bag,forall 'a. 'a list -> ('a list * 'a list -> 'a list) -> 'a list), max:forall 'a. 'a bag -> 'a, min:forall 'a. 'a bag -> 'a, nonEmpty:forall 'a. 'a bag -> bool, only:forall 'a. 'a bag -> 'a, sum:forall 'a. 'a bag -> 'a}
+> SCI            int option -> realfmt
+> SOME           forall 'a. 'a -> 'a option
+> STRING         string -> variant
+> Sat            weekday
+> Sep            month
+> Size           exn
+> Span           exn
+> String         {<:string * string -> bool, <=:string * string -> bool, <>:string * string -> bool, =:string * string -> bool, >:string * string -> bool, >=:string * string -> bool, ^:string * string -> string, collate:(char * char -> order) -> string * string -> order, compare:string * string -> order, concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int * int option -> string, fields:(char -> bool) -> string -> string list, fromCString:string -> string option, fromString:string -> string option, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, scan:forall 'a. ('a -> (char * 'a) option) -> 'a -> (string * 'a) option, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, toCString:string -> string, toString:string -> string, tokens:(char -> bool) -> string -> string list, translate:(char -> string) -> string -> string}
+> StringCvt      {dropl:forall 'a. (char -> bool) -> ('a -> (char * 'a) option) -> 'a -> 'a, padLeft:char -> int -> string -> string, padRight:char -> int -> string -> string, scanString:forall 'a 'b. (('a -> (char * 'a) option) -> 'a -> ('b * 'a) option) -> string -> 'b option, skipWS:forall 'a. ('a -> (char * 'a) option) -> 'a -> 'a, splitl:forall 'a. (char -> bool) -> ('a -> (char * 'a) option) -> 'a -> string * 'a, takel:forall 'a. (char -> bool) -> ('a -> (char * 'a) option) -> 'a -> string}
+> Subscript      exn
+> Sun            weekday
+> Sys            {clearEnv:unit -> unit, colorSchemes:unit -> {comment:string, constant:string, error:string, identifier:string, keyword:string, name:string, numeric:string, string:string, symbol:string, typeVar:string} list, deduceColorScheme:unit -> string, env:unit -> (string * string) list, file:{...}, parseTree:string -> string, plan:unit -> string, planEx:string -> string, set:forall 'a. string * 'a -> unit, show:string -> string option, showAll:unit -> (string * string option) list, unset:string -> unit}
+> Thu            weekday
+> Time           {+:time * time -> time, -:time * time -> time, <:time * time -> bool, <=:time * time -> bool, >:time * time -> bool, >=:time * time -> bool, compare:time * time -> order, fmt:int -> time -> string, fromMicroseconds:int -> time, fromMilliseconds:int -> time, fromNanoseconds:int -> time, fromReal:real -> time, fromSeconds:int -> time, fromString:string -> time option, now:unit -> time, scan:forall 'a. ('a -> (char * 'a) option) -> 'a -> (time * 'a) option, toMicroseconds:time -> int, toMilliseconds:time -> int, toNanoseconds:time -> int, toReal:time -> real, toSeconds:time -> int, toString:time -> string, zeroTime:time}
+> Tue            weekday
+> UNIT           variant
+> UnequalLengths exn
+> Unordered      exn
+> VARIANT_NONE   variant
+> VARIANT_SOME   variant -> variant
+> VECTOR         variant list -> variant
+> Variant        {parse:string -> variant, print:variant -> string}
+> Vector         {all:forall 'a. ('a -> bool) -> 'a vector -> bool, app:forall 'a. ('a -> unit) -> 'a vector -> unit, appi:forall 'a. (int * 'a -> unit) -> 'a vector -> unit, collate:forall 'a. ('a * 'a -> order) -> 'a vector * 'a vector -> order, concat:forall 'a. 'a vector list -> 'a vector, `exists`:forall 'a. ('a -> bool) -> 'a vector -> bool, find:forall 'a. ('a -> bool) -> 'a vector -> 'a option, findi:forall 'a 'b. (int * 'a -> bool) -> 'a vector -> (int * 'a) option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldli:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldri:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, fromList:forall 'a. 'a list -> 'a vector, length:forall 'a. 'a vector -> int, map:forall 'a 'b. ('a -> 'b) -> 'a vector -> 'b vector, mapi:forall 'a 'b. (int * 'a -> 'b) -> 'a vector -> 'b vector, maxLen:int, sub:forall 'a. 'a vector * int -> 'a, tabulate:forall 'a. int * (int -> 'a) -> 'a vector, update:forall 'a. 'a vector * int * 'a -> 'a vector}
+> Wed            weekday
+> Word           {*:word * word -> word, +:word * word -> word, -:word * word -> word, <:word * word -> bool, <<:word * word -> word, <=:word * word -> bool, >:word * word -> bool, >=:word * word -> bool, >>:word * word -> word, andb:word * word -> word, compare:word * word -> order, `div`:word * word -> word, fmt:radix -> word -> string, fromInt:int -> word, fromLarge:word -> word, fromLargeInt:int -> word, fromLargeWord:word -> word, fromString:string -> word option, max:word * word -> word, min:word * word -> word, `mod`:word * word -> word, notb:word -> word, orb:word * word -> word, scan:forall 'a. radix -> ('a -> (char * 'a) option) -> 'a -> (word * 'a) option, toInt:word -> int, toIntX:word -> int, toLarge:word -> word, toLargeInt:word -> int, toLargeIntX:word -> int, toLargeWord:word -> word, toLargeWordX:word -> word, toLargeX:word -> word, toString:word -> string, wordSize:int, xorb:word * word -> word, ~:word -> word, ~>>:word * word -> word}
+> ^              string * string -> string
+> abs            forall 'a. 'a -> 'a
+> app            forall 'a. ('a -> unit) -> 'a list -> unit
+> bag            forall 'a. 'a list -> 'a bag
+> before         forall 'a. 'a * unit -> 'a
+> ceil           real -> int
+> chr            int -> char
+> compare        forall 'a. 'a * 'a -> order
+> concat         string list -> string
+> count          forall 'a. 'a bag -> int
+> empty          forall 'a. 'a bag -> bool
+> env            unit -> (string * string) list
+> exnMessage     exn -> string
+> exnName        exn -> string
+> explode        string -> char list
+> false          bool
+> fields         (char -> bool) -> string -> string list
+> file           {...}
+> floor          real -> int
+> foldl          forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b
+> foldr          forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b
+> getOpt         forall 'a. 'a option * 'a -> 'a
+> hd             forall 'a. 'a list -> 'a
+> ignore         forall 'a. 'a -> unit
+> implode        char list -> string
+> isSome         forall 'a. 'a option -> bool
+> it             unit
+> iterate        forall 'a. 'a bag -> ('a bag * 'a bag -> 'a bag) -> 'a bag
+> length         forall 'a. 'a list -> int
+> map            forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list
+> max            forall 'a. 'a bag -> 'a
+> min            forall 'a. 'a bag -> 'a
+> nil            forall 'a. 'a list
+> nonEmpty       forall 'a. 'a bag -> bool
+> not            bool -> bool
+> null           forall 'a. 'a list -> bool
+> o              forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c
+> only           forall 'a. 'a bag -> 'a
+> op *           forall 'a. 'a * 'a -> 'a
+> op +           forall 'a. 'a * 'a -> 'a
+> op -           forall 'a. 'a * 'a -> 'a
+> op /           real * real -> real
+> op ::          forall 'a. 'a * 'a list -> 'a list
+> op <           forall 'a. 'a * 'a -> bool
+> op <=          forall 'a. 'a * 'a -> bool
+> op <>          forall 'a. 'a * 'a -> bool
+> op =           forall 'a. 'a * 'a -> bool
+> op >           forall 'a. 'a * 'a -> bool
+> op >=          forall 'a. 'a * 'a -> bool
+> op @           forall 'a. 'a list * 'a list -> 'a list
+> op ^           string * string -> string
+> op div         forall 'a. 'a * 'a -> 'a
+> op elem        forall 'a. 'a * 'a bag -> bool
+> op mod         forall 'a. 'a * 'a -> 'a
+> op notelem     forall 'a. 'a * 'a bag -> bool
+> op o           forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c
+> op ~           forall 'a. 'a -> 'a
+> ord            char -> int
+> plan           unit -> string
+> real           int -> real
+> rev            forall 'a. 'a list -> 'a list
+> round          real -> int
+> set            forall 'a. string * 'a -> unit
+> show           string -> string option
+> showAll        unit -> (string * string option) list
+> size           string -> int
+> str            char -> string
+> substring      string * int * int -> string
+> sum            forall 'a. 'a bag -> 'a
+> tl             forall 'a. 'a list -> 'a list
+> tokens         (char -> bool) -> string -> string list
+> true           bool
+> trunc          real -> int
+> unset          string -> unit
+> use            string -> unit
+> useSilently    string -> unit
+> valOf          forall 'a. 'a option -> 'a
+> vector         forall 'a. 'a list -> 'a vector
+>
+> val it : (string * string) list
 
 env;
 > val it = fn : unit -> (string * string) list
-env ();
-> val it =
->   [("$csComplement","forall 'a. 'a continuous_set -> 'a continuous_set"),
->    ("$csContains","forall 'a. 'a continuous_set -> 'a -> bool"),
->    ("$dsComplement","forall 'a. 'a discrete_set -> 'a discrete_set"),
->    ("$dsContains","forall 'a. 'a discrete_set -> 'a -> bool"),
->    ("$dsRanges","forall 'a. 'a discrete_set -> 'a range list"),
->    ("@","forall 'a. 'a list * 'a list -> 'a list"),("ALL","'a range"),
->    ("AT_LEAST","forall 'a. 'a -> 'a range"),
->    ("AT_MOST","forall 'a. 'a -> 'a range"),("Apr","month"),("Aug","month"),
->    ("BAG","variant list -> variant"),("BIN","radix"),
->    ("BOOL","bool -> variant"),
->    ("Bag",
->     "{@:forall 'a. 'a bag * 'a bag -> 'a bag, all:forall 'a. ('a -> bool) -> 'a bag -> bool, app:forall 'a. ('a -> unit) -> 'a bag -> unit, concat:forall 'a. 'a bag list -> 'a bag, drop:forall 'a. 'a bag * int -> 'a bag, `exists`:forall 'a. ('a -> bool) -> 'a bag -> bool, filter:forall 'a. ('a -> bool) -> 'a bag -> 'a bag, find:forall 'a. ('a -> bool) -> 'a bag -> 'a option, fold:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a bag -> 'b, fromList:forall 'a. 'a list -> 'a bag, getItem:forall 'a. 'a bag -> ('a * 'a bag) option, hd:forall 'a. 'a bag -> 'a, length:forall 'a. 'a bag -> int, map:forall 'a 'b. ('a -> 'b) -> 'a bag -> 'b bag, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a bag -> 'b bag, nil:forall 'a. 'a bag, nth:forall 'a. 'a bag * int -> 'a, null:forall 'a. 'a bag -> bool, only:forall 'a. 'a bag -> 'a, partition:forall 'a. ('a -> bool) -> 'a bag -> 'a bag * 'a bag, tabulate:forall 'a. int * (int -> 'a) -> 'a bag, `take`:forall 'a. 'a bag * int -> 'a bag, tl:forall 'a. 'a bag -> 'a bag, toList:forall 'a. 'a bag -> 'a list}"),
->    ("Bind","exn"),
->    ("Bool",
->     "{<:bool * bool -> bool, <>:bool * bool -> bool, =:bool * bool -> bool, >:bool * bool -> bool, `andalso`:bool * bool -> bool, fromString:string -> bool option, `implies`:bool * bool -> bool, not:bool -> bool, `orelse`:bool * bool -> bool, scan:forall 'a. ('a -> (char * 'a) option) -> 'a -> (bool * 'a) option, toString:bool -> string}"),
->    ("CHAR","char -> variant"),("CLOSED","forall 'a. 'a * 'a -> 'a range"),
->    ("CLOSED_OPEN","forall 'a. 'a * 'a -> 'a range"),
->    ("CONSTANT","string -> variant"),
->    ("CONSTRUCT","string * variant -> variant"),
->    ("CONTINUOUS_SET","forall 'a. 'a range list -> 'a continuous_set"),
->    ("Char",
->     "{<:char * char -> bool, <=:char * char -> bool, <>:char * char -> bool, =:char * char -> bool, >:char * char -> bool, >=:char * char -> bool, chr:int -> char, compare:char * char -> order, contains:string -> char -> bool, fromCString:string -> char option, fromInt:int -> char option, fromString:string -> char option, isAlpha:char -> bool, isAlphaNum:char -> bool, isAscii:char -> bool, isCntrl:char -> bool, isDigit:char -> bool, isGraph:char -> bool, isHexDigit:char -> bool, isLower:char -> bool, isOctDigit:char -> bool, isPrint:char -> bool, isPunct:char -> bool, isSpace:char -> bool, isUpper:char -> bool, maxChar:char, maxOrd:int, minChar:char, notContains:string -> char -> bool, ord:char -> int, pred:char -> char, scan:forall 'a. ('a -> (char * 'a) option) -> 'a -> (char * 'a) option, succ:char -> char, toCString:char -> string, toLower:char -> char, toString:char -> string, toUpper:char -> char}"),
->    ("Chr","exn"),("DEC","radix"),("DESC","forall 'a. 'a -> 'a descending"),
->    ("DISCRETE_SET","forall 'a. 'a range list -> 'a discrete_set"),
->    ("Datalog",
->     "{execute:string -> variant, translate:string -> string option, validate:string -> string}"),
->    ("Date",
->     "{compare:date * date -> order, date:{day:int, hour:int, minute:int, month:month, offset:time option, second:int, year:int} -> date, day:date -> int, fmt:string -> date -> string, fromString:string -> date option, fromTimeLocal:time -> date, fromTimeUniv:time -> date, hour:date -> int, isDst:date -> bool option, localOffset:unit -> time, minute:date -> int, month:date -> month, scan:forall 'a. ('a -> (char * 'a) option) -> 'a -> (date * 'a) option, second:date -> int, toString:date -> string, toTime:date -> time, weekDay:date -> weekday, year:date -> int, yearDay:date -> int}"),
->    ("Dec","month"),("Div","exn"),("Domain","exn"),("EQUAL","order"),
->    ("EXACT","realfmt"),
->    ("Either",
->     "{app:forall 'a 'b. ('a -> unit) * ('b -> unit) -> ('a,'b) either -> unit, appLeft:forall 'a 'b. ('a -> unit) -> ('a,'b) either -> unit, appRight:forall 'a 'b. ('b -> unit) -> ('a,'b) either -> unit, asLeft:forall 'a 'b. ('a,'b) either -> 'a option, asRight:forall 'a 'b. ('a,'b) either -> 'b option, fold:forall 'a 'b 'c. ('a * 'b -> 'b) * ('c * 'b -> 'b) -> 'b -> ('a,'c) either -> 'b, isLeft:forall 'a 'b. ('a,'b) either -> bool, isRight:forall 'a 'b. ('a,'b) either -> bool, map:forall 'a 'b 'c 'd. ('a -> 'c) * ('b -> 'd) -> ('a,'b) either -> ('c,'d) either, mapLeft:forall 'a 'b 'c. ('a -> 'b) -> ('a,'c) either -> ('b,'c) either, mapRight:forall 'a 'b 'c. ('b -> 'c) -> ('a,'b) either -> ('a,'c) either, partition:forall 'a 'b. ('a,'b) either list -> 'a list * 'b list, proj:forall 'a. ('a,'a) either -> 'a}"),
->    ("Empty","exn"),("FIX","int option -> realfmt"),("Fail","string -> exn"),
->    ("Feb","month"),
->    ("Fn",
->     "{apply:forall 'a 'b. ('a -> 'b) * 'a -> 'b, const:forall 'a 'b. 'a -> 'b -> 'a, curry:forall 'a 'b 'c. ('a * 'b -> 'c) -> 'a -> 'b -> 'c, equal:forall 'a. 'a -> 'a -> bool, flip:forall 'a 'b 'c. ('a * 'b -> 'c) -> 'b * 'a -> 'c, id:forall 'a. 'a -> 'a, notEqual:forall 'a 'b. 'a -> 'a -> bool, `o`:forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c, repeat:forall 'a. int -> ('a -> 'a) -> 'a -> 'a, uncurry:forall 'a 'b 'c. ('a -> 'b -> 'c) -> 'a * 'b -> 'c}"),
->    ("Fri","weekday"),("GEN","int option -> realfmt"),("GREATER","order"),
->    ("GREATER_THAN","forall 'a. 'a -> 'a range"),
->    ("General",
->     "{before:forall 'a. 'a * unit -> 'a, exnMessage:exn -> string, exnName:exn -> string, ignore:forall 'a. 'a -> unit, `o`:forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c}"),
->    ("HEX","radix"),("INL","forall 'a 'b. 'a -> ('a,'b) either"),
->    ("INR","forall 'a 'b. 'b -> ('a,'b) either"),("INT","int -> variant"),
->    ("Int",
->     "{*:int * int -> int, +:int * int -> int, -:int * int -> int, <:int * int -> bool, <=:int * int -> bool, >:int * int -> bool, >=:int * int -> bool, abs:int -> int, compare:int * int -> order, `div`:int * int -> int, fmt:radix -> int -> string, fromInt:int -> int, fromLarge:int -> int, fromString:string -> int option, max:int * int -> int, maxInt:int option, min:int * int -> int, minInt:int option, `mod`:int * int -> int, precision:int option, quot:int * int -> int, rem:int * int -> int, sameSign:int * int -> bool, scan:forall 'a. radix -> ('a -> (char * 'a) option) -> 'a -> (int * 'a) option, sign:int -> int, toInt:int -> int, toLarge:int -> int, toString:int -> string, ~:int -> int}"),
->    ("Interact","{use:string -> unit, useSilently:string -> unit}"),
->    ("Jan","month"),("Jul","month"),("Jun","month"),("LESS","order"),
->    ("LESS_THAN","forall 'a. 'a -> 'a range"),
->    ("LIST","variant list -> variant"),
->    ("List",
->     "{@:forall 'a. 'a list * 'a list -> 'a list, all:forall 'a. ('a -> bool) -> 'a list -> bool, app:forall 'a. ('a -> unit) -> 'a list -> unit, collate:forall 'a. ('a * 'a -> order) -> 'a list * 'a list -> order, concat:forall 'a. 'a list list -> 'a list, drop:forall 'a. 'a list * int -> 'a list, `except`:forall 'a. 'a list list -> 'a list, `exists`:forall 'a. ('a -> bool) -> 'a list -> bool, filter:forall 'a. ('a -> bool) -> 'a list -> 'a list, find:forall 'a. ('a -> bool) -> 'a list -> 'a option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, getItem:forall 'a. 'a list -> ('a * 'a list) option, hd:forall 'a. 'a list -> 'a, `intersect`:forall 'a. 'a list list -> 'a list, last:forall 'a. 'a list -> 'a, length:forall 'a. 'a list -> int, map:forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a list -> 'b list, mapi:forall 'a 'b. (int * 'a -> 'b) -> 'a list -> 'b list, nil:forall 'a. 'a list, nth:forall 'a. 'a list * int -> 'a, null:forall 'a. 'a list -> bool, only:forall 'a. 'a list -> 'a, partition:forall 'a. ('a -> bool) -> 'a list -> 'a list * 'a list, rev:forall 'a. 'a list -> 'a list, revAppend:forall 'a. 'a list * 'a list -> 'a list, tabulate:forall 'a. int * (int -> 'a) -> 'a list, `take`:forall 'a. 'a list * int -> 'a list, tl:forall 'a. 'a list -> 'a list}"),
->    ("ListPair",
->     "{all:forall 'a 'b. ('a * 'b -> bool) -> 'a list * 'b list -> bool, allEq:forall 'a 'b. ('a * 'b -> bool) -> 'a list * 'b list -> bool, app:forall 'a 'b. ('a * 'b -> unit) -> 'a list * 'b list -> unit, appEq:forall 'a 'b. ('a * 'b -> unit) -> 'a list * 'b list -> unit, `exists`:forall 'a 'b. ('a * 'b -> bool) -> 'a list * 'b list -> bool, foldl:forall 'a 'b 'c. ('a * 'b * 'c -> 'c) -> 'c -> 'a list * 'b list -> 'c, foldlEq:forall 'a 'b 'c. ('a * 'b * 'c -> 'c) -> 'c -> 'a list * 'b list -> 'c, foldr:forall 'a 'b 'c. ('a * 'b * 'c -> 'c) -> 'c -> 'a list * 'b list -> 'c, foldrEq:forall 'a 'b 'c. ('a * 'b * 'c -> 'c) -> 'c -> 'a list * 'b list -> 'c, map:forall 'a 'b 'c. ('a * 'b -> 'c) -> 'a list * 'b list -> 'c list, mapEq:forall 'a 'b 'c. ('a * 'b -> 'c) -> 'a list * 'b list -> 'c list, unzip:forall 'a 'b. ('a * 'b) list -> 'a list * 'b list, zip:forall 'a 'b. 'a list * 'b list -> ('a * 'b) list, zipEq:forall 'a 'b. 'a list * 'b list -> ('a * 'b) list}"),
->    ("Mar","month"),("Match","exn"),
->    ("Math",
->     "{acos:real -> real, asin:real -> real, atan:real -> real, atan2:real * real -> real, cos:real -> real, cosh:real -> real, e:real, exp:real -> real, ln:real -> real, log10:real -> real, pi:real, pow:real * real -> real, sin:real -> real, sinh:real -> real, sqrt:real -> real, tan:real -> real, tanh:real -> real}"),
->    ("May","month"),("Mon","weekday"),("NONE","'a option"),("Nov","month"),
->    ("OCT","radix"),("OPEN","forall 'a. 'a * 'a -> 'a range"),
->    ("OPEN_CLOSED","forall 'a. 'a * 'a -> 'a range"),("Oct","month"),
->    ("Option",
->     "{app:forall 'a. ('a -> unit) -> 'a option -> unit, compose:forall 'a 'b 'c. ('a -> 'b) * ('c -> 'a option) -> 'c -> 'b option, composePartial:forall 'a 'b 'c. ('a -> 'b option) * ('c -> 'a option) -> 'c -> 'b option, filter:forall 'a. ('a -> bool) -> 'a -> 'a option, getOpt:forall 'a. 'a option * 'a -> 'a, isSome:forall 'a. 'a option -> bool, `join`:forall 'a. 'a option option -> 'a option, map:forall 'a 'b. ('a -> 'b) -> 'a option -> 'b option, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a option -> 'b option, valOf:forall 'a. 'a option -> 'a}"),
->    ("Overflow","exn"),("POINT","forall 'a. 'a -> 'a range"),
->    ("PP",
->     "{align:doc -> doc, beside:doc * doc -> doc, braces:doc -> doc, brackets:doc -> doc, cat:doc list -> doc, empty:doc, encloseSep:doc * doc * doc * doc list -> doc, fillCat:doc list -> doc, fillSep:doc list -> doc, `group`:doc -> doc, hang:int * doc -> doc, hardLine:doc, hcat:doc list -> doc, hsep:doc list -> doc, indent:int * doc -> doc, line:doc, lineBreak:doc, nest:int * doc -> doc, pack:doc * doc list -> doc, parens:doc -> doc, punctuate:doc * doc list -> doc list, render:int * doc -> string, sep:doc list -> doc, softBreak:doc, softLine:doc, text:string -> doc, vcat:doc list -> doc, vsep:doc list -> doc}"),
->    ("REAL","real -> variant"),
->    ("RECORD","(string * variant) list -> variant"),
->    ("Range",
->     "{complement:forall 'a. 'a continuous_set -> 'a continuous_set, contains:forall 'a. 'a range -> 'a -> bool, continuousSetOf:forall 'a. 'a range list -> 'a continuous_set, discreteSetOf:forall 'a. 'a range list -> 'a discrete_set, flatten:forall 'a. 'a range list -> 'a list, ranges:forall 'a. 'a continuous_set -> 'a range list, toBag:forall 'a. 'a discrete_set -> 'a bag, toList:forall 'a. 'a discrete_set -> 'a list}"),
->    ("Real",
->     "{*:real * real -> real, +:real * real -> real, -:real * real -> real, /:real * real -> real, <:real * real -> bool, <=:real * real -> bool, <>:real * real -> bool, =:real * real -> bool, >:real * real -> bool, >=:real * real -> bool, abs:real -> real, ceil:real -> int, checkFloat:real -> real, compare:real * real -> order, copySign:real * real -> real, floor:real -> int, fmt:realfmt -> real -> string, fromInt:int -> real, fromManExp:{exp:int, man:real} -> real, fromString:string -> real option, isFinite:real -> bool, isNan:real -> bool, isNormal:real -> bool, max:real * real -> real, maxFinite:real, min:real * real -> real, minNormalPos:real, minPos:real, negInf:real, posInf:real, precision:int, radix:int, realCeil:real -> real, realFloor:real -> real, realMod:real -> real, realRound:real -> real, realTrunc:real -> real, rem:real * real -> real, round:real -> int, sameSign:real * real -> bool, scan:forall 'a. ('a -> (char * 'a) option) -> 'a -> (real * 'a) option, sign:real -> int, signBit:real -> bool, split:real -> {frac:real, whole:real}, toManExp:real -> {exp:int, man:real}, toString:real -> string, trunc:real -> int, unordered:real * real -> bool, ~:real -> real}"),
->    ("Relational",
->     "{compare:forall 'a. 'a * 'a -> order, count:forall 'a. 'a bag -> int, empty:forall 'a. 'a bag -> bool, iterate:multi(forall 'a. 'a bag -> ('a bag * 'a bag -> 'a bag) -> 'a bag,forall 'a. 'a list -> ('a list * 'a list -> 'a list) -> 'a list), max:forall 'a. 'a bag -> 'a, min:forall 'a. 'a bag -> 'a, nonEmpty:forall 'a. 'a bag -> bool, only:forall 'a. 'a bag -> 'a, sum:forall 'a. 'a bag -> 'a}"),
->    ("SCI","int option -> realfmt"),("SOME","forall 'a. 'a -> 'a option"),
->    ("STRING","string -> variant"),("Sat","weekday"),("Sep","month"),
->    ("Size","exn"),("Span","exn"),
->    ("String",
->     "{<:string * string -> bool, <=:string * string -> bool, <>:string * string -> bool, =:string * string -> bool, >:string * string -> bool, >=:string * string -> bool, ^:string * string -> string, collate:(char * char -> order) -> string * string -> order, compare:string * string -> order, concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int * int option -> string, fields:(char -> bool) -> string -> string list, fromCString:string -> string option, fromString:string -> string option, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, scan:forall 'a. ('a -> (char * 'a) option) -> 'a -> (string * 'a) option, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, toCString:string -> string, toString:string -> string, tokens:(char -> bool) -> string -> string list, translate:(char -> string) -> string -> string}"),
->    ("StringCvt",
->     "{dropl:forall 'a. (char -> bool) -> ('a -> (char * 'a) option) -> 'a -> 'a, padLeft:char -> int -> string -> string, padRight:char -> int -> string -> string, scanString:forall 'a 'b. (('a -> (char * 'a) option) -> 'a -> ('b * 'a) option) -> string -> 'b option, skipWS:forall 'a. ('a -> (char * 'a) option) -> 'a -> 'a, splitl:forall 'a. (char -> bool) -> ('a -> (char * 'a) option) -> 'a -> string * 'a, takel:forall 'a. (char -> bool) -> ('a -> (char * 'a) option) -> 'a -> string}"),
->    ("Subscript","exn"),("Sun","weekday"),
->    ("Sys",
->     "{clearEnv:unit -> unit, colorSchemes:unit -> {comment:string, constant:string, error:string, identifier:string, keyword:string, name:string, numeric:string, string:string, symbol:string, typeVar:string} list, deduceColorScheme:unit -> string, env:unit -> (string * string) list, file:{...}, parseTree:string -> string, plan:unit -> string, planEx:string -> string, set:forall 'a. string * 'a -> unit, show:string -> string option, showAll:unit -> (string * string option) list, unset:string -> unit}"),
->    ("Thu","weekday"),
->    ("Time",
->     "{+:time * time -> time, -:time * time -> time, <:time * time -> bool, <=:time * time -> bool, >:time * time -> bool, >=:time * time -> bool, compare:time * time -> order, fmt:int -> time -> string, fromMicroseconds:int -> time, fromMilliseconds:int -> time, fromNanoseconds:int -> time, fromReal:real -> time, fromSeconds:int -> time, fromString:string -> time option, now:unit -> time, scan:forall 'a. ('a -> (char * 'a) option) -> 'a -> (time * 'a) option, toMicroseconds:time -> int, toMilliseconds:time -> int, toNanoseconds:time -> int, toReal:time -> real, toSeconds:time -> int, toString:time -> string, zeroTime:time}"),
->    ("Tue","weekday"),("UNIT","variant"),("UnequalLengths","exn"),
->    ("Unordered","exn"),("VARIANT_NONE","variant"),
->    ("VARIANT_SOME","variant -> variant"),
->    ("VECTOR","variant list -> variant"),
->    ("Variant","{parse:string -> variant, print:variant -> string}"),
->    ("Vector",
->     "{all:forall 'a. ('a -> bool) -> 'a vector -> bool, app:forall 'a. ('a -> unit) -> 'a vector -> unit, appi:forall 'a. (int * 'a -> unit) -> 'a vector -> unit, collate:forall 'a. ('a * 'a -> order) -> 'a vector * 'a vector -> order, concat:forall 'a. 'a vector list -> 'a vector, `exists`:forall 'a. ('a -> bool) -> 'a vector -> bool, find:forall 'a. ('a -> bool) -> 'a vector -> 'a option, findi:forall 'a 'b. (int * 'a -> bool) -> 'a vector -> (int * 'a) option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldli:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldri:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, fromList:forall 'a. 'a list -> 'a vector, length:forall 'a. 'a vector -> int, map:forall 'a 'b. ('a -> 'b) -> 'a vector -> 'b vector, mapi:forall 'a 'b. (int * 'a -> 'b) -> 'a vector -> 'b vector, maxLen:int, sub:forall 'a. 'a vector * int -> 'a, tabulate:forall 'a. int * (int -> 'a) -> 'a vector, update:forall 'a. 'a vector * int * 'a -> 'a vector}"),
->    ("Wed","weekday"),
->    ("Word",
->     "{*:word * word -> word, +:word * word -> word, -:word * word -> word, <:word * word -> bool, <<:word * word -> word, <=:word * word -> bool, >:word * word -> bool, >=:word * word -> bool, >>:word * word -> word, andb:word * word -> word, compare:word * word -> order, `div`:word * word -> word, fmt:radix -> word -> string, fromInt:int -> word, fromLarge:word -> word, fromLargeInt:int -> word, fromLargeWord:word -> word, fromString:string -> word option, max:word * word -> word, min:word * word -> word, `mod`:word * word -> word, notb:word -> word, orb:word * word -> word, scan:forall 'a. radix -> ('a -> (char * 'a) option) -> 'a -> (word * 'a) option, toInt:word -> int, toIntX:word -> int, toLarge:word -> word, toLargeInt:word -> int, toLargeIntX:word -> int, toLargeWord:word -> word, toLargeWordX:word -> word, toLargeX:word -> word, toString:word -> string, wordSize:int, xorb:word * word -> word, ~:word -> word, ~>>:word * word -> word}"),
->    ("^","string * string -> string"),("abs","forall 'a. 'a -> 'a"),
->    ("app","forall 'a. ('a -> unit) -> 'a list -> unit"),
->    ("bag","forall 'a. 'a list -> 'a bag"),
->    ("before","forall 'a. 'a * unit -> 'a"),("ceil","real -> int"),
->    ("chr","int -> char"),("compare","forall 'a. 'a * 'a -> order"),
->    ("concat","string list -> string"),("count","forall 'a. 'a bag -> int"),
->    ("empty","forall 'a. 'a bag -> bool"),
->    ("env","unit -> (string * string) list"),("exnMessage","exn -> string"),
->    ("exnName","exn -> string"),("explode","string -> char list"),
->    ("false","bool"),("fields","(char -> bool) -> string -> string list"),
->    ("file","{...}"),("floor","real -> int"),
->    ("foldl","forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b"),
->    ("foldr","forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b"),
->    ("getOpt","forall 'a. 'a option * 'a -> 'a"),
->    ("hd","forall 'a. 'a list -> 'a"),("ignore","forall 'a. 'a -> unit"),
->    ("implode","char list -> string"),
->    ("isSome","forall 'a. 'a option -> bool"),
->    ("it","unit -> (string * string) list"),
->    ("iterate","forall 'a. 'a bag -> ('a bag * 'a bag -> 'a bag) -> 'a bag"),
->    ("length","forall 'a. 'a list -> int"),
->    ("map","forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list"),
->    ("max","forall 'a. 'a bag -> 'a"),("min","forall 'a. 'a bag -> 'a"),
->    ("nil","forall 'a. 'a list"),("nonEmpty","forall 'a. 'a bag -> bool"),
->    ("not","bool -> bool"),("null","forall 'a. 'a list -> bool"),
->    ("o","forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c"),
->    ("only","forall 'a. 'a bag -> 'a"),("op *","forall 'a. 'a * 'a -> 'a"),
->    ("op +","forall 'a. 'a * 'a -> 'a"),("op -","forall 'a. 'a * 'a -> 'a"),
->    ("op /","real * real -> real"),
->    ("op ::","forall 'a. 'a * 'a list -> 'a list"),
->    ("op <","forall 'a. 'a * 'a -> bool"),
->    ("op <=","forall 'a. 'a * 'a -> bool"),
->    ("op <>","forall 'a. 'a * 'a -> bool"),
->    ("op =","forall 'a. 'a * 'a -> bool"),
->    ("op >","forall 'a. 'a * 'a -> bool"),
->    ("op >=","forall 'a. 'a * 'a -> bool"),
->    ("op @","forall 'a. 'a list * 'a list -> 'a list"),
->    ("op ^","string * string -> string"),
->    ("op div","forall 'a. 'a * 'a -> 'a"),
->    ("op elem","forall 'a. 'a * 'a bag -> bool"),
->    ("op mod","forall 'a. 'a * 'a -> 'a"),
->    ("op notelem","forall 'a. 'a * 'a bag -> bool"),
->    ("op o","forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c"),
->    ("op ~","forall 'a. 'a -> 'a"),("ord","char -> int"),
->    ("plan","unit -> string"),("real","int -> real"),
->    ("rev","forall 'a. 'a list -> 'a list"),("round","real -> int"),
->    ("set","forall 'a. string * 'a -> unit"),
->    ("show","string -> string option"),
->    ("showAll","unit -> (string * string option) list"),
->    ("size","string -> int"),("str","char -> string"),
->    ("substring","string * int * int -> string"),
->    ("sum","forall 'a. 'a bag -> 'a"),("tl","forall 'a. 'a list -> 'a list"),
->    ("tokens","(char -> bool) -> string -> string list"),("true","bool"),
->    ("trunc","real -> int"),("unset","string -> unit"),
->    ("use","string -> unit"),("useSilently","string -> unit"),
->    ("valOf","forall 'a. 'a option -> 'a"),
->    ("vector","forall 'a. 'a list -> 'a vector")] : (string * string) list
+(* The output of 'env ()' is large, so just check that it equals
+ * 'Sys.env ()', which we executed above. *)
+env () = Sys.env ();
+> val it = true : bool
 
 (*) val parseTree : string -> string
 Sys.parseTree;
@@ -480,18 +370,33 @@ map
     (p, if p elem ["directory", "scriptDirectory", "banner", "productVersion"]
       then SOME "?" else v))
   (Sys.showAll ());
-> val it =
->   [("banner",SOME "?"),("colorScheme",NONE),("directory",SOME "?"),
->    ("excludeStructures",SOME "^Test$"),("hybrid",SOME "true"),
->    ("inlinePassCount",SOME "5"),("lineWidth",SOME "78"),
->    ("matchCoverageEnabled",SOME "true"),("matchStrict",SOME "false"),
->    ("now",SOME "2024-01-01T00:00:00Z"),("optionalInt",NONE),
->    ("output",SOME "CLASSIC"),("printDepth",SOME "5"),
->    ("printLength",SOME "999"),("productName",SOME "morel-java"),
->    ("productVersion",SOME "?"),("rangeMaxLength",SOME "16777215"),
->    ("relationalize",SOME "false"),("scriptDirectory",SOME "?"),
->    ("stringDepth",SOME "-1"),("stringFold",NONE),("terminalBackground",NONE),
->    ("timeZone",SOME "UTC")] : (string * string option) list
+> 1                    2
+> -------------------- --------------------
+> banner               ?
+> colorScheme
+> directory            ?
+> excludeStructures    ^Test$
+> hybrid               true
+> inlinePassCount      5
+> lineWidth            78
+> matchCoverageEnabled true
+> matchStrict          false
+> now                  2024-01-01T00:00:00Z
+> optionalInt
+> output               TABULAR
+> printDepth           5
+> printLength          999
+> productName          morel-java
+> productVersion       ?
+> rangeMaxLength       16777215
+> relationalize        false
+> scriptDirectory      ?
+> stringDepth          -1
+> stringFold
+> terminalBackground
+> timeZone             UTC
+>
+> val it : (string * string option) list
 List.length (Sys.showAll ());
 > val it = 23 : int
 List.length (showAll ());

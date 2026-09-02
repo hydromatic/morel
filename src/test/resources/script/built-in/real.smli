@@ -25,6 +25,8 @@ Sys.set ("printLength", 999);
 > val it = () : unit
 Sys.set ("stringDepth", ~1);
 > val it = () : unit
+Sys.set ("output", "tabular");
+> val it = () : unit
 (* Force the sign bit positive with 'abs': the sign of a raw NaN is not
  * specified by IEEE 754, and (in particular in Morel-Go) varies by platform. *)
 val nan = abs (Real.posInf / Real.posInf);
@@ -655,24 +657,36 @@ Real.toManExp Real.minPos;
 > val it = {exp=~126,man=1.1920929E~7} : {exp:int, man:real}
 Real.minNormalPos / Real.minPos;
 > val it = 8388608 : real
-List.map (fn x => (x, Real.toManExp x, Real.fromManExp (Real.toManExp x)))
+List.map (fn x =>
+             {` x` = x,
+              toManExp = Real.toManExp x,
+              fromManExp = Real.fromManExp (Real.toManExp x)})
   [1.0, 0.0, ~0.0, ~1.0, 0.5, 2.0,
    0.0000123456, 0.00000123456, 0.000000123456, ~0.00000123456,
    Real.minPos, Real.minNormalPos, Real.maxFinite, ~Real.maxFinite,
    Real.posInf, Real.negInf, nan];
-> val it =
->   [(1,{exp=1,man=0.5},1),(0,{exp=~126,man=0},0),(~0,{exp=~126,man=~0},~0),
->    (~1,{exp=1,man=~0.5},~1),(0.5,{exp=0,man=0.5},0.5),(2,{exp=2,man=0.5},2),
->    (1.23456E~5,{exp=~16,man=0.80908126},1.23456E~5),
->    (1.23456E~6,{exp=~19,man=0.647265},1.23456E~6),
->    (1.23456E~7,{exp=~22,man=0.517812},1.23456E~7),
->    (~1.23456E~6,{exp=~19,man=~0.647265},~1.23456E~6),
->    (1.4E~45,{exp=~126,man=1.1920929E~7},1.4E~45),
->    (1.1754944E~38,{exp=~125,man=0.5},1.1754944E~38),
->    (3.4028235E38,{exp=128,man=0.99999994},3.4028235E38),
->    (~3.4028235E38,{exp=128,man=~0.99999994},~3.4028235E38),
->    (inf,{exp=129,man=inf},inf),(~inf,{exp=129,man=~inf},~inf),
->    (nan,{exp=129,man=nan},nan)] : (real * {exp:int, man:real} * real) list
+>  x            fromManExp    toManExp
+>                             exp  man
+> ------------- ------------- ---- ------------
+>             1             1    1          0.5
+>             0             0 -126            0
+>            -0            -0 -126           -0
+>            -1            -1    1         -0.5
+>           0.5           0.5    0          0.5
+>             2             2    2          0.5
+>    1.23456E-5    1.23456E-5  -16   0.80908126
+>    1.23456E-6    1.23456E-6  -19     0.647265
+>    1.23456E-7    1.23456E-7  -22     0.517812
+>   -1.23456E-6   -1.23456E-6  -19    -0.647265
+>       1.4E-45       1.4E-45 -126 1.1920929E-7
+> 1.1754944E-38 1.1754944E-38 -125          0.5
+>  3.4028235E38  3.4028235E38  128   0.99999994
+> -3.4028235E38 -3.4028235E38  128  -0.99999994
+>           inf           inf  129          inf
+>          -inf          -inf  129         -inf
+>           nan           nan  129          nan
+>
+> val it : {` x`:real, fromManExp:real, toManExp:{exp:int, man:real}} list
 
 (* "fromManExp {man, exp}" returns man * radix(exp). This function is comparable
  * to ldexp in the C library. Note that, even if man is a non-zero, finite real
@@ -692,17 +706,32 @@ Real.fromManExp {man = 1.0, exp = 2};
 > val it = 4 : real
 Real.fromManExp {man = 1.0, exp = ~3};
 > val it = 0.125 : real
-List.map (fn x => (x, Real.fromManExp (Real.toManExp x)))
+List.map (fn x => {` x` = x, fromManExp = Real.fromManExp (Real.toManExp x)})
   [1.0, 0.0, ~0.0, ~1.0, 0.5, 2.0,
    0.0000123456, 0.00000123456, 0.000000123456, ~0.00000123456,
    Real.minPos, Real.minNormalPos, Real.maxFinite, ~Real.maxFinite,
    Real.posInf, Real.negInf, nan];
-> val it =
->   [(1,1),(0,0),(~0,~0),(~1,~1),(0.5,0.5),(2,2),(1.23456E~5,1.23456E~5),
->    (1.23456E~6,1.23456E~6),(1.23456E~7,1.23456E~7),(~1.23456E~6,~1.23456E~6),
->    (1.4E~45,1.4E~45),(1.1754944E~38,1.1754944E~38),
->    (3.4028235E38,3.4028235E38),(~3.4028235E38,~3.4028235E38),(inf,inf),
->    (~inf,~inf),(nan,nan)] : (real * real) list
+>  x            fromManExp
+> ------------- -------------
+>             1             1
+>             0             0
+>            -0            -0
+>            -1            -1
+>           0.5           0.5
+>             2             2
+>    1.23456E-5    1.23456E-5
+>    1.23456E-6    1.23456E-6
+>    1.23456E-7    1.23456E-7
+>   -1.23456E-6   -1.23456E-6
+>       1.4E-45       1.4E-45
+> 1.1754944E-38 1.1754944E-38
+>  3.4028235E38  3.4028235E38
+> -3.4028235E38 -3.4028235E38
+>           inf           inf
+>          -inf          -inf
+>           nan           nan
+>
+> val it : {` x`:real, fromManExp:real} list
 
 (* "split r" returns {whole, frac}, where frac and whole are the fractional and
  * integral parts of r, respectively. Specifically, whole is integral,
@@ -1009,10 +1038,7 @@ Real.fromString "nan";
 
 (* Side-by-side comparison of how each format handles a range of values.
  * To run in SML, prepend `open StringCvt;` (Morel exposes the constructors
- * at the top level). `Sys.set` is Morel-only; SML users will see the
- * record list in non-tabular notation. *)
-Sys.set ("output", "tabular");
-> val it = () : unit
+ * at the top level). *)
 List.map (fn (Name, X) =>
              {Name = Name,
               X = X,
@@ -1059,8 +1085,6 @@ List.map (fn (Name, X) =>
 > nan                         nan nan            nan                                          nan         nan       nan
 >
 > val it : {Name:string, X:real, exact:string, fix3:string, gen6:string, sci3:string, toString:string} list
-Sys.unset "output";
-> val it = () : unit
 
 (* "toLarge r", "fromLarge r" convert between values of type real and type
  * LargeReal.real. If r is too small or too large to be represented as a real,
@@ -1281,18 +1305,32 @@ Real.toString Real.negInf;
 > val it = "~inf" : string
 Real.toString Real.posInf;
 > val it = "inf" : string
-List.map (fn x => (x, Real.toString x))
+List.map (fn x => {` x` = x, toString = Real.toString x})
   [1.0, 0.0, ~0.0, ~1.0, 0.5, 2.0,
    0.0000123456, 0.00000123456, 0.000000123456, ~0.00000123456,
    Real.minPos, Real.minNormalPos, Real.maxFinite, ~Real.maxFinite,
    Real.posInf, Real.negInf, nan];
-> val it =
->   [(1,"1"),(0,"0"),(~0,"~0"),(~1,"~1"),(0.5,"0.5"),(2,"2"),
->    (1.23456E~5,"1.23456E~5"),(1.23456E~6,"1.23456E~6"),
->    (1.23456E~7,"1.23456E~7"),(~1.23456E~6,"~1.23456E~6"),(1.4E~45,"1.4E~45"),
->    (1.1754944E~38,"1.1754944E~38"),(3.4028235E38,"3.4028235E38"),
->    (~3.4028235E38,"~3.4028235E38"),(inf,"inf"),(~inf,"~inf"),(nan,"nan")]
->   : (real * string) list
+>  x            toString
+> ------------- -------------
+>             1 1
+>             0 0
+>            -0 ~0
+>            -1 ~1
+>           0.5 0.5
+>             2 2
+>    1.23456E-5 1.23456E~5
+>    1.23456E-6 1.23456E~6
+>    1.23456E-7 1.23456E~7
+>   -1.23456E-6 ~1.23456E~6
+>       1.4E-45 1.4E~45
+> 1.1754944E-38 1.1754944E~38
+>  3.4028235E38 3.4028235E38
+> -3.4028235E38 ~3.4028235E38
+>           inf inf
+>          -inf ~inf
+>           nan nan
+>
+> val it : {` x`:real, toString:string} list
 
 (* "scan getc strm", "fromString s" scan a real value from character source. The
  * first version reads from ARG/strm/ using reader getc, ignoring initial

@@ -293,4 +293,47 @@ let val w : {b:int list} option = NONE in w?.b?.c end;
 > stdIn:1.43-1.47 Error: reference to field c of non-record type int
 >   raised at: stdIn:1.43-1.47
 
+(* A receiver whose type comes only from the function's own type
+ * dispatches like any other. Nothing in the body says what "ds"
+ * is; the annotation on the function does, and the rule's type is
+ * settled before its body is deduced, so the body sees it. *)
+val f = (fn ds => ds.length ()) : {d:int} bag -> int;
+> val f = fn : {d:int} bag -> int
+f (bag [{d=1},{d=2}]);
+> val it = 2 : int
+val g: {d:int} bag -> int = fn ds => ds.length ();
+> val g = fn : {d:int} bag -> int
+
+(* A query is a receiver like any other. Its orderedness is not
+ * settled when the method is chosen -- that is what typing the
+ * query decides -- so the method is chosen at the collection, and
+ * a list or a bag it turns out to be. *)
+val b = bag [1,2,3];
+> val b = [1,2,3] : int bag
+(from x in b).length ();
+> val it = 3 : int
+(from x in b yield x distinct).length ();
+> val it = 3 : int
+(from x in [1,2,3]).length ();
+> val it = 3 : int
+(from x in [1,2,3] order x).length ();
+> val it = 3 : int
+
+(* The receiver may be any expression. Its head type constructor is
+ * what the method is chosen by, and an expression that is not an
+ * application, a literal or a name has one just the same -- an
+ * 'if', a 'let', a 'case', or an operator applied. *)
+val l = [1,2,3];
+> val l = [1,2,3] : int list
+(if true then l else l).length ();
+> val it = 3 : int
+(let val z = l in z end).length ();
+> val it = 3 : int
+(case 1 of _ => l).length ();
+> val it = 3 : int
+(l @ l).length ();
+> val it = 6 : int
+(if true then 1 else 2).abs ();
+> val it = 1 : int
+
 (*) End postfix.smli
