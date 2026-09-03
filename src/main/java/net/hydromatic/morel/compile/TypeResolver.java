@@ -5414,12 +5414,21 @@ public class TypeResolver {
           return bagTerm(toTerm(dataType.elementType(), subst));
         }
         if (dataType.name.equals(COLLECTION_TY_CON)) {
-          // The orderedness is a fresh variable, so the use decides whether
-          // the collection is a list or a bag. Where nothing decides, reading
-          // the term back gives a bag.
+          // The orderedness is a variable, so the use decides whether the
+          // collection is a list or a bag. Where nothing decides, reading the
+          // term back gives a bag.
+          //
+          // Collections of the same element type in one instantiation share
+          // it, so that a function from a collection to a collection returns
+          // what it was given: "iterate" applied to a list returns a list.
           assert dataType.arguments.size() == 1;
-          return collectionTerm(
-              toTerm(dataType.elementType(), subst), unifier.variable());
+          final Map<Type, Variable> orderedness = subst.orderedness();
+          final Variable ordered =
+              orderedness == null
+                  ? unifier.variable()
+                  : orderedness.computeIfAbsent(
+                      dataType.elementType(), t -> unifier.variable());
+          return collectionTerm(toTerm(dataType.elementType(), subst), ordered);
         }
         // A term identifies a datatype by name, so a datatype whose name now
         // belongs to something else could not be recovered from the term.
@@ -5460,7 +5469,7 @@ public class TypeResolver {
         return listTerm(toTerm(type.elementType(), subst));
       case FORALL_TYPE:
         final ForallType forallType = (ForallType) type;
-        Subst subst2 = subst;
+        Subst subst2 = subst.instantiating();
         for (int i = 0; i < forallType.parameterCount; i++) {
           subst2 = subst2.plus(typeSystem.typeVariable(i), unifier.variable());
         }
@@ -5960,6 +5969,54 @@ public class TypeResolver {
     }
 
     abstract @Nullable Variable get(TypeVar typeVar);
+
+    /**
+     * The orderedness variables of the collections in one instantiation, by
+     * element type, or null outside an instantiation.
+     *
+     * <p>A collection's orderedness is decided by its use, and the collections
+     * of one instantiation are one use: {@code iterate}, of type "&alpha;
+     * collection &rarr; (&alpha; collection * &alpha; collection &rarr; &alpha;
+     * collection) &rarr; &alpha; collection", applied to a list returns a list.
+     * Give each occurrence an orderedness of its own and nothing relates them,
+     * so the argument being a list says nothing about the result, which is then
+     * read back as a bag.
+     */
+    abstract @Nullable Map<Type, Variable> orderedness();
+
+    /** Returns a substitution that starts an instantiation's orderedness. */
+    Subst instantiating() {
+      return new OrderednessSubst(this);
+    }
+  }
+
+  /**
+   * Substitution that starts a scope in which collections of the same element
+   * type share an orderedness.
+   */
+  private static class OrderednessSubst extends Subst {
+    final Subst parent;
+    final Map<Type, Variable> orderedness = new HashMap<>();
+
+    OrderednessSubst(Subst parent) {
+      this.parent = parent;
+    }
+
+    @Override
+    @Nullable
+    Variable get(TypeVar typeVar) {
+      return parent.get(typeVar);
+    }
+
+    @Override
+    Map<Type, Variable> orderedness() {
+      return orderedness;
+    }
+
+    @Override
+    public String toString() {
+      return parent.toString();
+    }
   }
 
   /** Empty substitution. */
@@ -5972,6 +6029,12 @@ public class TypeResolver {
     @Override
     @Nullable
     Variable get(TypeVar typeVar) {
+      return null;
+    }
+
+    @Override
+    @Nullable
+    Map<Type, Variable> orderedness() {
       return null;
     }
   }
@@ -5995,6 +6058,12 @@ public class TypeResolver {
     @Nullable
     Variable get(TypeVar typeVar) {
       return typeVar.equals(this.typeVar) ? variable : parent.get(typeVar);
+    }
+
+    @Override
+    @Nullable
+    Map<Type, Variable> orderedness() {
+      return parent.orderedness();
     }
 
     @Override

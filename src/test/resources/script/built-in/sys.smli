@@ -70,14 +70,18 @@ Sys.env;
 > val it = fn : unit -> (string * string) list
 Sys.set ("output", "tabular");
 > val it = () : unit
-Sys.env ();
-> 1              2
+(* A few bindings are an implementation's own, and differ between them,
+ * so they are left out: 'scott', which is bound only where its data
+ * source is, and '$csComplement' and '$dsRanges', internals that
+ * morel-go has no counterpart for. *)
+from (name, t) in Sys.env ()
+  where name notelem ["$csComplement", "$dsRanges", "scott"]
+  order name;
+> name           t
 > -------------- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-> $csComplement  forall 'a. 'a continuous_set -> 'a continuous_set
 > $csContains    forall 'a. 'a continuous_set -> 'a -> bool
 > $dsComplement  forall 'a. 'a discrete_set -> 'a discrete_set
 > $dsContains    forall 'a. 'a discrete_set -> 'a -> bool
-> $dsRanges      forall 'a. 'a discrete_set -> 'a range list
 > @              forall 'a. 'a list * 'a list -> 'a list
 > ALL            'a range
 > AT_LEAST       forall 'a. 'a -> 'a range
@@ -113,7 +117,7 @@ Sys.env ();
 > FIX            int option -> realfmt
 > Fail           string -> exn
 > Feb            month
-> Fn             {apply:forall 'a 'b. ('a -> 'b) * 'a -> 'b, const:forall 'a 'b. 'a -> 'b -> 'a, curry:forall 'a 'b 'c. ('a * 'b -> 'c) -> 'a -> 'b -> 'c, equal:forall 'a. 'a -> 'a -> bool, flip:forall 'a 'b 'c. ('a * 'b -> 'c) -> 'b * 'a -> 'c, id:forall 'a. 'a -> 'a, notEqual:forall 'a 'b. 'a -> 'a -> bool, `o`:forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c, repeat:forall 'a. int -> ('a -> 'a) -> 'a -> 'a, uncurry:forall 'a 'b 'c. ('a -> 'b -> 'c) -> 'a * 'b -> 'c}
+> Fn             {apply:forall 'a 'b. ('a -> 'b) * 'a -> 'b, const:forall 'a 'b. 'a -> 'b -> 'a, curry:forall 'a 'b 'c. ('a * 'b -> 'c) -> 'a -> 'b -> 'c, equal:forall 'a. 'a -> 'a -> bool, flip:forall 'a 'b 'c. ('a * 'b -> 'c) -> 'b * 'a -> 'c, id:forall 'a. 'a -> 'a, notEqual:forall 'a. 'a -> 'a -> bool, `o`:forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c, repeat:forall 'a. int -> ('a -> 'a) -> 'a -> 'a, uncurry:forall 'a 'b 'c. ('a -> 'b -> 'c) -> 'a * 'b -> 'c}
 > Fri            weekday
 > GEN            int option -> realfmt
 > GREATER        order
@@ -152,7 +156,7 @@ Sys.env ();
 > RECORD         (string * variant) list -> variant
 > Range          {complement:forall 'a. 'a continuous_set -> 'a continuous_set, contains:forall 'a. 'a range -> 'a -> bool, continuousSetOf:forall 'a. 'a range list -> 'a continuous_set, discreteSetOf:forall 'a. 'a range list -> 'a discrete_set, flatten:forall 'a. 'a range list -> 'a list, ranges:forall 'a. 'a continuous_set -> 'a range list, toBag:forall 'a. 'a discrete_set -> 'a bag, toList:forall 'a. 'a discrete_set -> 'a list}
 > Real           {*:real * real -> real, +:real * real -> real, -:real * real -> real, /:real * real -> real, <:real * real -> bool, <=:real * real -> bool, <>:real * real -> bool, =:real * real -> bool, >:real * real -> bool, >=:real * real -> bool, abs:real -> real, ceil:real -> int, checkFloat:real -> real, compare:real * real -> order, copySign:real * real -> real, floor:real -> int, fmt:realfmt -> real -> string, fromInt:int -> real, fromManExp:{exp:int, man:real} -> real, fromString:string -> real option, isFinite:real -> bool, isNan:real -> bool, isNormal:real -> bool, max:real * real -> real, maxFinite:real, min:real * real -> real, minNormalPos:real, minPos:real, negInf:real, posInf:real, precision:int, radix:int, realCeil:real -> real, realFloor:real -> real, realMod:real -> real, realRound:real -> real, realTrunc:real -> real, rem:real * real -> real, round:real -> int, sameSign:real * real -> bool, scan:forall 'a. ('a -> (char * 'a) option) -> 'a -> (real * 'a) option, sign:real -> int, signBit:real -> bool, split:real -> {frac:real, whole:real}, toManExp:real -> {exp:int, man:real}, toString:real -> string, trunc:real -> int, unordered:real * real -> bool, ~:real -> real}
-> Relational     {compare:forall 'a. 'a * 'a -> order, count:forall 'a. 'a bag -> int, empty:forall 'a. 'a bag -> bool, iterate:multi(forall 'a. 'a bag -> ('a bag * 'a bag -> 'a bag) -> 'a bag,forall 'a. 'a list -> ('a list * 'a list -> 'a list) -> 'a list), max:forall 'a. 'a bag -> 'a, min:forall 'a. 'a bag -> 'a, nonEmpty:forall 'a. 'a bag -> bool, only:forall 'a. 'a bag -> 'a, sum:forall 'a. 'a bag -> 'a}
+> Relational     {compare:forall 'a. 'a * 'a -> order, count:forall 'a. 'a bag -> int, empty:forall 'a. 'a bag -> bool, iterate:forall 'a. 'a bag -> ('a bag * 'a bag -> 'a bag) -> 'a bag, max:forall 'a. 'a bag -> 'a, min:forall 'a. 'a bag -> 'a, nonEmpty:forall 'a. 'a bag -> bool, only:forall 'a. 'a bag -> 'a, sum:forall 'a. 'a bag -> 'a}
 > SCI            int option -> realfmt
 > SOME           forall 'a. 'a -> 'a option
 > STRING         string -> variant
@@ -175,7 +179,7 @@ Sys.env ();
 > VARIANT_SOME   variant -> variant
 > VECTOR         variant list -> variant
 > Variant        {parse:string -> variant, print:variant -> string}
-> Vector         {all:forall 'a. ('a -> bool) -> 'a vector -> bool, app:forall 'a. ('a -> unit) -> 'a vector -> unit, appi:forall 'a. (int * 'a -> unit) -> 'a vector -> unit, collate:forall 'a. ('a * 'a -> order) -> 'a vector * 'a vector -> order, concat:forall 'a. 'a vector list -> 'a vector, `exists`:forall 'a. ('a -> bool) -> 'a vector -> bool, find:forall 'a. ('a -> bool) -> 'a vector -> 'a option, findi:forall 'a 'b. (int * 'a -> bool) -> 'a vector -> (int * 'a) option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldli:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldri:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, fromList:forall 'a. 'a list -> 'a vector, length:forall 'a. 'a vector -> int, map:forall 'a 'b. ('a -> 'b) -> 'a vector -> 'b vector, mapi:forall 'a 'b. (int * 'a -> 'b) -> 'a vector -> 'b vector, maxLen:int, sub:forall 'a. 'a vector * int -> 'a, tabulate:forall 'a. int * (int -> 'a) -> 'a vector, update:forall 'a. 'a vector * int * 'a -> 'a vector}
+> Vector         {all:forall 'a. ('a -> bool) -> 'a vector -> bool, app:forall 'a. ('a -> unit) -> 'a vector -> unit, appi:forall 'a. (int * 'a -> unit) -> 'a vector -> unit, collate:forall 'a. ('a * 'a -> order) -> 'a vector * 'a vector -> order, concat:forall 'a. 'a vector list -> 'a vector, `exists`:forall 'a. ('a -> bool) -> 'a vector -> bool, find:forall 'a. ('a -> bool) -> 'a vector -> 'a option, findi:forall 'a. (int * 'a -> bool) -> 'a vector -> (int * 'a) option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldli:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldri:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, fromList:forall 'a. 'a list -> 'a vector, length:forall 'a. 'a vector -> int, map:forall 'a 'b. ('a -> 'b) -> 'a vector -> 'b vector, mapi:forall 'a 'b. (int * 'a -> 'b) -> 'a vector -> 'b vector, maxLen:int, sub:forall 'a. 'a vector * int -> 'a, tabulate:forall 'a. int * (int -> 'a) -> 'a vector, update:forall 'a. 'a vector * int * 'a -> 'a vector}
 > Wed            weekday
 > Word           {*:word * word -> word, +:word * word -> word, -:word * word -> word, <:word * word -> bool, <<:word * word -> word, <=:word * word -> bool, >:word * word -> bool, >=:word * word -> bool, >>:word * word -> word, andb:word * word -> word, compare:word * word -> order, `div`:word * word -> word, fmt:radix -> word -> string, fromInt:int -> word, fromLarge:word -> word, fromLargeInt:int -> word, fromLargeWord:word -> word, fromString:string -> word option, max:word * word -> word, min:word * word -> word, `mod`:word * word -> word, notb:word -> word, orb:word * word -> word, scan:forall 'a. radix -> ('a -> (char * 'a) option) -> 'a -> (word * 'a) option, toInt:word -> int, toIntX:word -> int, toLarge:word -> word, toLargeInt:word -> int, toLargeIntX:word -> int, toLargeWord:word -> word, toLargeWordX:word -> word, toLargeX:word -> word, toString:word -> string, wordSize:int, xorb:word * word -> word, ~:word -> word, ~>>:word * word -> word}
 > ^              string * string -> string
@@ -257,7 +261,7 @@ Sys.env ();
 > valOf          forall 'a. 'a option -> 'a
 > vector         forall 'a. 'a list -> 'a vector
 >
-> val it : (string * string) list
+> val it : {name:string, t:string} list
 
 env;
 > val it = fn : unit -> (string * string) list

@@ -1502,7 +1502,7 @@ public enum BuiltIn {
   FN_NOT_EQUAL(
       "Fn",
       "notEqual",
-      ts -> ts.forallType(2, h -> ts.fnType(h.get(0), h.get(0), BOOL))),
+      ts -> ts.forallType(1, h -> ts.fnType(h.get(0), h.get(0), BOOL))),
 
   /**
    * Operator "Fn.o", of type "(&beta; &rarr; &gamma;) * (&alpha; &rarr; &beta;)
@@ -3870,10 +3870,10 @@ public enum BuiltIn {
       ts -> ts.forallType(1, h -> ts.fnType(h.collection(0), BOOL))),
 
   /**
-   * Function "Relational.iterate", aka "iterate", overloaded with both "&alpha;
-   * bag &rarr; (&alpha; bag * &alpha; bag &rarr; &alpha; bag) &rarr; &alpha;
-   * bag" and "&alpha; list &rarr; (&alpha; list * &alpha; list &rarr; &alpha;
-   * list) &rarr; &alpha; list".
+   * Function "Relational.iterate", aka "iterate", of type "&alpha; collection
+   * &rarr; (&alpha; collection * &alpha; collection &rarr; &alpha; collection)
+   * &rarr; &alpha; collection"; the collection is a list or a bag, whichever
+   * the argument is, and the result is the same.
    *
    * <p>"iterate initialList listUpdate" computes a fixed point, starting with a
    * list and iterating by passing it to a function.
@@ -3883,22 +3883,15 @@ public enum BuiltIn {
       "iterate",
       true,
       ts ->
-          ts.multi(
-              ts.forallType(
-                  1,
-                  h ->
+          ts.forallType(
+              1,
+              h ->
+                  ts.fnType(
+                      h.collection(0),
                       ts.fnType(
-                          h.bag(0),
-                          ts.fnType(ts.tupleType(h.bag(0), h.bag(0)), h.bag(0)),
-                          h.bag(0))),
-              ts.forallType(
-                  1,
-                  h ->
-                      ts.fnType(
-                          h.list(0),
-                          ts.fnType(
-                              ts.tupleType(h.list(0), h.list(0)), h.list(0)),
-                          h.list(0))))),
+                          ts.tupleType(h.collection(0), h.collection(0)),
+                          h.collection(0)),
+                      h.collection(0)))),
 
   /**
    * Function "Relational.max", aka "max", of type "&alpha; collection &rarr;
@@ -4903,7 +4896,7 @@ public enum BuiltIn {
       "findi",
       ts ->
           ts.forallType(
-              2,
+              1,
               h ->
                   ts.fnType(
                       ts.fnType(ts.tupleType(INT, h.get(0)), BOOL),
