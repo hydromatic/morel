@@ -559,6 +559,12 @@ public class FromBuilder {
 
   /** Returns whether a pattern is currently in scope. */
   private boolean containsBinding(Core.NamedPat pat) {
+    return containsBinding(bindings, pat);
+  }
+
+  /** Returns whether a pattern is one of {@code bindings}. */
+  private static boolean containsBinding(
+      List<Binding> bindings, Core.NamedPat pat) {
     return bindings.stream().anyMatch(b -> b.id.equals(pat));
   }
 
@@ -750,7 +756,15 @@ public class FromBuilder {
       if (arg.op != Op.ID) {
         return TupleType.OTHER;
       }
-      if (!((Core.Id) arg).idPat.name.equals(name)) {
+      final Core.NamedPat idPat = ((Core.Id) arg).idPat;
+      if (!containsBinding(env.bindings, idPat)) {
+        // The field's value comes from outside the query, e.g. 'yield {h = h}'
+        // where 'h' is a variable in the enclosing environment. The step is
+        // neither the identity nor a rename of the current row -- it replaces
+        // the row -- so it must be kept.
+        return TupleType.OTHER;
+      }
+      if (!idPat.name.equals(name)) {
         identity = false;
       }
     }
