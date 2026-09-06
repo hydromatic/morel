@@ -27,12 +27,13 @@ Sys.set ("stringDepth", ~1);
 
 Relational;
 > val it =
->   {compare=fn,count=fn,empty=fn,iterate=fn,max=fn,min=fn,nonEmpty=fn,
->    only=fn,sum=fn}
+>   {compare=fn,count=fn,empty=fn,iterate=fn,max=fn,maxBy=fn,min=fn,minBy=fn,
+>    nonEmpty=fn,only=fn,sum=fn}
 >   : {compare:'a * 'a -> order, count:'b bag -> int, empty:'c bag -> bool,
 >       iterate:'d bag -> ('d bag * 'd bag -> 'd bag) -> 'd bag,
->       max:'e bag -> 'e, min:'f bag -> 'f, nonEmpty:'g bag -> bool,
->       only:'h bag -> 'h, sum:'i bag -> 'i}
+>       max:'e bag -> 'e, maxBy:('f -> 'g) -> 'f bag -> 'f, min:'h bag -> 'h,
+>       minBy:('i -> 'j) -> 'i bag -> 'i, nonEmpty:'k bag -> bool,
+>       only:'l bag -> 'l, sum:'m bag -> 'm}
 
 (* Descending:
  *   datatype descending = DESC of 'a
@@ -167,6 +168,36 @@ Sys.plan ();
 >   "apply(fnValue Relational.max, argCode apply(fnValue Bag.fromList, argCode tuple(constant(false), constant(true))))"
 >   : string
 
+(* `maxBy keyFn` returns the element with the greatest key. The key need not
+ * be the element itself, and need not be of the same type. *)
+Relational.maxBy String.size ["john", "paul", "george", "ringo"];
+> val it = "george" : string
+maxBy String.size ["john", "paul", "george", "ringo"];
+> val it = "george" : string
+maxBy String.size (bag ["john", "paul", "george", "ringo"]);
+> val it = "george" : string
+maxBy #deptno [{deptno=20, ename="b"}, {deptno=30, ename="a"},
+    {deptno=10, ename="c"}];
+> val it = {deptno=30,ename="a"} : {deptno:int, ename:string}
+maxBy Fn.id [1];
+> val it = 1 : int
+maxBy (fn w => w) [0w1, 0wxFFFFFFFFFFFFFFFF];
+> val it = 0wxFFFFFFFFFFFFFFFF : word
+maxBy (fn i => (i mod 3, i)) [1, 2, 3, 4, 5];
+> val it = 5 : int
+maxBy (fn i => DESC i) [3, 1, 2];
+> val it = 1 : int
+maxBy String.size ([] : string list);
+> uncaught exception Empty
+>   raised at: stdIn:1.1-1.37
+maxBy String.size (bag [] : string bag);
+> uncaught exception Empty
+>   raised at: stdIn:1.1-1.40
+Sys.plan ();
+> val it =
+>   "apply2(fnValue Relational.maxBy, constant(String.size), apply(fnValue Bag.fromList, argCode tuple))"
+>   : string
+
 Relational.min (bag [1, 2, 3]);
 > val it = 1 : int
 (bag [1, 2, 3]).min ();
@@ -191,6 +222,35 @@ Relational.min (bag [false, true]);
 Sys.plan ();
 > val it =
 >   "apply(fnValue Relational.min, argCode apply(fnValue Bag.fromList, argCode tuple(constant(false), constant(true))))"
+>   : string
+
+(* `minBy keyFn` returns the element with the least key. Both `john` and
+ * `paul` have 4 characters; which of them is returned is not specified, and
+ * for a bag may vary from run to run. *)
+Relational.minBy String.size ["john", "paul", "george", "ringo"];
+> val it = "john" : string
+minBy String.size ["john", "paul", "george", "ringo"];
+> val it = "john" : string
+minBy String.size (bag ["john", "paul", "george", "ringo"]);
+> val it = "john" : string
+minBy #deptno [{deptno=20, ename="b"}, {deptno=30, ename="a"},
+    {deptno=10, ename="c"}];
+> val it = {deptno=10,ename="c"} : {deptno:int, ename:string}
+minBy Fn.id [1];
+> val it = 1 : int
+minBy (fn w => w) [0w1, 0wxFFFFFFFFFFFFFFFF];
+> val it = 0wx1 : word
+minBy (fn i => DESC i) [3, 1, 2];
+> val it = 3 : int
+minBy String.size ([] : string list);
+> uncaught exception Empty
+>   raised at: stdIn:1.1-1.37
+minBy String.size (bag [] : string bag);
+> uncaught exception Empty
+>   raised at: stdIn:1.1-1.40
+Sys.plan ();
+> val it =
+>   "apply2(fnValue Relational.minBy, constant(String.size), apply(fnValue Bag.fromList, argCode tuple))"
 >   : string
 
 Relational.only [2];

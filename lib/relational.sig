@@ -39,7 +39,7 @@ sig
    *
    * Comparisons are based on the structure of the type `α`.
    * Primitive types are compared using their natural order;
-   * Option types compare with NONE last;
+   * Option types compare with NONE first;
    * Tuple types compare lexicographically;
    * Record types compare lexicographically, with the fields
    * compared in alphabetical order;
@@ -79,11 +79,39 @@ sig
   val max : 'a bag -> 'a [@@method] [@@prototype "max list"]
 
   (**
+   * returns the element of `list` for which `keyFn` gives the greatest key,
+   * for example `maxBy String.size ["john", "paul", "george", "ringo"]`,
+   * which returns `"george"`.
+   *
+   * Often used with `group` to deduplicate whole rows, for example
+   * `from p in product_versions group p.id compute latest = maxBy
+   * #version over p`.
+   *
+   * If several elements are tied for the greatest key, and the input is
+   * unordered, it is not specified which of them is returned.
+   *
+   * Raises `Empty` if `list` is empty.
+   *)
+  val maxBy : ('a -> 'b) -> 'a bag -> 'a [@@prototype "maxBy keyFn list"]
+
+  (**
    * returns the least element of `list`. Often used with
    * `group`, for example `from e in emps group e.deptno compute minId =
    * min of e.id`.
    *)
   val min : 'a bag -> 'a [@@method] [@@prototype "min list"]
+
+  (**
+   * returns the element of `list` for which `keyFn` gives the least key,
+   * for example `minBy String.size ["john", "paul", "george", "ringo"]`,
+   * which returns `"john"`.
+   *
+   * If several elements are tied for the least key, and the input is
+   * unordered, it is not specified which of them is returned.
+   *
+   * Raises `Empty` if `list` is empty.
+   *)
+  val minBy : ('a -> 'b) -> 'a bag -> 'a [@@prototype "minBy keyFn list"]
 
   (**
    * returns whether the list has at least one element, for

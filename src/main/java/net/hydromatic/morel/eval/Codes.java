@@ -4843,9 +4843,17 @@ public abstract class Codes {
   private static final Applicable RELATIONAL_MAX =
       new RelationalMinMax(BuiltIn.RELATIONAL_MAX, Pos.ZERO, null);
 
+  /** @see BuiltIn#RELATIONAL_MAX_BY */
+  private static final Applicable RELATIONAL_MAX_BY =
+      new RelationalMinMaxBy(BuiltIn.RELATIONAL_MAX_BY, Pos.ZERO, null);
+
   /** @see BuiltIn#RELATIONAL_MIN */
   private static final Applicable RELATIONAL_MIN =
       new RelationalMinMax(BuiltIn.RELATIONAL_MIN, Pos.ZERO, null);
+
+  /** @see BuiltIn#RELATIONAL_MIN_BY */
+  private static final Applicable RELATIONAL_MIN_BY =
+      new RelationalMinMaxBy(BuiltIn.RELATIONAL_MIN_BY, Pos.ZERO, null);
 
   /**
    * Implements {@link #RELATIONAL_MAX} and {@link #RELATIONAL_MIN}.
@@ -4901,6 +4909,72 @@ public abstract class Codes {
           builtIn == BuiltIn.RELATIONAL_MAX
               ? ordering.max(list)
               : ordering.min(list));
+    }
+  }
+
+  /**
+   * Implements {@link #RELATIONAL_MAX_BY} and {@link #RELATIONAL_MIN_BY}.
+   *
+   * <p>Applies the key function to each element and compares the resulting keys
+   * with {@link Comparators#comparatorFor}, just as {@link RelationalMinMax}
+   * compares elements. Returns the first element whose key is extreme, so if
+   * several elements are tied the result depends on the order in which the
+   * collection is traversed; for a bag, that order is arbitrary.
+   *
+   * <p>Raises {@link BuiltInExn#EMPTY} on an empty collection, like {@code
+   * List.hd}.
+   */
+  private static class RelationalMinMaxBy
+      extends BasePositionedApplicable2<Object, Applicable1, List>
+      implements Typed {
+    /** Comparator for the key type; null until {@link #withType} is run. */
+    private final @Nullable Comparator comparator;
+
+    RelationalMinMaxBy(
+        BuiltIn builtIn, Pos pos, @Nullable Comparator comparator) {
+      super(builtIn, pos);
+      this.comparator = comparator;
+    }
+
+    @Override
+    public Applicable withPos(Pos pos) {
+      return new RelationalMinMaxBy(builtIn, pos, comparator);
+    }
+
+    @Override
+    public Applicable withType(TypeSystem typeSystem, Type type, Pos pos) {
+      // 'type' is '(elementType -> keyType) -> elementType bag -> elementType'
+      // (perhaps wrapped in a ForallType if the function is used as a value);
+      // the key type is the result type of its first argument.
+      final Type fnType =
+          type instanceof ForallType ? ((ForallType) type).type : type;
+      final Type keyType = ((FnType) ((FnType) fnType).paramType).resultType;
+      final Comparator comparator =
+          Comparators.comparatorFor(typeSystem, keyType, pos);
+      return new RelationalMinMaxBy(builtIn, pos, comparator);
+    }
+
+    @Override
+    public Object apply(Applicable1 keyFn, List list) {
+      final Iterator iterator = list.iterator();
+      if (!iterator.hasNext()) {
+        throw new MorelRuntimeException(BuiltInExn.EMPTY, pos);
+      }
+      final Comparator comparator =
+          requireNonNull(this.comparator, "comparator");
+      // 'minBy' is 'maxBy' with the comparison reversed.
+      final int sign = builtIn == BuiltIn.RELATIONAL_MAX_BY ? 1 : -1;
+      Object best = iterator.next();
+      Object bestKey = keyFn.apply(best);
+      while (iterator.hasNext()) {
+        final Object element = iterator.next();
+        final Object key = keyFn.apply(element);
+        if (sign * comparator.compare(key, bestKey) > 0) {
+          best = element;
+          bestKey = key;
+        }
+      }
+      return best;
     }
   }
 
@@ -7341,8 +7415,12 @@ public abstract class Codes {
         } else {
           argRows = rows;
         }
-        final Applicable aggregate = (Applicable) aggregateCode.eval(stack);
-        return aggregate.apply(stack, argRows);
+        // An aggregate function is usually an Applicable, but a partially
+        // applied built-in (say 'maxBy keyFn') is a plain Applicable1.
+        final Object aggregate = aggregateCode.eval(stack);
+        return aggregate instanceof Applicable
+            ? ((Applicable) aggregate).apply(stack, argRows)
+            : ((Applicable1) aggregate).apply(argRows);
       }
     };
   }
@@ -7688,7 +7766,9 @@ public abstract class Codes {
     b.add(BuiltIn.RELATIONAL_EMPTY, RELATIONAL_EMPTY);
     b.add(BuiltIn.RELATIONAL_ITERATE, RELATIONAL_ITERATE);
     b.add(BuiltIn.RELATIONAL_MAX, RELATIONAL_MAX);
+    b.add(BuiltIn.RELATIONAL_MAX_BY, RELATIONAL_MAX_BY);
     b.add(BuiltIn.RELATIONAL_MIN, RELATIONAL_MIN);
+    b.add(BuiltIn.RELATIONAL_MIN_BY, RELATIONAL_MIN_BY);
     b.add(BuiltIn.RELATIONAL_NON_EMPTY, RELATIONAL_NON_EMPTY);
     b.add(BuiltIn.RELATIONAL_ONLY, RELATIONAL_ONLY);
     b.add(BuiltIn.RELATIONAL_SUM, RELATIONAL_SUM);

@@ -3728,6 +3728,26 @@ from i in [1] compute sum;
 > stdIn:1.23-1.26 Error: operator 'sum' not defined for type ''a bag'
 >   raised at: stdIn:1.23-1.26
 
+(* As aggregate functions, 'maxBy' and 'minBy' return a whole row, and so
+ * deduplicate rows without aggregating each column independently. *)
+from e in scott.emps
+  group e.deptno
+  compute {latest = maxBy #hiredate over e,
+      earliest = minBy #hiredate over e}
+  yield {deptno, last = latest.ename, first = earliest.ename}
+  order deptno;
+> val it =
+>   [{deptno=10,first="CLARK",last="MILLER"},
+>    {deptno=20,first="SMITH",last="ADAMS"},
+>    {deptno=30,first="BLAKE",last="JAMES"}]
+>   : {deptno:int, first:string, last:string} list
+from e in scott.emps compute maxBy #hiredate over e;
+> val it =
+>   {comm=0,deptno=20,empno=7876,ename="ADAMS",hiredate="1987-05-23",
+>    job="CLERK",mgr=7788,sal=1100}
+>   : {comm:real, deptno:int, empno:int, ename:string, hiredate:string,
+>       job:string, mgr:int, sal:real}
+
 (*) dummy
 from message in ["the end"];
 > val it = ["the end"] : string list
