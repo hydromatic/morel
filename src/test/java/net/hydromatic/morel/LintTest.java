@@ -52,7 +52,6 @@ import java.util.Comparator;
 import java.util.Deque;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
@@ -1813,8 +1812,14 @@ public class LintTest {
   }
 
   /**
-   * Checks that every non-internal {@link BuiltIn} entry has a corresponding
-   * {@code val} spec in {@code lib/*.sig}.
+   * Checks that every built-in is declared by a spec in {@code lib/*.sig}: a
+   * {@code val} spec for each non-internal {@link BuiltIn} entry, a {@code
+   * type} or {@code datatype} spec for each {@link BuiltIn.Datatype}, and an
+   * {@code exception} spec for each {@link Codes.BuiltInExn}.
+   *
+   * <p>{@link SignatureChecker} checks the other direction, that what a
+   * signature declares exists in the enums; it cannot notice a built-in that no
+   * signature declares.
    *
    * <p>Entries in the internal {@code "$"} pseudo-structure are excluded.
    * Entries in the {@code "Test"} pseudo-structure (test-only built-ins) are
@@ -1823,7 +1828,9 @@ public class LintTest {
    */
   @Test
   void testBuiltInsDocumented() {
-    final Set<String> missing = new TreeSet<>();
+    // Each missing built-in, as the kind of spec that would declare it and
+    // its qualified name.
+    final PairList<String, String> missing = PairList.of();
     for (BuiltIn builtIn : BuiltIn.values()) {
       final String structure = builtIn.structure;
       if (structure.equals("Top")
@@ -1840,15 +1847,35 @@ public class LintTest {
         continue;
       }
       if (!MODEL.containsFunction(structure, builtIn.mlName)) {
-        missing.add(structure + "." + builtIn.mlName);
+        missing.add("val", structure + "." + builtIn.mlName);
+      }
+    }
+    for (BuiltIn.Datatype datatype : BuiltIn.Datatype.values()) {
+      final String structure = datatype.structure;
+      if (structure.equals("$")) {
+        continue;
+      }
+      if (!MODEL.containsType(structure, datatype.mlName())) {
+        missing.add("type", structure + "." + datatype.mlName());
+      }
+    }
+    for (Codes.BuiltInExn exn : Codes.BuiltInExn.values()) {
+      if (!MODEL.containsException(exn.structure, exn.mlName())) {
+        missing.add("exception", exn.structure + "." + exn.mlName());
       }
     }
     if (!missing.isEmpty()) {
-      fail(
-          format(
-              "BuiltIn entries not documented in any lib/*.sig: %s\n"
-                  + "Add a val/type/exception spec for each.",
-              missing));
+      final StringBuilder b =
+          new StringBuilder("Built-ins not declared in any lib/*.sig;\n")
+              .append("add a spec of the given kind for each:\n");
+      missing.forEach(
+          (kind, name) ->
+              b.append("  ")
+                  .append(kind)
+                  .append(' ')
+                  .append(name)
+                  .append('\n'));
+      fail(b.toString());
     }
   }
 
@@ -1887,31 +1914,6 @@ public class LintTest {
               "%d method inconsistencies between BuiltIn and lib/*.sig:\n" //
                   + "%s",
               errors.size(), String.join("\n", errors)));
-    }
-  }
-
-  /**
-   * Checks that every non-internal {@link BuiltIn.Datatype} entry has a
-   * corresponding type or datatype spec in {@code lib/*.sig}.
-   */
-  @Test
-  void testDatatypesDocumented() {
-    final List<String> missing = new ArrayList<>();
-    for (BuiltIn.Datatype datatype : BuiltIn.Datatype.values()) {
-      final String structure = datatype.structure;
-      if (structure.equals("$")) {
-        continue;
-      }
-      if (!MODEL.containsType(structure, datatype.mlName())) {
-        missing.add(structure + "." + datatype.mlName());
-      }
-    }
-    if (!missing.isEmpty()) {
-      fail(
-          format(
-              "Datatype entries not declared in any lib/*.sig: %s\n"
-                  + "Add a type/datatype spec for each.",
-              missing));
     }
   }
 

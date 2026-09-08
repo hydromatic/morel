@@ -24,13 +24,22 @@ License.
 [Up to index](index.md)
 
 [//]: # (start:lib/ieee-real)
-
+The `IEEEReal` structure provides types and constants related to
+IEEE 754 floating-point arithmetic, including rounding modes,
+floating-point classes, and a decimal approximation record type.
 
 *Specified by the [Standard ML Basis Library](https://smlfamily.github.io/Basis/ieee-real.html).*
 
 ## Synopsis
 
 <pre>
+exception <a id='Unordered' href="#Unordered-impl">Unordered</a>
 </pre>
+
+<a id="Unordered-impl"></a>
+<h3><code><strong>exception</strong> Unordered</code></h3>
+
+is raised by `Real.compare` when either argument is NaN, so that no
+order between them can be reported.
 
 [//]: # (end:lib/ieee-real)

@@ -156,6 +156,12 @@ public class Generation {
      * datatype} spec named {@code name}.
      */
     boolean containsType(String s, String name);
+
+    /**
+     * True if structure {@code s} has an {@code exception} spec named {@code
+     * name}.
+     */
+    boolean containsException(String s, String name);
   }
 
   /**
@@ -195,6 +201,13 @@ public class Generation {
       final StrDef str = structures.get(s);
       return str != null
           && str.types.stream().anyMatch(ty -> ty.name.equals(name));
+    }
+
+    @Override
+    public boolean containsException(String s, String name) {
+      final StrDef str = structures.get(s);
+      return str != null
+          && str.exceptions.stream().anyMatch(exn -> exn.name.equals(name));
     }
   }
 

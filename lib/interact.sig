@@ -25,6 +25,12 @@
 signature INTERACT =
 sig
 
+  (**
+   * is raised by `use` and `useSilently` when the file named cannot be
+   * opened.
+   *)
+  exception Error
+
   (** loads source text from the file named `f`. *)
   val use : string -> unit [@@prototype "use f"]
 

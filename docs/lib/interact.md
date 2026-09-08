@@ -30,9 +30,17 @@ Morel REPL, such as loading source files.
 ## Synopsis
 
 <pre>
+exception <a id='Error' href="#Error-impl">Error</a>
+
 val <a id='use' href="#use-impl">use</a> : string -> unit
 val <a id='useSilently' href="#useSilently-impl">useSilently</a> : string -> unit
 </pre>
+
+<a id="Error-impl"></a>
+<h3><code><strong>exception</strong> Error</code></h3>
+
+is raised by `use` and `useSilently` when the file named cannot be
+opened.
 
 <a id="use-impl"></a>
 <h3><code>use</code></h3>

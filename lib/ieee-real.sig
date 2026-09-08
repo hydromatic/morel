@@ -52,6 +52,12 @@ sig
    *)
   datatype rounding_mode = TO_NEAREST | TO_NEGINF | TO_POSINF | TO_ZERO
 *)
+
+  (**
+   * is raised by `Real.compare` when either argument is NaN, so that no
+   * order between them can be reported.
+   *)
+  exception Unordered
 end
 [@@description "IEEE 754 floating-point definitions."]
 

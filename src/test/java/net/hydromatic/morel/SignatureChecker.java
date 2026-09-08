@@ -636,6 +636,9 @@ public class SignatureChecker {
         return "Bool";
       case "INTEGER":
         return "Int";
+      case "IEEE_REAL":
+        // "IEEE" is an acronym; Pascal case would give "IeeeReal".
+        return "IEEEReal";
       case "PP":
         return "PP";
       default:
