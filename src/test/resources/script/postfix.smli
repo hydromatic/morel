@@ -319,6 +319,30 @@ val b = bag [1,2,3];
 (from x in [1,2,3] order x).length ();
 > val it = 3 : int
 
+(* The query's source may be a variable whose type is known but whose
+ * orderedness has not been written down anywhere the method-chooser can
+ * see it. A scan shares one orderedness with its source, so solving the
+ * equations gathered so far finds it. *)
+fun countAll (ds: int list) = (from d in ds).length ();
+> val countAll = fn : int list -> int
+countAll [1,2,3];
+> val it = 3 : int
+fun countPositive (ds: int bag) = (from d in ds where d > 0).length ();
+> val countPositive = fn : int bag -> int
+countPositive (bag [1, ~2, 3]);
+> val it = 2 : int
+val h = fn (ds: string bag) => (from d in ds yield d distinct).length ();
+> val h = fn : string bag -> int
+h (bag ["a", "b", "a"]);
+> val it = 2 : int
+
+(* Nothing says what kind of collection this one is, so it is a bag,
+ * as its type says. *)
+fun countAny ds = (from d in ds yield d + 1).length ();
+> val countAny = fn : int bag -> int
+countAny (bag [1,2,3]);
+> val it = 3 : int
+
 (* The receiver may be any expression. Its head type constructor is
  * what the method is chosen by, and an expression that is not an
  * application, a literal or a name has one just the same -- an
