@@ -51,6 +51,7 @@ jobs:
             checkstyle-version: "9.3"
           - java-version: "11"
             checkstyle-version: "10.26.1"
+            javadoc: true
           - java-version: "17"
             checkstyle-version: "10.26.1"
             javadoc: true

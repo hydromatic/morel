@@ -683,8 +683,8 @@ public class Expander {
   /**
    * Renames patterns in a pattern tree according to the given map.
    *
-   * <p>For example, if the map is {y -> y$}, then the pattern (x, y, z) becomes
-   * (x, y$, z).
+   * <p>For example, if the map is {@code {y -> y$}}, then the pattern (x, y, z)
+   * becomes (x, y$, z).
    */
   private static Core.Pat renamePatterns(
       TypeSystem typeSystem,

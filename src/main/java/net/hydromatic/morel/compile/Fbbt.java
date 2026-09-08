@@ -629,9 +629,9 @@ class Fbbt {
    * <p>Handles the connected-interval cases:
    *
    * <ul>
-   *   <li>{@code abs(x) < c} -> {@code x} in {@code (-c, c)}
-   *   <li>{@code abs(x) <= c} -> {@code x} in {@code [-c, c]}
-   *   <li>{@code abs(x) = 0} -> {@code x = 0}
+   *   <li>{@code abs(x) < c} &rarr; {@code x} in {@code (-c, c)}
+   *   <li>{@code abs(x) <= c} &rarr; {@code x} in {@code [-c, c]}
+   *   <li>{@code abs(x) = 0} &rarr; {@code x = 0}
    * </ul>
    *
    * <p>The {@code >}, {@code >=}, and non-zero {@code =} cases produce a

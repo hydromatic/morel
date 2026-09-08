@@ -53,8 +53,9 @@ final class Bounds {
    * null if {@code exp} is not a linear combination of one variable and an
    * integer constant.
    *
-   * <p>Examples: {@code x} -> {@code (x, 0)}; {@code x + 3} -> {@code (x, 3)};
-   * {@code 5} -> {@code (null, 5)}; {@code x + y} -> {@code null}.
+   * <p>Examples: {@code x} &rarr; {@code (x, 0)}; {@code x + 3} &rarr; {@code
+   * (x, 3)}; {@code 5} &rarr; {@code (null, 5)}; {@code x + y} &rarr; {@code
+   * null}.
    */
   static @Nullable Term linearTerm(Core.Exp exp) {
     if (exp instanceof Core.Id) {
@@ -156,7 +157,7 @@ final class Bounds {
   /**
    * Returns {@code lit}'s value as a {@link BigDecimal} suitable for arithmetic
    * and comparison. Char literals are encoded as the integer character code
-   * (e.g. {@code #"a"} -> 97).
+   * (e.g. {@code #"a"} &rarr; 97).
    */
   static BigDecimal asBigDecimal(Core.Literal lit) {
     switch (lit.op) {
