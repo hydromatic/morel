@@ -33,8 +33,28 @@ settings.xml
 .settings
 .checkstyle
 
+# macOS
+.DS_Store
+
+# patches and merge leftovers
+*.log
+!src/test/resources/script.log
+*.orig
+*.patch
+*.rej
+
+# direnv
+.envrc
+
+# Java JFR Profiler plugin
+.profileconfig.json
+profile.jfr
+
 # netbeans
 nb-configuration.xml
 */nb-configuration.xml
+
+# direnv
+.envrc
 
 # End .gitignore
