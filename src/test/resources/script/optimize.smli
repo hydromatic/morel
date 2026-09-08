@@ -586,4 +586,25 @@ Sys.planEx "~1";
 > val it = "val it = from ({a = a, b = b}) in [{a = 1, b = 2}] yield a + b"
 >   : string
 
+(* A selector is written by the field it selects: a record's label, a
+ * tuple's ordinal, or the name of a structure's member. *)
+val rs = [{a = 1, b = 2}];
+> val rs = [{a=1,b=2}] : {a:int, b:int} list
+from r in rs where #a r > 0;
+> val it = [{a=1,b=2}] : {a:int, b:int} list
+Sys.planEx "~1";
+> val it = "val it = from r in rs where #a r > 0" : string
+val ps = [(1, 2)];
+> val ps = [(1,2)] : (int * int) list
+from p in ps where #1 p > 0;
+> val it = [(1,2)] : (int * int) list
+Sys.planEx "~1";
+> val it = "val it = from p in ps where #1 p > 0" : string
+val xs = [1, 2, 3];
+> val xs = [1,2,3] : int list
+from i in List.rev xs;
+> val it = [3,2,1] : int list
+Sys.planEx "~1";
+> val it = "val it = #rev List xs" : string
+
 (*) End optimize.smli
