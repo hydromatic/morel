@@ -1205,4 +1205,20 @@ classify 0w0;
 classify 0w7;
 > val it = "nonzero" : string
 
+(* A newline in a string literal is part of the string, but a backslash
+ * at the end of a line is a line continuation: it, the newline, and the
+ * spaces and tabs that begin the next line are ignored. *)
+"abc
+  def";
+> val it = {_|
+> abc
+>   def|_} : string
+val text = "This is a very \
+            long string split \
+            across lines.";
+> val text = "This is a very long string split across lines." : string
+"a\
+   ";
+> val it = "a" : string
+
 (*) End simple.smli

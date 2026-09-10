@@ -312,6 +312,15 @@ public class MainTest {
     ml("#\"a\"").assertParseLiteral(isLiteral('a', "#\"a\""));
     ml("#\"\\\"\"").assertParseLiteral(isLiteral('"', "#\"\\\"\""));
     ml("#\"\\\\\"").assertParseLiteral(isLiteral('\\', "#\"\\\\\""));
+    // A newline in a string is part of the string; a backslash at the end
+    // of a line is a line continuation, and it and the spaces and tabs
+    // that begin the next line are ignored.
+    ml("\"ab\n  cd\"")
+        .assertParseLiteral(isLiteral("ab\n  cd", "\"ab\n  cd\""));
+    ml("\"ab\\\n  cd\"").assertParseLiteral(isLiteral("abcd", "\"abcd\""));
+    ml("\"ab\\\r\n\tcd\"").assertParseLiteral(isLiteral("abcd", "\"abcd\""));
+    ml("\"ab\\\n   \"").assertParseLiteral(isLiteral("ab", "\"ab\""));
+    ml("\"\\\n  ab\\\n  \\\n\"").assertParseLiteral(isLiteral("ab", "\"ab\""));
 
     // word literals unparse in upper-case hexadecimal, prefixed "0wx"
     ml("0wxAB").assertParse("0wxAB");

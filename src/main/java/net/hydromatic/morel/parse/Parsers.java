@@ -168,7 +168,10 @@ public final class Parsers {
     final StringParser p = new StringParser(s);
     final StringBuilder b = new StringBuilder();
     while (p.i < p.s.length()) {
-      b.append(p.parseChar());
+      final int c = p.parseChar();
+      if (c >= 0) {
+        b.append((char) c);
+      }
     }
     return b.toString();
   }
@@ -189,7 +192,10 @@ public final class Parsers {
     final StringParser p = new StringParser(s);
     final StringBuilder b = new StringBuilder();
     while (p.i < p.s.length()) {
-      b.append(p.parseChar());
+      final int c = p.parseChar();
+      if (c >= 0) {
+        b.append((char) c);
+      }
     }
     return b.toString();
   }
@@ -200,7 +206,8 @@ public final class Parsers {
       return null;
     }
     final StringParser p = new StringParser(s);
-    return p.parseChar();
+    final int c = p.parseChar();
+    return c < 0 ? null : (Character) (char) c;
   }
 
   /**
@@ -309,9 +316,11 @@ public final class Parsers {
 
     /**
      * Parses a single character in a string literal or character literal.
-     * Advances {@code i[0]} to the next character in the string.
+     * Advances {@code i} to the next character in the string. Returns -1 if
+     * there is no character: the escape was a line continuation, and it ended
+     * the string.
      */
-    char parseChar() {
+    int parseChar() {
       final char c = s.charAt(i++);
       if (c != '\\') {
         return c;
@@ -325,6 +334,20 @@ public final class Parsers {
         case '\\':
           // Escaped double-quote or backslash
           return c2;
+
+        case '\r':
+        case '\n':
+          // Line continuation: a backslash at the end of a line. The newline
+          // (or carriage return and newline) and the spaces and tabs that
+          // begin the next line are ignored.
+          if (c2 == '\r' && i < s.length() && s.charAt(i) == '\n') {
+            i++;
+          }
+          while (i < s.length()
+              && (s.charAt(i) == ' ' || s.charAt(i) == '\t')) {
+            i++;
+          }
+          return i < s.length() ? parseChar() : -1;
 
         case 'a':
           // Alert (ASCII 0x07) "\\a"

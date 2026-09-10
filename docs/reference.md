@@ -142,6 +142,19 @@ In Standard ML but not in Morel:
                                 or \-headed escape sequence
 </pre>
 
+A string literal may span lines. A newline in a string is part of the
+string; but a `\` at the end of a line is a line continuation: the
+backslash, the newline, and the spaces and tabs that begin the next
+line are ignored. For example,
+
+```sml
+val text = "This is a very \
+            long string split \
+            across lines.";
+```
+
+gives `"This is a very long string split across lines."`.
+
 ### Identifiers
 
 <pre>

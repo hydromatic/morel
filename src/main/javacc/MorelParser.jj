@@ -2708,7 +2708,11 @@ AstNode statementEof() :
                      ( (~["\"", "\\"])
                      | ("\\" ["a", "b", "t", "n", "v", "f", "r", "\"", "\\"])
                      | ("\\" "^" ["@"-"_"])
-                     | ("\\" ["0"-"9"]["0"-"9"]["0"-"9"]) )*
+                     | ("\\" ["0"-"9"]["0"-"9"]["0"-"9"])
+                     // A backslash at the end of a line continues the
+                     // string on the next line; the newline and the spaces
+                     // and tabs that begin the next line are ignored.
+                     | ("\\" ("\r")? "\n" ([" ", "\t"])*) )*
                      <DOUBLE_QUOTE> >
     |
     < CHAR_LITERAL: ("#") <QUOTED_STRING> >
