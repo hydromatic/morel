@@ -36,8 +36,10 @@ edge(1,2).
 edge(2,3).
 .output edge";
 > val program =
->   ".decl edge(x:int, y:int)\nedge(1,2).\nedge(2,3).\n.output edge"
->   : string
+>   {|.decl edge(x:int, y:int)
+> edge(1,2).
+> edge(2,3).
+> .output edge|} : string
 
 Datalog.validate program;
 > val it = "{edge:{x:int, y:int} list}" : string
@@ -53,8 +55,11 @@ Datalog.translate program;
 (*) Basic validation - parse error
 Datalog.validate ".decl edge(x:int";
 > val it =
->   "Parse error: Encountered \"<EOF>\" at line 1, column 16.\nWas expecting one of:\n    \")\" ...\n    \",\" ...\n    "
->   : string
+>   {|Parse error: Encountered "<EOF>" at line 1, column 16.
+> Was expecting one of:
+>     ")" ...
+>     "," ...
+>     |} : string
 
 (*) Schema validation - arity mismatch in fact
 Datalog.validate ".decl edge(x:int, y:int)
@@ -216,8 +221,13 @@ path(X,Y) :- edge(X,Y).
 path(X,Z) :- path(X,Y), edge(Y,Z).
 .output path";
 > val program =
->   ".decl edge(x:int, y:int)\n.decl path(x:int, y:int)\nedge(1,2).\nedge(2,3).\npath(X,Y) :- edge(X,Y).\npath(X,Z) :- path(X,Y), edge(Y,Z).\n.output path"
->   : string
+>   {|.decl edge(x:int, y:int)
+> .decl path(x:int, y:int)
+> edge(1,2).
+> edge(2,3).
+> path(X,Y) :- edge(X,Y).
+> path(X,Z) :- path(X,Y), edge(Y,Z).
+> .output path|} : string
 Datalog.execute program;
 > val it = {path=[{x=1,y=2},{x=2,y=3},{x=1,y=3}]}
 >   : {path:{x:int, y:int} list} variant
@@ -460,8 +470,10 @@ fact(0, 1).
 fact(N + 1, value * (N + 1)) :- fact(N, value), N < 10.
 .output fact";
 > val program =
->   ".decl fact(n:int, value:int)\nfact(0, 1).\nfact(N + 1, value * (N + 1)) :- fact(N, value), N < 10.\n.output fact"
->   : string
+>   {|.decl fact(n:int, value:int)
+> fact(0, 1).
+> fact(N + 1, value * (N + 1)) :- fact(N, value), N < 10.
+> .output fact|} : string
 
 Datalog.translate program;
 > val it =
@@ -609,8 +621,17 @@ path(X, Y, 1) :- edge(X, Y).
 path(X, Z, N+1) :- path(X, Y, N), edge(Y, Z).
 .output path";
 > val program =
->   ".decl edge(x:string, y:string)\n.decl path(x:string, y:string, n:int)\nedge(\"a\", \"b\").\nedge(\"b\", \"c\").\nedge(\"c\", \"d\").\nedge(\"d\", \"e\").\nedge(\"e\", \"f\").\nedge(\"a\", \"c\").\npath(X, Y, 1) :- edge(X, Y).\npath(X, Z, N+1) :- path(X, Y, N), edge(Y, Z).\n.output path"
->   : string
+>   {|.decl edge(x:string, y:string)
+> .decl path(x:string, y:string, n:int)
+> edge("a", "b").
+> edge("b", "c").
+> edge("c", "d").
+> edge("d", "e").
+> edge("e", "f").
+> edge("a", "c").
+> path(X, Y, 1) :- edge(X, Y).
+> path(X, Z, N+1) :- path(X, Y, N), edge(Y, Z).
+> .output path|} : string
 
 Datalog.translate program;
 > val it =
@@ -676,8 +697,17 @@ path(X, Y, 1) :- edge(X, Y).
 path(X, Z, N+1) :- path(X, Y, N), edge(Y, Z), N < 3.
 .output path";
 > val program =
->   ".decl edge(x:string, y:string)\n.decl path(x:string, y:string, n:int)\nedge(\"a\", \"b\").\nedge(\"b\", \"c\").\nedge(\"c\", \"d\").\nedge(\"d\", \"e\").\nedge(\"e\", \"f\").\nedge(\"a\", \"c\").\npath(X, Y, 1) :- edge(X, Y).\npath(X, Z, N+1) :- path(X, Y, N), edge(Y, Z), N < 3.\n.output path"
->   : string
+>   {|.decl edge(x:string, y:string)
+> .decl path(x:string, y:string, n:int)
+> edge("a", "b").
+> edge("b", "c").
+> edge("c", "d").
+> edge("d", "e").
+> edge("e", "f").
+> edge("a", "c").
+> path(X, Y, 1) :- edge(X, Y).
+> path(X, Z, N+1) :- path(X, Y, N), edge(Y, Z), N < 3.
+> .output path|} : string
 
 Datalog.translate program;
 > val it =

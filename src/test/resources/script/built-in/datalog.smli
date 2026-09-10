@@ -35,8 +35,11 @@ val program = ".decl edge(x:int, y:int)
 edge(1,2).
 edge(2,3).
 .output edge";
-> val program = ".decl edge(x:int, y:int)\nedge(1,2).\nedge(2,3).\n.output edge"
->   : string
+> val program =
+>   {|.decl edge(x:int, y:int)
+> edge(1,2).
+> edge(2,3).
+> .output edge|} : string
 Datalog.validate program;
 > val it = "{edge:{x:int, y:int} list}" : string
 Datalog.translate program;
@@ -50,8 +53,11 @@ Datalog.execute program;
 (*) Basic validation - parse error
 Datalog.validate ".decl edge(x:int";
 > val it =
->   "Parse error: Encountered \"<EOF>\" at line 1, column 16.\nWas expecting one of:\n    \")\" ...\n    \",\" ...\n    "
->   : string
+>   {|Parse error: Encountered "<EOF>" at line 1, column 16.
+> Was expecting one of:
+>     ")" ...
+>     "," ...
+>     |} : string
 
 (*) Schema validation - arity mismatch in fact
 Datalog.validate ".decl edge(x:int, y:int)

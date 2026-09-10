@@ -168,6 +168,120 @@ public class MainTest {
   }
 
   /**
+   * Tests what the script-test harness generates for a multi-line string value:
+   * a raw string literal, {@code {|...|}}, per the rules in {@link
+   * net.hydromatic.morel.compile.OutputMatcher#toRawStrings}.
+   *
+   * <p>This cannot be tested from within a script: a script conforms to
+   * whatever the harness generates, and in lenient mode an escaped expectation
+   * that is equivalent is kept as written.
+   */
+  @Test
+  void testScriptRawStringGeneration() {
+    // A statement with a placeholder expectation gets the generated form.
+    assertThat(
+        runIdempotent("\"a\\nb\";\n> x\n", false),
+        containsString(
+            "> val it = {|a\n" //
+                + "> b|} : string\n"));
+    // A bound name; a trailing newline leaves the fence alone on a line;
+    // an empty line is a bare ">".
+    assertThat(
+        runIdempotent("val s = \"a\\n\\nb\\n\";\n> x\n", false),
+        containsString(
+            "> val s = {|a\n" //
+                + ">\n"
+                + "> b\n"
+                + "> |} : string\n"));
+    // If the second line starts with a space, the content starts on the
+    // line after the opening fence, which carries the tag "_".
+    assertThat(
+        runIdempotent("\"a\\n  b\";\n> x\n", false),
+        containsString(
+            "> val it = {_|\n" //
+                + "> a\n"
+                + ">   b|_} : string\n"));
+    // Content containing "|}" gets a tagged fence.
+    assertThat(
+        runIdempotent("\"a|}\\nb\";\n> x\n", false),
+        containsString(
+            "> val it = {a|a|}\n" //
+                + "> b|a} : string\n"));
+    // Whitespace before a newline keeps the escaped form.
+    assertThat(
+        runIdempotent("\"a \\nb\";\n> x\n", false),
+        containsString("> val it = \"a \\nb\" : string\n"));
+    // No newline: escaped form.
+    assertThat(
+        runIdempotent("\"a\\\\nb\";\n> x\n", false),
+        containsString("> val it = \"a\\\\nb\" : string\n"));
+    // Inside a list: escaped form.
+    assertThat(
+        runIdempotent("[\"a\\nb\"];\n> x\n", false),
+        containsString("> val it = [\"a\\nb\"] : string list\n"));
+    // A value the printer wraps onto the next line starts the raw literal on
+    // that line, indented; the closing fence is followed by the type. (The
+    // string must stay shorter than "stringDepth", or it is truncated, and
+    // "val it = " plus the escaped literal must exceed "lineWidth".)
+    final String longLine = repeat("abcdefghij", 6) + "abcdef";
+    assertThat(
+        runIdempotent("\"" + longLine + "\\nb\";\n> x\n", false),
+        containsString(
+            "> val it =\n" //
+                + ">   {|"
+                + longLine
+                + "\n"
+                + "> b|} : string\n"));
+  }
+
+  /**
+   * Tests how the script-test harness treats an existing expectation for a
+   * multi-line string. In lenient mode an escaped literal that is equivalent to
+   * the value is kept as written; in strict mode it is regenerated as a raw
+   * literal. A raw expectation is kept in both modes, and a raw expectation
+   * with the wrong content is replaced in both modes.
+   */
+  @Test
+  void testScriptRawStringMatching() {
+    final String escaped = "\"a\\nb\";\n> val it = \"a\\nb\" : string\n";
+    assertThat(
+        runIdempotent(escaped, false),
+        containsString("> val it = \"a\\nb\" : string\n"));
+    assertThat(
+        runIdempotent(escaped, true),
+        containsString(
+            "> val it = {|a\n" //
+                + "> b|} : string\n"));
+    final String raw =
+        "\"a\\nb\";\n" //
+            + "> val it = {|a\n"
+            + "> b|} : string\n";
+    // (The harness ends its output with an extra newline.)
+    assertThat(runIdempotent(raw, false), is(raw + "\n"));
+    assertThat(runIdempotent(raw, true), is(raw + "\n"));
+    final String wrong =
+        "\"a\\nb\";\n" //
+            + "> val it = {|a\n"
+            + "> c|} : string\n";
+    assertThat(runIdempotent(wrong, false), is(raw + "\n"));
+    assertThat(runIdempotent(wrong, true), is(raw + "\n"));
+    // A tagged fence in the expectation is equivalent to a plain one.
+    final String tagged =
+        "\"a\\nb\";\n" //
+            + "> val it = {q|a\n"
+            + "> b|q} : string\n";
+    assertThat(runIdempotent(tagged, false), is(tagged + "\n"));
+  }
+
+  private static String repeat(String s, int n) {
+    final StringBuilder b = new StringBuilder();
+    for (int i = 0; i < n; i++) {
+      b.append(s);
+    }
+    return b.toString();
+  }
+
+  /**
    * Runs {@code input} through the idempotent (script-test) harness, with or
    * without strict output matching, and returns the regenerated output.
    */

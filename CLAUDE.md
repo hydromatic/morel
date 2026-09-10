@@ -173,6 +173,8 @@ infrastructure:
 - `src/test/resources/script/`: Reference test files (`.smli` suffix)
   - These are Morel source files with expected output
   - Run via `MainTest` methods that check actual vs. expected output
+  - The format, harness and output matching are described in
+    `docs/script-format.md`
 
 Key test files in `src/test/resources/script/`:
 - `built-in.smli`: Tests for built-in functions and operators
@@ -288,6 +290,14 @@ Notes:
   authoritative output (a single placeholder expands to a multi-line result).
   Copy it back over the source. Operator/reserved members are invoked with
   backticks, e.g. `` Word.`<<` (a, b) ``.
+- In expected output, a top-level string value that contains a newline, has no
+  space before a newline, and is otherwise printable ASCII is written as a raw
+  string literal, `{|...|}` (or `{id|...|id}` if the content contains `|}`,
+  the tag being lower-case letters and underscores), with verbatim content;
+  the `{_|` form, whose tag starts with an underscore and whose content starts
+  on the next line (the newline after the fence is not content), is used when
+  the second line starts with a space. The harness generates these forms, and
+  `OutputMatcher` treats them as equivalent to the escaped literal.
 - Adding a structure adds one top-level binding, so regenerate the
   environment-count tests in `built-in/sys.smli` and `misc.smli`.
 

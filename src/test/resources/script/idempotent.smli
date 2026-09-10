@@ -67,4 +67,106 @@ val x = 10 - 1;
 > val x = 9 : int
 *)
 
+(* -------------------------------------------------------------------
+ * Raw string literals
+ *
+ * In a script, a top-level string value that contains a newline is
+ * written as a raw string literal, {|...|}, whose content is verbatim:
+ * no escapes, and lines after the first start at column 0. This is a
+ * feature of the script format, not of the Morel language.
+ *)
+
+(*) A string with newlines
+"root {\n  common {\n    plan_id: 0\n  }\n}";
+> val it = {_|
+> root {
+>   common {
+>     plan_id: 0
+>   }
+> }|_} : string
+
+(* If the second line starts with a space, the content starts on the line
+ * after the opening fence, so that the lines line up. The tag then starts
+ * with "_", which means that the newline after the fence is not part of
+ * the content. *)
+"a\n  b\nc";
+> val it = {_|
+> a
+>   b
+> c|_} : string
+
+(*) After "{|", a newline is content
+"\na";
+> val it = {|
+> a|} : string
+
+(*) A bound name
+val s = "one\ntwo";
+> val s = {|one
+> two|} : string
+
+(*) A trailing newline leaves the closing fence alone on the last line
+"a\nb\n";
+> val it = {|a
+> b
+> |} : string
+
+(*) Empty lines are preserved
+"a\n\nb";
+> val it = {|a
+>
+> b|} : string
+
+(*) Quotes and backslashes are verbatim
+"say \"hi\"\n\\bye";
+> val it = {|say "hi"
+> \bye|} : string
+
+(*) If the content contains "|}", the fences carry an identifier
+"a|}\nb";
+> val it = {a|a|}
+> b|a} : string
+
+(*) A string without a newline is a regular literal
+"a|}b";
+> val it = "a|}b" : string
+
+(*) A string inside a collection is a regular literal
+["a\nb"];
+> val it = ["a\nb"] : string list
+
+(* A space before a newline keeps the regular literal, because trailing
+ * whitespace would be invisible in a raw literal. So does a tab, carriage
+ * return, control character or non-ASCII character anywhere, because they
+ * would be invisible or fragile in the script. *)
+"a \nb";
+> val it = "a \nb" : string
+"a\t\nb";
+> val it = "a\t\nb" : string
+"a\tb\nc";
+> val it = "a\tb\nc" : string
+"a\r\nb";
+> val it = "a\r\nb" : string
+"a\^Lb\nc";
+> val it = "a\^Lb\nc" : string
+"caf\233\nb";
+> val it = "caf\233\nb" : string
+
+(*) A space at the very end is visible, because the fence follows it
+"a\nb ";
+> val it = {|a
+> b |} : string
+
+(*) A fence inside a regular literal is just text
+"{ab|x|ab}";
+> val it = "{ab|x|ab}" : string
+["{|a|}", "{b|c|b}"];
+> val it = ["{|a|}","{b|c|b}"] : string list
+
+(* A raw literal may contain a fence with a different tag; here the
+ * content contains "|}", so the tag is "a". *)
+"{ab|x|ab}\n{|y|}";
+> val it = {a|{ab|x|ab}
+> {|y|}|a} : string
+
 (*) End idempotent.smli

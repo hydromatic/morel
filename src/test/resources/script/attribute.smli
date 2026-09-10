@@ -205,8 +205,9 @@ Sys.parseTree "(** outer (* one (* two *) *) end *) val x = 1";
  * the embedded newline becomes part of the doc text. *)
 Sys.parseTree "(** outer (*) line\n  rest *) val x = 1";
 > val it =
->   "(attributedDecl (val (valBind (idPat x) (int_literal 1))) (attribute @@doc (string_literal \" outer (*) line\n  rest \")))"
->   : string
+>   {_|
+> (attributedDecl (val (valBind (idPat x) (int_literal 1))) (attribute @@doc (string_literal " outer (*) line
+>   rest ")))|_} : string
 
 (* Multi-line doc comment: content (including newlines) is captured,
  * with the leading whitespace and `*` on each continuation line
@@ -218,20 +219,26 @@ Sys.parseTree "(** outer (*) line\n  rest *) val x = 1";
  *)
 Sys.parseTree "(** First line\n * Second line\n * Third line *) val x = 1";
 > val it =
->   "(attributedDecl (val (valBind (idPat x) (int_literal 1))) (attribute @@doc (string_literal \" First line\n Second line\n Third line \")))"
->   : string
+>   {_|
+> (attributedDecl (val (valBind (idPat x) (int_literal 1))) (attribute @@doc (string_literal " First line
+>  Second line
+>  Third line ")))|_} : string
 Sys.parseTree "(** First line
  * Second line
  * Third line *) val x = 1";
 > val it =
->   "(attributedDecl (val (valBind (idPat x) (int_literal 1))) (attribute @@doc (string_literal \" First line\n Second line\n Third line \")))"
->   : string
+>   {_|
+> (attributedDecl (val (valBind (idPat x) (int_literal 1))) (attribute @@doc (string_literal " First line
+>  Second line
+>  Third line ")))|_} : string
 
 (*) Body-on-its-own-lines style: opening `(**` on its own line.
 Sys.parseTree "(**\n * Body lines\n *) val x = 1";
 > val it =
->   "(attributedDecl (val (valBind (idPat x) (int_literal 1))) (attribute @@doc (string_literal \"\n Body lines\n \")))"
->   : string
+>   {_|
+> (attributedDecl (val (valBind (idPat x) (int_literal 1))) (attribute @@doc (string_literal "
+>  Body lines
+>  ")))|_} : string
 
 (* --- Attributes are inert: code evaluates normally -------------- *)
 val x = 1 [@@deprecated];

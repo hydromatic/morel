@@ -237,6 +237,221 @@ public class TypeTest {
     assertThat(
         m.codeEqual(stringOptionType, "NONE", " SOME  \"x\""), is(false));
     assertThat(m.codeEqual(stringOptionType, "NONE", " NONE "), is(true));
+
+    // A raw string literal is equivalent to the regular literal with the
+    // same content; the content is verbatim, so escapes are not processed.
+    final String ab = lines("{|a", "b|}");
+    assertThat(m.codeEqual(stringType, "\"a\\nb\"", ab), is(true));
+    assertThat(
+        m.codeEqual(stringType, "\"a\\nb\"", lines("{x|a", "b|x}")), is(true));
+    assertThat(m.codeEqual(stringType, ab, ab), is(true));
+    assertThat(m.codeEqual(stringType, "\"a\\nc\"", ab), is(false));
+    assertThat(m.codeEqual(stringType, "\"a\\\\nb\"", "{|a\\nb|}"), is(true));
+    assertThat(m.codeEqual(stringType, "\"a\\nb\"", "{|a\\nb|}"), is(false));
+    assertThat(
+        m.codeEqual(
+            stringType, "\"say \\\"hi\\\"\\n\"", lines("{|say \"hi\"", "|}")),
+        is(true));
+    assertThat(
+        m.codeEqual(stringType, "\"a|}\\nb\"", lines("{q|a|}", "b|q}")),
+        is(true));
+    assertThat(m.codeEqual(stringType, "\"1\"", "1"), is(false));
+    assertThat(m.codeEqual(stringType, "{|1|}", "1"), is(false));
+    // An unterminated fence, even in the prefix, gives "not equivalent"
+    // rather than an exception
+    assertThat(m.codeEqual(stringType, "{a|x", "\"x\""), is(false));
+    assertThat(
+        m.equivalent(
+            stringType,
+            "{a| val it = \"x\" : string",
+            "{a| val it = \"x\" : string"),
+        is(false));
+    // If the tag starts with "_", a newline right after the opening fence
+    // is not content; otherwise it is
+    assertThat(
+        m.codeEqual(stringType, "\"a\\nb\"", lines("{_|", "a", "b|_}")),
+        is(true));
+    assertThat(
+        m.codeEqual(stringType, "\"a\\nb\"", lines("{_x|", "a", "b|_x}")),
+        is(true));
+    assertThat(
+        m.codeEqual(stringType, "\"\\na\\nb\"", lines("{|", "a", "b|}")),
+        is(true));
+    assertThat(
+        m.codeEqual(stringType, "\"a\\nb\"", lines("{|", "a", "b|}")),
+        is(false));
+    assertThat(
+        m.codeEqual(stringType, "\"\\na\"", lines("{_|", "", "a|_}")),
+        is(true));
+    // A tag consists of lower-case letters and underscores; anything else
+    // is not a fence.
+    assertThat(m.codeEqual(stringType, "\"x\"", "{a_b|x|a_b}"), is(true));
+    assertThat(m.codeEqual(stringType, "\"x\"", "{A|x|A}"), is(false));
+    assertThat(m.codeEqual(stringType, "\"x\"", "{a1|x|a1}"), is(false));
+    assertThat(m.codeEqual(stringType, "\"x\"", "{a-b|x|a-b}"), is(false));
+    // A fence inside a regular literal is just text, and a raw literal may
+    // contain a fence with a different tag.
+    assertThat(
+        m.codeEqual(stringType, "\"{ab|x|ab}\"", "{|{ab|x|ab}|}"), is(true));
+    assertThat(m.codeEqual(stringType, "\"{|x|}\"", "{a|{|x|}|a}"), is(true));
+    assertThat(
+        m.codeEqual(stringType, "\"{ab|x|ab}\"", "\"{ab|x|ab}\""), is(true));
+    assertThat(
+        m.codeEqual(
+            typeSystem.listType(stringType),
+            "[\"{|a|}\", \"b\"]",
+            "[ \"{|a|}\",  \"b\" ]"),
+        is(true));
+    assertThat(
+        m.equivalent(
+            stringType,
+            "val it = \"{ab| : |ab}\" : string",
+            "val it = \"{ab| : |ab}\" : string"),
+        is(true));
+    // Whole lines, including the type suffix
+    assertThat(
+        m.equivalent(
+            stringType,
+            "val it = \"a : b\\nc\" : string",
+            lines("val it = {|a : b", "c|} : string")),
+        is(true));
+    assertThat(
+        m.equivalent(
+            stringType,
+            "val it = \"a\\nc\" : string",
+            lines("val it = {|a", "b|} : string")),
+        is(false));
+    assertThat(
+        m.equivalent(
+            stringType,
+            "val it = \"a\\nb\" : string",
+            lines("val x = {|a", "b|} : string")),
+        is(false));
+    final ListType stringListType = typeSystem.listType(stringType);
+    assertThat(
+        m.codeEqual(
+            stringListType, "[\"a\\nb\", \"c\"]", lines("[{|a", "b|}, \"c\"]")),
+        is(true));
+  }
+
+  /** Joins lines with newlines (no trailing newline). */
+  private static String lines(String... lines) {
+    return String.join("\n", lines);
+  }
+
+  /** Tests {@link OutputMatcher#toRawStrings}. */
+  @Test
+  void testToRawStrings() {
+    // Unchanged: no newline in the string
+    assertThat(
+        OutputMatcher.toRawStrings("val it = \"ab\" : string"),
+        is("val it = \"ab\" : string"));
+    assertThat(
+        OutputMatcher.toRawStrings("val it = \"a\\\\nb\" : string"),
+        is("val it = \"a\\\\nb\" : string"));
+    // Unchanged: a space or tab before a newline
+    assertThat(
+        OutputMatcher.toRawStrings("val it = \"a \\nb\" : string"),
+        is("val it = \"a \\nb\" : string"));
+    assertThat(
+        OutputMatcher.toRawStrings("val it = \"a\\t\\nb\" : string"),
+        is("val it = \"a\\t\\nb\" : string"));
+    // A space at the very end is visible (the fence follows it)
+    assertThat(
+        OutputMatcher.toRawStrings("val it = \"a\\nb \" : string"),
+        is(lines("val it = {|a", "b |} : string")));
+    // Unchanged: not a top-level string
+    assertThat(
+        OutputMatcher.toRawStrings("val it = [\"a\\nb\"] : string list"),
+        is("val it = [\"a\\nb\"] : string list"));
+    assertThat(
+        OutputMatcher.toRawStrings("val it = \"a\\nb\" : string variant"),
+        is("val it = \"a\\nb\" : string variant"));
+    // A newline makes a raw literal; quotes and backslashes become verbatim
+    assertThat(
+        OutputMatcher.toRawStrings("val it = \"a\\nb\" : string"),
+        is(lines("val it = {|a", "b|} : string")));
+    assertThat(
+        OutputMatcher.toRawStrings(
+            "val s = \"say \\\"hi\\\"\\n\\\\bye\" : string"),
+        is(lines("val s = {|say \"hi\"", "\\bye|} : string")));
+    // Unchanged: a tab, carriage return, control character or non-ASCII
+    // character anywhere, which would be invisible or fragile in the script
+    assertThat(
+        OutputMatcher.toRawStrings("val s = \"a\\n\\tb\" : string"),
+        is("val s = \"a\\n\\tb\" : string"));
+    assertThat(
+        OutputMatcher.toRawStrings("val s = \"a\\r\\nb\" : string"),
+        is("val s = \"a\\r\\nb\" : string"));
+    assertThat(
+        OutputMatcher.toRawStrings("val s = \"a\\^Lb\\nc\" : string"),
+        is("val s = \"a\\^Lb\\nc\" : string"));
+    assertThat(
+        OutputMatcher.toRawStrings("val s = \"a\\252\\nb\" : string"),
+        is("val s = \"a\\252\\nb\" : string"));
+    // A trailing newline leaves the closing fence alone on the last line
+    assertThat(
+        OutputMatcher.toRawStrings("val it = \"a\\n\" : string"),
+        is(lines("val it = {|a", "|} : string")));
+    // If the printer wrapped the literal onto the next line, the raw literal
+    // starts on the next line too, indented; the type suffix may also have
+    // been wrapped, and follows the closing fence.
+    assertThat(
+        OutputMatcher.toRawStrings(
+            lines("val program =", "  \"a\\nb\" : string")),
+        is(lines("val program =", "  {|a", "b|} : string")));
+    assertThat(
+        OutputMatcher.toRawStrings(
+            lines("val program =", "  \"a\\nb\"", "  : string")),
+        is(lines("val program =", "  {|a", "b|} : string")));
+    assertThat(
+        OutputMatcher.toRawStrings(lines("val it = \"a\\nb\"", "  : string")),
+        is(lines("val it = {|a", "b|} : string")));
+    // Several bindings, and surrounding lines, in one output
+    assertThat(
+        OutputMatcher.toRawStrings(
+            lines(
+                "val a = \"x\\ny\" : string",
+                "val b = 1 : int",
+                "val c = \"p\\nq\" : string")),
+        is(
+            lines(
+                "val a = {|x",
+                "y|} : string",
+                "val b = 1 : int",
+                "val c = {|p",
+                "q|} : string")));
+    // The fences carry an identifier if the content contains "|}"
+    assertThat(
+        OutputMatcher.toRawStrings("val it = \"a|}\\nb\" : string"),
+        is(lines("val it = {a|a|}", "b|a} : string")));
+    assertThat(
+        OutputMatcher.toRawStrings("val it = \"|}|a}\\n\" : string"),
+        is(lines("val it = {b||}|a}", "|b} : string")));
+    assertThat(OutputMatcher.rawLiteral("x"), is("{|x|}"));
+    // If the second line starts with a space, the content starts on the
+    // line after the "{_|" fence; content that starts with a newline does
+    // not need that, because a newline after "{|" is content
+    assertThat(
+        OutputMatcher.toRawStrings("val it = \"a\\n  b\" : string"),
+        is(lines("val it = {_|", "a", "  b|_} : string")));
+    assertThat(
+        OutputMatcher.toRawStrings("val it = \"\\na\" : string"),
+        is(lines("val it = {|", "a|} : string")));
+    assertThat(
+        OutputMatcher.toRawStrings("val it = \"a\\nb\\n  c\" : string"),
+        is(lines("val it = {|a", "b", "  c|} : string")));
+    assertThat(
+        OutputMatcher.rawLiteral(lines("a", " b")),
+        is(lines("{_|", "a", " b|_}")));
+    assertThat(
+        OutputMatcher.rawLiteral(lines("a|_}", " b")),
+        is(lines("{_a|", "a|_}", " b|_a}")));
+    final StringBuilder b = new StringBuilder("|}");
+    for (char c = 'a'; c <= 'z'; c++) {
+      b.append('|').append(c).append('}');
+    }
+    assertThat(OutputMatcher.rawLiteral(b.toString()), is("{aa|" + b + "|aa}"));
   }
 }
 

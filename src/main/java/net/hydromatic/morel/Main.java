@@ -818,7 +818,11 @@ public class Main {
       } catch (Codes.MorelRuntimeException e) {
         appendToOutput(e, outLines);
         if (buffered) {
-          outLines.bufferedLines().forEach(outLines.consumer());
+          // As in emit, but there is no expected output to keep: the
+          // statement failed, and its output is what it is.
+          final String output = String.join("\n", outLines.bufferedLines());
+          Arrays.stream(OutputMatcher.toRawStrings(output).split("\n", -1))
+              .forEach(outLines.consumer());
         }
       }
     }
@@ -830,13 +834,21 @@ public class Main {
      * equivalent to it - the same modulo whitespace, line endings and the order
      * of the elements of a bag - emits the expected output verbatim, so that
      * the script keeps the form it was written in. Otherwise emits the actual
-     * output.
+     * output, with multi-line string values as raw string literals (see {@link
+     * OutputMatcher#toRawStrings}).
      */
     private void emit(
         LineConsumer outLines, @Nullable String expectedOutput, Type type) {
-      final List<String> actualLines = outLines.bufferedLines();
+      List<String> actualLines = outLines.bufferedLines();
+      String actualOutput = String.join("\n", actualLines);
+      // In a script, a top-level string value that contains a newline is
+      // written as a raw string literal.
+      final String rawOutput = OutputMatcher.toRawStrings(actualOutput);
+      if (!rawOutput.equals(actualOutput)) {
+        actualOutput = rawOutput;
+        actualLines = Arrays.asList(rawOutput.split("\n", -1));
+      }
       if (expectedOutput != null) {
-        final String actualOutput = String.join("\n", actualLines);
         // In strict mode, output must match character-for-character;
         // otherwise it may differ in whitespace and bag-element order.
         final boolean strict = Prop.MATCH_STRICT.booleanValue(main.session.map);
