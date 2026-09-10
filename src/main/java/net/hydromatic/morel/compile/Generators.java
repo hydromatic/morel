@@ -34,6 +34,8 @@ import com.google.common.collect.MultimapBuilder;
 import com.google.common.collect.Range;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -173,9 +175,11 @@ class Generators {
     }
     if (hasBounds && pat.type.isDiscrete(cache.typeSystem)) {
       final @Nullable Bound lower =
-          lowerBound(cache.typeSystem, pat, context.constraints);
+          lowerBound(
+              cache.typeSystem, pat, context.constraints, cache.ungrounded);
       final @Nullable Bound upper =
-          upperBound(cache.typeSystem, pat, context.constraints);
+          upperBound(
+              cache.typeSystem, pat, context.constraints, cache.ungrounded);
       if (lower != null && upper != null) {
         generateRange(cache, ordered, (Core.NamedPat) pat, lower, upper);
         return true;
@@ -1487,7 +1491,8 @@ class Generators {
 
     // Try to create a generator for the base case using a fresh cache,
     // so that extent generators from outer scope don't interfere.
-    final Cache baseCache = new Cache(cache.typeSystem, cache.env);
+    final Cache baseCache =
+        new Cache(cache.typeSystem, cache.env, cache.ungrounded);
     final Context baseContext = new Context(ImmutableList.of(substitutedBase));
     if (!maybeGenerator(baseCache, goalPat, ordered, baseContext)) {
       return null;
@@ -1907,7 +1912,8 @@ class Generators {
             pattern.baseCase);
 
     // Try to create a generator for the base case
-    final Cache baseCache = new Cache(cache.typeSystem, cache.env);
+    final Cache baseCache =
+        new Cache(cache.typeSystem, cache.env, cache.ungrounded);
     final Context baseContext = new Context(ImmutableList.of(substitutedBase));
     if (!maybeGenerator(baseCache, goalPat, ordered, baseContext)) {
       return null;
@@ -1930,7 +1936,8 @@ class Generators {
       return null;
     }
 
-    final Cache stepCache = new Cache(cache.typeSystem, cache.env);
+    final Cache stepCache =
+        new Cache(cache.typeSystem, cache.env, cache.ungrounded);
     final Context stepContext = new Context(ImmutableList.of(substitutedStep));
     if (!maybeGenerator(stepCache, stepGoalPat, ordered, stepContext)) {
       return null;
@@ -3401,28 +3408,97 @@ class Generators {
    * any constraint is good enough.
    */
   static @Nullable Bound lowerBound(
-      TypeSystem typeSystem, Core.Pat pat, List<Core.Exp> constraints) {
-    // Two passes: first prefer a bound whose value is a constant
-    // expression. A constant bound makes the generator independent of other
-    // variables; a variable bound creates a generator-scheduling dependency
-    // that can fail to break a cycle even when the system is finite. If no
-    // constant bound exists, fall back to the first bound of any shape.
-    final Bound constant = lowerBound1(typeSystem, pat, constraints, true);
-    if (constant != null) {
-      return constant;
-    }
-    return lowerBound1(typeSystem, pat, constraints, false);
+      TypeSystem typeSystem,
+      Core.Pat pat,
+      List<Core.Exp> constraints,
+      Set<Core.NamedPat> ungrounded) {
+    return bound(
+        typeSystem, pat, constraints, ungrounded, Generators::lowerBound1);
   }
 
   /**
-   * Helper for {@link #lowerBound}. When {@code requireConstant} is true, skips
-   * any candidate whose bound expression is not a constant.
+   * Chooses a bound, in order of preference.
+   *
+   * <p>First, a bound that mentions only variables that are bound already, as
+   * 'x' is in {@code from x in [3, 5, 7], y where y < x}. Such a bound
+   * generates 'y' afresh for each 'x', which is tighter than any constant
+   * bound, and it cannot make a cycle, because 'x' does not wait on 'y'.
+   *
+   * <p>Failing that, a constant bound. It is independent of every other
+   * variable, and so is always safe.
+   *
+   * <p>Failing that, a bound of any shape, which may mention a variable that is
+   * itself waiting for a generator. Such a bound may make a cycle that
+   * generator scheduling cannot break, but it is better than no bound at all.
+   */
+  private static @Nullable Bound bound(
+      TypeSystem typeSystem,
+      Core.Pat pat,
+      List<Core.Exp> constraints,
+      Set<Core.NamedPat> ungrounded,
+      BoundFinder finder) {
+    for (Preference preference : Preference.values()) {
+      final Bound bound =
+          finder.find(typeSystem, pat, constraints, ungrounded, preference);
+      if (bound != null) {
+        return bound;
+      }
+    }
+    return null;
+  }
+
+  /** Looks for one side of a bound, at a given preference. */
+  @FunctionalInterface
+  private interface BoundFinder {
+    @Nullable
+    Bound find(
+        TypeSystem typeSystem,
+        Core.Pat pat,
+        List<Core.Exp> constraints,
+        Set<Core.NamedPat> ungrounded,
+        Preference preference);
+  }
+
+  /**
+   * How much we like the shape of a bound. The constants are in order of
+   * preference; see {@link #bound}.
+   */
+  private enum Preference {
+    /** Mentions only variables that are bound already. */
+    GROUNDED,
+    /** Mentions no variables. */
+    CONSTANT,
+    /** Anything. */
+    ANY
+  }
+
+  /** Returns whether a bound expression is acceptable at a preference. */
+  private static boolean acceptable(
+      TypeSystem typeSystem,
+      Core.Exp bound,
+      Set<Core.NamedPat> ungrounded,
+      Preference preference) {
+    switch (preference) {
+      case GROUNDED:
+        return !bound.isConstant()
+            && Collections.disjoint(freePats(typeSystem, bound), ungrounded);
+      case CONSTANT:
+        return bound.isConstant();
+      default:
+        return true;
+    }
+  }
+
+  /**
+   * Helper for {@link #lowerBound}: returns the first bound acceptable at
+   * {@code preference}.
    */
   private static @Nullable Bound lowerBound1(
       TypeSystem typeSystem,
       Core.Pat pat,
       List<Core.Exp> constraints,
-      boolean requireConstant) {
+      Set<Core.NamedPat> ungrounded,
+      Preference preference) {
     for (Core.Exp constraint : constraints) {
       switch (constraint.builtIn()) {
         case OP_GT:
@@ -3430,7 +3506,7 @@ class Generators {
           if (references(constraint.arg(0), pat)) {
             // "p > e" -> (strict, e); "p >= e" -> (non-strict, e).
             final Core.Exp bound = constraint.arg(1);
-            if (requireConstant && !bound.isConstant()) {
+            if (!acceptable(typeSystem, bound, ungrounded, preference)) {
               continue;
             }
             final boolean strict = constraint.builtIn() == BuiltIn.OP_GT;
@@ -3442,7 +3518,7 @@ class Generators {
         case CHAR_OP_GE:
           if (references(constraint.arg(0), pat)) {
             final Core.Exp bound = constraint.arg(1);
-            if (requireConstant && !bound.isConstant()) {
+            if (!acceptable(typeSystem, bound, ungrounded, preference)) {
               continue;
             }
             return new Bound(
@@ -3454,7 +3530,7 @@ class Generators {
           if (references(constraint.arg(1), pat)) {
             // "e < p" -> (strict, e); "e <= p" -> (non-strict, e).
             final Core.Exp bound = constraint.arg(0);
-            if (requireConstant && !bound.isConstant()) {
+            if (!acceptable(typeSystem, bound, ungrounded, preference)) {
               continue;
             }
             final boolean strict = constraint.builtIn() == BuiltIn.OP_LT;
@@ -3464,7 +3540,8 @@ class Generators {
           final BigDecimal offset = extractOffset(constraint.arg(1), pat);
           if (offset != null) {
             // "e < p + k" -> "p > e - k"
-            if (requireConstant && !constraint.arg(0).isConstant()) {
+            if (!acceptable(
+                typeSystem, constraint.arg(0), ungrounded, preference)) {
               continue;
             }
             final boolean strict = constraint.builtIn() == BuiltIn.OP_LT;
@@ -3477,7 +3554,7 @@ class Generators {
         case CHAR_OP_LE:
           if (references(constraint.arg(1), pat)) {
             final Core.Exp bound = constraint.arg(0);
-            if (requireConstant && !bound.isConstant()) {
+            if (!acceptable(typeSystem, bound, ungrounded, preference)) {
               continue;
             }
             return new Bound(
@@ -3493,7 +3570,7 @@ class Generators {
             if (c == BuiltIn.Constructor.RANGE_AT_LEAST
                 || c == BuiltIn.Constructor.RANGE_GREATER_THAN) {
               final Core.Exp bound = range.arg;
-              if (requireConstant && !bound.isConstant()) {
+              if (!acceptable(typeSystem, bound, ungrounded, preference)) {
                 continue;
               }
               return new Bound(
@@ -3514,24 +3591,23 @@ class Generators {
    * <p>Also handles constraints like "e &gt; pat + k" which gives an upper
    * bound of "e - k" for pat.
    *
-   * <p>Analogous to {@link #lowerBound(TypeSystem, Core.Pat, List)}.
+   * <p>Analogous to {@link #lowerBound}.
    */
   static @Nullable Bound upperBound(
-      TypeSystem typeSystem, Core.Pat pat, List<Core.Exp> constraints) {
-    // See {@link #lowerBound}: prefer a constant bound to avoid a cyclic
-    // generator dependency.
-    final Bound constant = upperBound1(typeSystem, pat, constraints, true);
-    if (constant != null) {
-      return constant;
-    }
-    return upperBound1(typeSystem, pat, constraints, false);
+      TypeSystem typeSystem,
+      Core.Pat pat,
+      List<Core.Exp> constraints,
+      Set<Core.NamedPat> ungrounded) {
+    return bound(
+        typeSystem, pat, constraints, ungrounded, Generators::upperBound1);
   }
 
   private static @Nullable Bound upperBound1(
       TypeSystem typeSystem,
       Core.Pat pat,
       List<Core.Exp> constraints,
-      boolean requireConstant) {
+      Set<Core.NamedPat> ungrounded,
+      Preference preference) {
     for (Core.Exp constraint : constraints) {
       switch (constraint.builtIn()) {
         case OP_LT:
@@ -3539,7 +3615,7 @@ class Generators {
           if (references(constraint.arg(0), pat)) {
             // "p < e" -> (strict, e); "p <= e" -> (non-strict, e).
             final Core.Exp bound = constraint.arg(1);
-            if (requireConstant && !bound.isConstant()) {
+            if (!acceptable(typeSystem, bound, ungrounded, preference)) {
               continue;
             }
             final boolean strict = constraint.builtIn() == BuiltIn.OP_LT;
@@ -3551,7 +3627,7 @@ class Generators {
         case CHAR_OP_LE:
           if (references(constraint.arg(0), pat)) {
             final Core.Exp bound = constraint.arg(1);
-            if (requireConstant && !bound.isConstant()) {
+            if (!acceptable(typeSystem, bound, ungrounded, preference)) {
               continue;
             }
             return new Bound(
@@ -3563,7 +3639,7 @@ class Generators {
           if (references(constraint.arg(1), pat)) {
             // "e > p" -> (strict, e); "e >= p" -> (non-strict, e).
             final Core.Exp bound = constraint.arg(0);
-            if (requireConstant && !bound.isConstant()) {
+            if (!acceptable(typeSystem, bound, ungrounded, preference)) {
               continue;
             }
             final boolean strict = constraint.builtIn() == BuiltIn.OP_GT;
@@ -3573,7 +3649,8 @@ class Generators {
           final BigDecimal offset = extractOffset(constraint.arg(1), pat);
           if (offset != null) {
             // "e > p + k" -> "p < e - k"
-            if (requireConstant && !constraint.arg(0).isConstant()) {
+            if (!acceptable(
+                typeSystem, constraint.arg(0), ungrounded, preference)) {
               continue;
             }
             final boolean strict = constraint.builtIn() == BuiltIn.OP_GT;
@@ -3586,7 +3663,7 @@ class Generators {
         case CHAR_OP_GE:
           if (references(constraint.arg(1), pat)) {
             final Core.Exp bound = constraint.arg(0);
-            if (requireConstant && !bound.isConstant()) {
+            if (!acceptable(typeSystem, bound, ungrounded, preference)) {
               continue;
             }
             return new Bound(
@@ -3602,7 +3679,7 @@ class Generators {
             if (c == BuiltIn.Constructor.RANGE_AT_MOST
                 || c == BuiltIn.Constructor.RANGE_LESS_THAN) {
               final Core.Exp bound = range.arg;
-              if (requireConstant && !bound.isConstant()) {
+              if (!acceptable(typeSystem, bound, ungrounded, preference)) {
                 continue;
               }
               return new Bound(
@@ -4161,6 +4238,18 @@ class Generators {
   static class Cache {
     final TypeSystem typeSystem;
     final Environment env;
+
+    /**
+     * Patterns that are still looking for a generator.
+     *
+     * <p>A bound that mentions one of them makes this generator depend on
+     * another that does not exist yet, and the dependency may even be a cycle;
+     * a bound that mentions only variables bound elsewhere -- by an earlier
+     * scan, say -- is safe, and is usually tighter than a constant bound. See
+     * {@link #lowerBound}.
+     */
+    final Set<Core.NamedPat> ungrounded;
+
     final Multimap<Core.NamedPat, Generator> generators =
         MultimapBuilder.hashKeys().arrayListValues().build();
 
@@ -4171,9 +4260,13 @@ class Generators {
     final Map<Pair<Core.NamedPat, Integer>, Core.IdPat> fieldPats =
         new LinkedHashMap<>();
 
-    Cache(TypeSystem typeSystem, Environment env) {
+    Cache(
+        TypeSystem typeSystem,
+        Environment env,
+        Collection<Core.NamedPat> ungrounded) {
       this.typeSystem = requireNonNull(typeSystem);
       this.env = requireNonNull(env);
+      this.ungrounded = ImmutableSet.copyOf(ungrounded);
     }
 
     /**

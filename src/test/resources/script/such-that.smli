@@ -325,6 +325,293 @@ from x where abs x < 5;
 List.length (from x, y where x > 0 andalso x < y andalso y < 10);
 > val it = 36 : int
 
+(* -- FBBT over linear constraints -------------------------------- *)
+
+(* The cases below come from the catalog in issue #229, "Improve
+ * deduction of ranges". Each was written with explicit bounds (say
+ * 'q <= 4') that the planner should not need; FBBT deduces them by
+ * substituting the other variables' known bounds into one constraint
+ * at a time, and iterating.
+ *
+ * To start with the smallest case: FBBT deduces 'x = 2' from
+ * 'x + 1 = 3'. The extractor cannot use that equation as it stands --
+ * it grounds a variable from a comparison against a constant -- so
+ * FBBT emits the bounds that it can use.
+ *)
+from x where x + 1 = 3;
+> val it = [2] : int list
+
+(* Postage stamps. How many (threes, fives) pairs make 30 cents?
+ * Substituting 'f >= 0' into the equation gives 't <= 10', and
+ * substituting 't >= 0' gives 'f <= 6'. *)
+from t, f
+  where t >= 0 andalso f >= 0 andalso 3 * t + 5 * f = 30;
+> f t
+> - --
+> 6  0
+> 3  5
+> 0 10
+>
+> val it : {f:int, t:int} list
+Sys.planEx "3";
+> val it =
+>   "val it = from t in #flatten Range ([CLOSED (0, 10)]) join f in #flatten Range ([CLOSED (0, 6)]) where #* Int (3, t) + #* Int (5, f) = 30"
+>   : string
+
+(* A linear Diophantine equation with no solutions. FBBT bounds
+ * 'x <= 7' and 'y <= 5'; enumerating that box finds nothing, which is
+ * the right answer -- 13x + 17y = 100 has no non-negative solutions. *)
+from x, y
+  where x >= 0 andalso y >= 0 andalso 13 * x + 17 * y = 100;
+> x y
+> - -
+>
+> val it : {x:int, y:int} list
+
+(* Coin change: how many ways to make a dollar? One equation bounds
+ * all four variables: 'q <= 4', 'd <= 10', 'n <= 20', 'p <= 100'. *)
+List.length (
+  from q, d, n, p
+    where q >= 0 andalso d >= 0 andalso n >= 0 andalso p >= 0
+      andalso 25 * q + 10 * d + 5 * n + p = 100);
+> val it = 242 : int
+
+(* Integer triangles of perimeter 24, with sides in order. Here the
+ * bounds come out of the ordering chain and the perimeter equation
+ * together, which takes more than one round of propagation: 'a >= 1'
+ * bounds 'b' below, which bounds 'c' below, and the equation then
+ * bounds all three above. *)
+from a, b, c
+  where 1 <= a andalso a <= b andalso b <= c
+    andalso a + b + c = 24
+    andalso a + b > c;
+> a b  c
+> - -- --
+> 2 11 11
+> 3 10 11
+> 4  9 11
+> 4 10 10
+> 5  8 11
+> 5  9 10
+> 6  7 11
+> 6  8 10
+> 6  9  9
+> 7  7 10
+> 7  8  9
+> 8  8  8
+>
+> val it : {a:int, b:int, c:int} list
+
+(* A bounded knapsack. The single inequality bounds each variable:
+ * 'a <= 16', 'b <= 10', 'c <= 7'. *)
+from a, b, c
+  where a >= 0 andalso b >= 0 andalso c >= 0
+    andalso 3 * a + 5 * b + 7 * c <= 50
+  yield {a, b, c, value = 4 * a + 6 * b + 9 * c}
+  order DESC value
+  take 3;
+> a  b c value
+> -- - - -----
+> 12 0 2    66
+> 15 1 0    66
+>  5 0 5    65
+>
+> val it : {a:int, b:int, c:int, value:int} list
+
+(* A production plan. No constraint mentions an upper bound, but
+ * '2 * b <= 6' gives 'b <= 3' and '75 * c <= 500' gives 'c <= 6'; a
+ * coefficient no longer stops FBBT. *)
+from b, c
+  where b >= 0 andalso c >= 0
+    andalso 50 * b + 200 * c <= 4000
+    andalso 2 * b <= 6
+    andalso 75 * b + 150 * c <= 2000
+    andalso 100 * b + 150 * c <= 500
+    andalso 75 * c <= 500
+  yield {b, c, profit = 400 * b + 450 * c}
+  order DESC profit;
+> b c profit
+> - - ------
+> 2 2   1700
+> 3 1   1650
+> 0 3   1350
+> 1 2   1300
+> 2 1   1250
+> 3 0   1200
+> 0 2    900
+> 1 1    850
+> 2 0    800
+> 0 1    450
+> 1 0    400
+> 0 0      0
+>
+> val it : {b:int, c:int, profit:int} list
+
+(* Pythagorean triples. The constraint 'a * a + b * b = c * c' is not
+ * linear, and FBBT ignores it; the ordering chain
+ * '1 <= a <= b < c <= 50' is what grounds the query, and the
+ * non-linear constraint remains a filter. *)
+from a, b, c
+  where 1 <= a andalso a <= b andalso b < c andalso c <= 50
+    andalso a * a + b * b = c * c;
+> a  b  c
+> -- -- --
+>  3  4  5
+>  5 12 13
+>  6  8 10
+>  7 24 25
+>  8 15 17
+>  9 12 15
+>  9 40 41
+> 10 24 26
+> 12 16 20
+> 12 35 37
+> 14 48 50
+> 15 20 25
+> ...
+>
+> val it : {a:int, b:int, c:int} list
+
+(* Two cases that FBBT does not solve.
+ *
+ * Lattice points in a tilted region. No single constraint bounds
+ * either variable: 'x + y <= 10' says nothing about 'x' while 'y' is
+ * unbounded below. Deducing '~1 <= x <= 6' means adding two
+ * constraints together, which is Fourier-Motzkin elimination. *)
+from x, y
+  where x + y >= 0 andalso x + y <= 10
+    andalso x - y >= ~3 andalso x - y <= 3;
+> stdIn:1.6 Error: pattern 'x' is not grounded
+>   raised at: stdIn:1.6
+
+(* The example that opens issue #229. A scan bounds the variable it
+ * generates -- 'z' lies in [1, 8] -- and FBBT reads those bounds like
+ * any other, deducing that 'x' and 'y' lie in [1, 7]. *)
+from z in [1, 2, 3, 4, 5, 6, 7, 8], x, y
+  where x + y = z andalso x > 0 andalso y > 0;
+> x y z
+> - - -
+> 1 1 2
+> 1 2 3
+> 2 1 3
+> 1 3 4
+> 2 2 4
+> 3 1 4
+> 1 4 5
+> 2 3 5
+> 3 2 5
+> 4 1 5
+> 1 5 6
+> 2 4 6
+> ...
+>
+> val it : {x:int, y:int, z:int} list
+
+(* A bound that does not divide exactly must round outwards, or it
+ * would exclude a solution: '3 * x <= 10' gives 'x <= 3', and 3 is a
+ * solution. *)
+from x where x >= 0 andalso 3 * x <= 10;
+> val it = [0,1,2,3] : int list
+
+(* The argument of an absolute value must be linear in one variable.
+ * 'abs (x * y)' is not, so nothing is deduced, and neither variable is
+ * grounded. *)
+from x, y where abs (x * y) < 5;
+> stdIn:1.6 Error: pattern 'x' is not grounded
+>   raised at: stdIn:1.6
+
+(* Constraints that contradict each other leave a variable with an
+ * empty range. There is nothing to deduce, and nothing to enumerate. *)
+from x, y where x > 5 andalso x < 3 andalso y < x andalso y > 0;
+> x y
+> - -
+>
+> val it : {x:int, y:int} list
+from x, y where x >= 0 andalso y >= 0 andalso x + y = ~1;
+> stdIn:1.6 Error: pattern 'x' is not grounded
+>   raised at: stdIn:1.6
+from x where abs (x - 2) < 0;
+> stdIn:1.6 Error: pattern 'x' is not grounded
+>   raised at: stdIn:1.6
+
+(* -- FBBT over sums of absolute values --------------------------- *)
+
+(* An absolute value is never negative, which is enough to bound what
+ * it wraps. FBBT reads 'abs (x - 2) < 5' as '~5 < x - 2 < 5'. *)
+from x where abs (x - 2) < 5;
+> val it = [~2,~1,0,1,2,3,4,5,6] : int list
+
+(* A coefficient is a coefficient, whether it is inside the absolute
+ * value or outside it. *)
+from x where 3 * abs (x - 2) < 9;
+> val it = [0,1,2,3,4] : int list
+
+(*) The same, with a coefficient inside: 'abs (2 * x - 1) <= 5'.
+from x where abs (2 * x - 1) <= 5;
+> val it = [~2,~1,0,1,2,3] : int list
+
+(* A negative coefficient swaps the ends of the interval. Each end
+ * still rounds away from zero, so that no solution is excluded:
+ * 'abs (~3 * x) < 10' gives '~10/3 < x < 10/3', hence '~3 <= x <= 3'. *)
+from x where abs (~3 * x) < 10;
+> val it = [~3,~2,~1,0,1,2,3] : int list
+from x where abs (~2 * x - 3) < 4;
+> val it = [~3,~2,~1,0] : int list
+
+(* Manhattan distance: all the points within 5 steps of (2, 3). Each
+ * absolute value is bounded by what the other leaves over -- and the
+ * other is at least zero -- so 'abs (x - 2) < 5' and
+ * 'abs (y - 3) < 5', which bound both variables. *)
+List.length (from x, y where abs (x - 2) + abs (y - 3) < 5);
+> val it = 41 : int
+from x, y
+  where abs (x - 2) + abs (y - 3) < 3;
+> x y
+> - -
+> 0 3
+> 1 2
+> 1 3
+> 1 4
+> 2 1
+> 2 2
+> 2 3
+> 2 4
+> 2 5
+> 3 2
+> 3 3
+> 3 4
+> ...
+>
+> val it : {x:int, y:int} list
+
+(* A sum of an absolute value and an ordinary term. The term's own
+ * bounds say how much of the constant it uses up: 'y <= 2' leaves
+ * 'abs (x - 2) < 5', and so '~3 < x < 7'. *)
+from x, y
+  where y >= 0 andalso y <= 2 andalso abs (x - 2) + y < 5;
+> x  y
+> -- -
+> -2 0
+> -1 0
+> -1 1
+>  0 0
+>  0 1
+>  0 2
+>  1 0
+>  1 1
+>  1 2
+>  2 0
+>  2 1
+>  2 2
+> ...
+>
+> val it : {x:int, y:int} list
+(* 'abs (x) > c' describes two disjoint intervals rather than one, so
+ * it grounds nothing. *)
+from x where abs (x - 2) > 5;
+> stdIn:1.6 Error: pattern 'x' is not grounded
+>   raised at: stdIn:1.6
+
 (* -- elem patterns ----------------------------------------------- *)
 
 (*) Pattern
@@ -442,12 +729,19 @@ from x, y in [0, 2, 9] where x > y andalso x < y + 5;
 >
 > val it : {x:int, y:int} list
 
-(* Similar, but we know the values of x. *)
+(* Similar, but we know the values of x.
+ *
+ * 'y' has two candidate bounds: 'y < x', which depends on 'x', and the
+ * constant bounds that FBBT deduces from it. The dependent one is
+ * tighter -- four values of 'y' for each 'x', rather than nine -- and
+ * 'x' does not wait on 'y', so there is no cycle to fear, and the
+ * extractor prefers it. FBBT's bounds remain as a filter, which the
+ * generator has already made redundant. *)
 from x in [3, 5, 7], y where x > y andalso x < y + 5 yield y;
 > val it = [~1,0,1,2,1,2,3,4,3,4,5,6] : int list
 Sys.planEx "3";
 > val it =
->   "val it = from x in [3, 5, 7] join y in #flatten Range ([OPEN (#- Int (x, 5), x)]) yield y"
+>   "val it = from x in [3, 5, 7] join y in #flatten Range ([OPEN (#- Int (x, 5), x)]) where y > ~2 andalso y < 7 yield y"
 >   : string
 
 from x in [3, 5, 7], y
@@ -465,6 +759,42 @@ from x in [3, 5, 7], y
 >     1  6
 >
 > val it : {count:int, y:int} list
+
+(* Preferring the dependent generator changes the order in which rows
+ * come out. Here 'y' bounds 'x', so 'y' is enumerated in the outer
+ * loop and the rows are y-major; before, 'x' came from a constant
+ * range in the outer loop and they were x-major. Neither query is
+ * ordered, so neither order is wrong, but the choice is observable. *)
+from x, y in [3, 5] where x > 0 andalso x < 10 andalso x < y;
+> x y
+> - -
+> 1 3
+> 2 3
+> 1 5
+> 2 5
+> 3 5
+> 4 5
+>
+> val it : {x:int, y:int} list
+
+(* A scan whose expression mentions an unbounded variable cannot run
+ * until that variable has a generator, so its own variable is no
+ * better as a bound. If 'y' were the upper bound of 'x' here, each
+ * generator would be waiting for the other. *)
+from x, y in [x * 2] where x > 0 andalso x < 10 andalso x < y;
+> x y
+> - --
+> 1  2
+> 2  4
+> 3  6
+> 4  8
+> 5 10
+> 6 12
+> 7 14
+> 8 16
+> 9 18
+>
+> val it : {x:int, y:int} list
 
 from x where x = 3 andalso x < 10;
 > val it = [3] : int list

@@ -18,7 +18,12 @@
  */
 package net.hydromatic.morel.compile;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
+import com.google.common.collect.ImmutableMap;
 import java.math.BigDecimal;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.ast.Op;
 import org.jspecify.annotations.Nullable;
@@ -110,6 +115,174 @@ final class Bounds {
       return null;
     }
     return new Term(b.var, a.offset.add(b.offset));
+  }
+
+  /**
+   * A linear combination of atoms, {@code c1 * a1 + ... + cn * an + k}.
+   *
+   * <p>Where {@link Term} models one variable with a coefficient of 1, a {@code
+   * LinearForm} models any number of atoms with any integer or real
+   * coefficients. It is what FBBT needs to reason about a constraint such as
+   * {@code 25 * q + 10 * d + 5 * n + p = 100}.
+   *
+   * <p>An atom is a variable, or an {@code abs} term. An {@code abs} term is an
+   * atom because, like a variable, it is a quantity that the arithmetic cannot
+   * see into but whose value lies in a known interval -- in its case {@code [0,
+   * inf)}. That is what lets FBBT bound the terms around it, and then the term
+   * itself.
+   */
+  static final class LinearForm {
+    /** Coefficients, keyed by atom. No coefficient is zero. */
+    final Map<Core.Exp, BigDecimal> coefficients;
+
+    final BigDecimal constant;
+
+    LinearForm(Map<Core.Exp, BigDecimal> coefficients, BigDecimal constant) {
+      this.coefficients = ImmutableMap.copyOf(coefficients);
+      this.constant = constant;
+    }
+
+    /** Creates a form with no variables. */
+    static LinearForm constant(BigDecimal constant) {
+      return new LinearForm(ImmutableMap.of(), constant);
+    }
+
+    /** Returns whether this form has no variables. */
+    boolean isConstant() {
+      return coefficients.isEmpty();
+    }
+
+    /** Returns the sum of this form and {@code that}. */
+    LinearForm plus(LinearForm that) {
+      return combine(that, BigDecimal.ONE);
+    }
+
+    /** Returns the difference of this form and {@code that}. */
+    LinearForm minus(LinearForm that) {
+      return combine(that, BigDecimal.ONE.negate());
+    }
+
+    private LinearForm combine(LinearForm that, BigDecimal scale) {
+      final Map<Core.Exp, BigDecimal> map = new LinkedHashMap<>(coefficients);
+      that.coefficients.forEach(
+          (v, c) ->
+              map.merge(
+                  v,
+                  c.multiply(scale),
+                  (c0, c1) -> {
+                    final BigDecimal sum = c0.add(c1);
+                    // A variable whose coefficients cancel (as 'x' does in
+                    // 'x + y - x') drops out of the form.
+                    return sum.signum() == 0 ? null : sum;
+                  }));
+      return new LinearForm(map, constant.add(that.constant.multiply(scale)));
+    }
+
+    /** Returns this form with every coefficient and the constant scaled. */
+    LinearForm times(BigDecimal scale) {
+      if (scale.signum() == 0) {
+        return constant(BigDecimal.ZERO);
+      }
+      final Map<Core.Exp, BigDecimal> map = new LinkedHashMap<>();
+      coefficients.forEach((v, c) -> map.put(v, c.multiply(scale)));
+      return new LinearForm(map, constant.multiply(scale));
+    }
+  }
+
+  /**
+   * Decomposes {@code exp} into a {@link LinearForm}, or returns null if {@code
+   * exp} is not linear.
+   *
+   * <p>Handles addition, subtraction, negation, and multiplication where one
+   * side is constant. A product of two variables (say {@code x * y}) is not
+   * linear, and gives null.
+   *
+   * <p>Examples: {@code 2 * x + 3} &rarr; {@code 2x + 3}; {@code x - y} &rarr;
+   * {@code x - y}; {@code abs (x - 2) + abs (y - 3)} &rarr; a sum of two atoms;
+   * {@code x * y} &rarr; null.
+   */
+  static @Nullable LinearForm linearForm(Core.Exp exp) {
+    if (exp instanceof Core.Id || isAbs(exp)) {
+      return new LinearForm(
+          ImmutableMap.of(exp, BigDecimal.ONE), BigDecimal.ZERO);
+    }
+    if (exp instanceof Core.Literal) {
+      final Core.Literal lit = numericLiteral(exp);
+      return lit == null
+          ? null
+          : LinearForm.constant(lit.unwrap(BigDecimal.class));
+    }
+    if (!(exp instanceof Core.Apply)) {
+      return null;
+    }
+    final Core.Apply apply = (Core.Apply) exp;
+    final BuiltIn op = apply.builtIn();
+    if (op == null) {
+      return null;
+    }
+    switch (op) {
+      case OP_NEGATE:
+      case INT_OP_NEGATE:
+      case REAL_OP_NEGATE:
+        {
+          final LinearForm f = linearForm(apply.arg);
+          return f == null ? null : f.times(BigDecimal.ONE.negate());
+        }
+      case OP_PLUS:
+      case INT_OP_PLUS:
+      case REAL_OP_PLUS:
+      case OP_MINUS:
+      case INT_OP_MINUS:
+      case REAL_OP_MINUS:
+      case OP_TIMES:
+      case INT_OP_TIMES:
+      case REAL_OP_TIMES:
+        break;
+      default:
+        return null;
+    }
+    final LinearForm a = linearForm(apply.arg(0));
+    if (a == null) {
+      return null;
+    }
+    final LinearForm b = linearForm(apply.arg(1));
+    if (b == null) {
+      return null;
+    }
+    switch (op) {
+      case OP_PLUS:
+      case INT_OP_PLUS:
+      case REAL_OP_PLUS:
+        return a.plus(b);
+      case OP_MINUS:
+      case INT_OP_MINUS:
+      case REAL_OP_MINUS:
+        return a.minus(b);
+      default:
+        // Multiplication is linear only if one side is constant.
+        if (a.isConstant()) {
+          return b.times(a.constant);
+        }
+        if (b.isConstant()) {
+          return a.times(b.constant);
+        }
+        return null;
+    }
+  }
+
+  /** Returns whether {@code exp} is a call to {@code abs}. */
+  static boolean isAbs(Core.Exp exp) {
+    if (!(exp instanceof Core.Apply)) {
+      return false;
+    }
+    final BuiltIn b = ((Core.Apply) exp).builtIn();
+    return b == BuiltIn.INT_ABS || b == BuiltIn.REAL_ABS;
+  }
+
+  /** Returns the argument of an {@code abs} term. */
+  static Core.Exp absArg(Core.Exp exp) {
+    checkArgument(isAbs(exp), "not abs: %s", exp);
+    return ((Core.Apply) exp).arg;
   }
 
   /**
