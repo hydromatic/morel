@@ -323,9 +323,12 @@ public class FbbtTest {
   }
 
   /**
-   * A large negative coefficient makes both ends round to the same place if
-   * they round inwards. They must not: rounding outwards keeps the interval
-   * non-empty, so {@code Range.open} has something to hold.
+   * A coefficient large enough that the true bound lies below the scale at
+   * which decimal arithmetic would have divided: {@code abs (~1e13 * r) < 1}
+   * bounds {@code r} by 1e-13, which dividing at twelve decimal places could
+   * only round to 1e-12, an interval ten times too wide. Rationals divide
+   * exactly, so the bound is the true one; and the ends still swap, because the
+   * coefficient is negative.
    */
   @Test
   void testLargeNegativeCoefficientInsideAbs() {
@@ -337,7 +340,7 @@ public class FbbtTest {
     final Core.Exp result =
         Fbbt.strengthen(typeSystem, ImmutableSet.of(rPat), w);
     assertThat(
-        result, hasToString(startsWith("r > ~1E-12 andalso (r < 1E-12")));
+        result, hasToString(startsWith("r > ~1E-13 andalso (r < 1E-13")));
   }
 
   /**

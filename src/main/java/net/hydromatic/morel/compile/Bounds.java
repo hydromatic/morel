@@ -26,6 +26,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.ast.Op;
+import net.hydromatic.morel.util.BigRational;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -45,9 +46,9 @@ final class Bounds {
    */
   static final class Term {
     final Core.@Nullable NamedPat var;
-    final BigDecimal offset;
+    final BigRational offset;
 
-    Term(Core.@Nullable NamedPat var, BigDecimal offset) {
+    Term(Core.@Nullable NamedPat var, BigRational offset) {
       this.var = var;
       this.offset = offset;
     }
@@ -65,14 +66,14 @@ final class Bounds {
   static @Nullable Term linearTerm(Core.Exp exp) {
     if (exp instanceof Core.Id) {
       final Core.NamedPat p = ((Core.Id) exp).idPat;
-      return new Term(p, BigDecimal.ZERO);
+      return new Term(p, BigRational.ZERO);
     }
     if (exp instanceof Core.Literal) {
       final Core.Literal lit = numericLiteral(exp);
       if (lit == null) {
         return null;
       }
-      return new Term(null, lit.unwrap(BigDecimal.class));
+      return new Term(null, BigRational.of(lit.unwrap(BigDecimal.class)));
     }
     if (!(exp instanceof Core.Apply)) {
       return null;
@@ -96,7 +97,7 @@ final class Bounds {
         op == BuiltIn.INT_OP_MINUS
             || op == BuiltIn.OP_MINUS
             || op == BuiltIn.REAL_OP_MINUS;
-    final BigDecimal otherOffset = minus ? b.offset.negate() : b.offset;
+    final BigRational otherOffset = minus ? b.offset.negate() : b.offset;
     if (a.var != null && b.var != null) {
       // Linear combination of two distinct variables; we don't model
       // that as a single Term.
@@ -133,17 +134,17 @@ final class Bounds {
    */
   static final class LinearForm {
     /** Coefficients, keyed by atom. No coefficient is zero. */
-    final Map<Core.Exp, BigDecimal> coefficients;
+    final Map<Core.Exp, BigRational> coefficients;
 
-    final BigDecimal constant;
+    final BigRational constant;
 
-    LinearForm(Map<Core.Exp, BigDecimal> coefficients, BigDecimal constant) {
+    LinearForm(Map<Core.Exp, BigRational> coefficients, BigRational constant) {
       this.coefficients = ImmutableMap.copyOf(coefficients);
       this.constant = constant;
     }
 
     /** Creates a form with no variables. */
-    static LinearForm constant(BigDecimal constant) {
+    static LinearForm constant(BigRational constant) {
       return new LinearForm(ImmutableMap.of(), constant);
     }
 
@@ -154,23 +155,23 @@ final class Bounds {
 
     /** Returns the sum of this form and {@code that}. */
     LinearForm plus(LinearForm that) {
-      return combine(that, BigDecimal.ONE);
+      return combine(that, BigRational.ONE);
     }
 
     /** Returns the difference of this form and {@code that}. */
     LinearForm minus(LinearForm that) {
-      return combine(that, BigDecimal.ONE.negate());
+      return combine(that, BigRational.ONE.negate());
     }
 
-    private LinearForm combine(LinearForm that, BigDecimal scale) {
-      final Map<Core.Exp, BigDecimal> map = new LinkedHashMap<>(coefficients);
+    private LinearForm combine(LinearForm that, BigRational scale) {
+      final Map<Core.Exp, BigRational> map = new LinkedHashMap<>(coefficients);
       that.coefficients.forEach(
           (v, c) ->
               map.merge(
                   v,
                   c.multiply(scale),
                   (c0, c1) -> {
-                    final BigDecimal sum = c0.add(c1);
+                    final BigRational sum = c0.add(c1);
                     // A variable whose coefficients cancel (as 'x' does in
                     // 'x + y - x') drops out of the form.
                     return sum.signum() == 0 ? null : sum;
@@ -179,11 +180,11 @@ final class Bounds {
     }
 
     /** Returns this form with every coefficient and the constant scaled. */
-    LinearForm times(BigDecimal scale) {
+    LinearForm times(BigRational scale) {
       if (scale.signum() == 0) {
-        return constant(BigDecimal.ZERO);
+        return constant(BigRational.ZERO);
       }
-      final Map<Core.Exp, BigDecimal> map = new LinkedHashMap<>();
+      final Map<Core.Exp, BigRational> map = new LinkedHashMap<>();
       coefficients.forEach((v, c) -> map.put(v, c.multiply(scale)));
       return new LinearForm(map, constant.multiply(scale));
     }
@@ -204,13 +205,13 @@ final class Bounds {
   static @Nullable LinearForm linearForm(Core.Exp exp) {
     if (exp instanceof Core.Id || isAbs(exp)) {
       return new LinearForm(
-          ImmutableMap.of(exp, BigDecimal.ONE), BigDecimal.ZERO);
+          ImmutableMap.of(exp, BigRational.ONE), BigRational.ZERO);
     }
     if (exp instanceof Core.Literal) {
       final Core.Literal lit = numericLiteral(exp);
       return lit == null
           ? null
-          : LinearForm.constant(lit.unwrap(BigDecimal.class));
+          : LinearForm.constant(BigRational.of(lit.unwrap(BigDecimal.class)));
     }
     if (!(exp instanceof Core.Apply)) {
       return null;
@@ -226,7 +227,7 @@ final class Bounds {
       case REAL_OP_NEGATE:
         {
           final LinearForm f = linearForm(apply.arg);
-          return f == null ? null : f.times(BigDecimal.ONE.negate());
+          return f == null ? null : f.times(BigRational.ONE.negate());
         }
       case OP_PLUS:
       case INT_OP_PLUS:

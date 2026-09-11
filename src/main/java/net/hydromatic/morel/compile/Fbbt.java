@@ -39,6 +39,7 @@ import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
+import net.hydromatic.morel.util.BigRational;
 import net.hydromatic.morel.util.Pair;
 import org.jspecify.annotations.Nullable;
 
@@ -64,6 +65,11 @@ import org.jspecify.annotations.Nullable;
  * fires when nothing else makes the pattern finite (e.g. a literal range scan,
  * or a finite source like {@code from e in emps}).
  *
+ * <p>The arithmetic is exact. Coefficients and interval endpoints are {@link
+ * BigRational}, so dividing by a coefficient loses nothing, and a bound is
+ * rounded once, where it is written: to the tightest integer for an int
+ * pattern, outwards for a real one. See {@link #boundConjunct}.
+ *
  * <p>Shares the {@link Bounds.LinearForm} decomposition and the {@link
  * Bounds#linearForm}, {@link Bounds#linearTerm}, {@link Bounds#numericLiteral}
  * helpers with {@link Generators} and {@link RangePushdown}.
@@ -78,15 +84,17 @@ class Fbbt {
    */
   private static final int MAX_ROUNDS = 8;
 
-  private static final ImmutableRangeSet<BigDecimal> ALL =
+  private static final ImmutableRangeSet<BigRational> ALL =
       ImmutableRangeSet.of(Range.all());
 
   private static final ImmutableList<Propagator> PROPAGATORS =
       ImmutableList.of(new SumPropagator(), new MultiplyPropagator());
 
   /**
-   * Scale for the division in {@link SumPropagator}, whose result may not
-   * terminate (as 100 / 3 does not).
+   * Scale at which a real bound is written when it has no exact decimal form
+   * (as 10 / 3 has not). The deduction itself is exact -- it is done in {@link
+   * BigRational} -- so this is only the precision of the literal that states
+   * the bound, and it is rounded outwards.
    */
   private static final int SCALE = 12;
 
@@ -173,32 +181,34 @@ class Fbbt {
       TypeSystem typeSystem,
       Core.NamedPat pat,
       boolean lower,
-      BigDecimal value,
+      BigRational value,
       boolean strict) {
-    // Multiplication-style propagators can produce fractional bound values
-    // (e.g. 30/4 = 7.5). For an integer-typed pattern, snap the bound to
-    // the tightest integer endpoint: x > 7.5 => x >= 8, x < 7.5 => x <= 7.
-    // For real-typed patterns no snap is needed — the BigDecimal carries
-    // the exact value and real comparisons are well-defined at any
-    // precision.
+    // The arithmetic that deduced this bound was exact, so this is the
+    // only place it is rounded.
+    final BigDecimal constant;
     if (pat.type == PrimitiveType.INT) {
-      final BigDecimal floor = value.setScale(0, RoundingMode.FLOOR);
-      if (floor.compareTo(value) != 0) {
-        if (lower) {
-          value = value.setScale(0, RoundingMode.CEILING);
-        } else {
-          value = floor;
-        }
-        strict = false;
+      // A propagator can produce a fractional bound (30/4 = 15/2, say).
+      // Snap it to the tightest integer endpoint: x > 15/2 becomes
+      // x >= 8, x < 15/2 becomes x <= 7.
+      if (value.isInteger()) {
+        constant = new BigDecimal(value.numerator);
       } else {
-        // Value is integer-valued; strip any trailing zeros introduced by
-        // earlier division so the literal prints as e.g. "27" not
-        // "27.00000000".
-        value = value.setScale(0, RoundingMode.UNNECESSARY);
+        constant = new BigDecimal(lower ? value.ceil() : value.floor());
+        strict = false;
       }
+    } else {
+      // A real bound with no exact decimal form, such as 10/3, is rounded
+      // outwards, so that the bound we state is never tighter than the
+      // one we deduced.
+      final @Nullable BigDecimal exact = value.exactBigDecimal();
+      constant =
+          exact != null
+              ? exact
+              : value.toBigDecimal(
+                  SCALE, lower ? RoundingMode.FLOOR : RoundingMode.CEILING);
     }
     final Core.Exp idExp = core.id(pat);
-    final Core.Exp constExp = core.literal((PrimitiveType) pat.type, value);
+    final Core.Exp constExp = core.literal((PrimitiveType) pat.type, constant);
     if (lower) {
       return strict
           ? core.greaterThan(typeSystem, idExp, constExp)
@@ -219,14 +229,14 @@ class Fbbt {
   /** Per-pattern feasible interval (an {@link ImmutableRangeSet}). */
   static class State {
     private final Set<Core.NamedPat> pats;
-    private final Map<Core.NamedPat, ImmutableRangeSet<BigDecimal>> intervals =
+    private final Map<Core.NamedPat, ImmutableRangeSet<BigRational>> intervals =
         new HashMap<>();
     /**
      * Snapshot of intervals after applying only the constant-bound conjuncts of
      * the original where-clause. Used to identify which deductions are newly
      * produced by cross-variable propagation.
      */
-    private final Map<Core.NamedPat, ImmutableRangeSet<BigDecimal>> inputs =
+    private final Map<Core.NamedPat, ImmutableRangeSet<BigRational>> inputs =
         new HashMap<>();
 
     State(Set<Core.NamedPat> pats) {
@@ -248,14 +258,14 @@ class Fbbt {
 
     /**
      * Returns whether {@code t} is a numeric primitive type FBBT can track:
-     * {@code int} or {@code real}. Both store values as {@code BigDecimal} in
+     * {@code int} or {@code real}. Both store values as {@code BigRational} in
      * the interval map.
      */
     private static boolean isNumeric(Type t) {
       return t == PrimitiveType.INT || t == PrimitiveType.REAL;
     }
 
-    ImmutableRangeSet<BigDecimal> get(Core.NamedPat pat) {
+    ImmutableRangeSet<BigRational> get(Core.NamedPat pat) {
       return intervals.getOrDefault(pat, ALL);
     }
 
@@ -263,7 +273,8 @@ class Fbbt {
      * Intersects {@code pat}'s current interval with {@code rangeSet}. Returns
      * whether the interval actually tightened.
      */
-    boolean tighten(Core.NamedPat pat, ImmutableRangeSet<BigDecimal> rangeSet) {
+    boolean tighten(
+        Core.NamedPat pat, ImmutableRangeSet<BigRational> rangeSet) {
       // Track any numeric variable, not only the ones whose bounds we are
       // deducing: a variable that a scan bound, such as 'z' in
       // 'from z in [1, 2, 3], x where x < z', tells us about its neighbours
@@ -271,8 +282,9 @@ class Fbbt {
       if (!isNumeric(pat.type)) {
         return false;
       }
-      final ImmutableRangeSet<BigDecimal> current = get(pat);
-      final ImmutableRangeSet<BigDecimal> next = current.intersection(rangeSet);
+      final ImmutableRangeSet<BigRational> current = get(pat);
+      final ImmutableRangeSet<BigRational> next =
+          current.intersection(rangeSet);
       if (next.equals(current)) {
         return false;
       }
@@ -317,15 +329,15 @@ class Fbbt {
           // A variable that a scan bound. It needs no bounds of its own.
           continue;
         }
-        final ImmutableRangeSet<BigDecimal> finalRs =
+        final ImmutableRangeSet<BigRational> finalRs =
             requireNonNull(intervals.get(pat));
         if (finalRs.isEmpty()) {
           continue;
         }
-        final ImmutableRangeSet<BigDecimal> inputRs =
+        final ImmutableRangeSet<BigRational> inputRs =
             inputs.getOrDefault(pat, ALL);
-        final Range<BigDecimal> finalSpan = finalRs.span();
-        final Range<BigDecimal> inputSpan =
+        final Range<BigRational> finalSpan = finalRs.span();
+        final Range<BigRational> inputSpan =
             inputRs.isEmpty() ? Range.all() : inputRs.span();
         if (finalSpan.hasLowerBound() && isLowerTighter(finalSpan, inputSpan)) {
           consumer.accept(
@@ -354,7 +366,7 @@ class Fbbt {
      * emission.
      */
     private static boolean isLowerTighter(
-        Range<BigDecimal> finalSpan, Range<BigDecimal> inputSpan) {
+        Range<BigRational> finalSpan, Range<BigRational> inputSpan) {
       if (!inputSpan.hasLowerBound()) {
         return true;
       }
@@ -372,7 +384,7 @@ class Fbbt {
     }
 
     private static boolean isUpperTighter(
-        Range<BigDecimal> finalSpan, Range<BigDecimal> inputSpan) {
+        Range<BigRational> finalSpan, Range<BigRational> inputSpan) {
       if (!inputSpan.hasUpperBound()) {
         return true;
       }
@@ -396,8 +408,8 @@ class Fbbt {
    * they do in {@code from x where x > 5 andalso x < 3}. There is nothing more
    * to deduce, and {@link ImmutableRangeSet#span()} would throw.
    */
-  private static @Nullable Range<BigDecimal> span(
-      ImmutableRangeSet<BigDecimal> rangeSet) {
+  private static @Nullable Range<BigRational> span(
+      ImmutableRangeSet<BigRational> rangeSet) {
     return rangeSet.isEmpty() ? null : rangeSet.span();
   }
 
@@ -415,7 +427,7 @@ class Fbbt {
      *     for non-strict
      */
     void accept(
-        Core.NamedPat pat, boolean lower, BigDecimal value, boolean strict);
+        Core.NamedPat pat, boolean lower, BigRational value, boolean strict);
   }
 
   /**
@@ -481,7 +493,7 @@ class Fbbt {
         return false;
       }
       boolean changed = false;
-      for (Map.Entry<Core.Exp, BigDecimal> entry :
+      for (Map.Entry<Core.Exp, BigRational> entry :
           sum.coefficients.entrySet()) {
         changed |= tightenOne(state, sum, entry.getKey(), entry.getValue(), op);
       }
@@ -495,7 +507,7 @@ class Fbbt {
         State state,
         Bounds.LinearForm sum,
         Core.Exp atom,
-        BigDecimal coefficient,
+        BigRational coefficient,
         BuiltIn op) {
       if (!canTighten(state, atom)) {
         return false;
@@ -503,34 +515,32 @@ class Fbbt {
       // The rest of the sum, "sum - coefficient * atom", lies in
       // [restMin, restMax]; either may be absent, if some atom is unbounded
       // on that side.
-      BigDecimal restMin = sum.constant;
-      BigDecimal restMax = sum.constant;
-      for (Map.Entry<Core.Exp, BigDecimal> entry :
+      BigRational restMin = sum.constant;
+      BigRational restMax = sum.constant;
+      for (Map.Entry<Core.Exp, BigRational> entry :
           sum.coefficients.entrySet()) {
         if (entry.getKey().equals(atom)) {
           continue;
         }
-        final @Nullable Range<BigDecimal> span =
+        final @Nullable Range<BigRational> span =
             span(interval(state, entry.getKey()));
         if (span == null) {
           return false;
         }
-        final BigDecimal c = entry.getValue();
+        final BigRational c = entry.getValue();
         // A positive coefficient takes its minimum at the atom's lower
         // endpoint, a negative one at its upper endpoint.
         final boolean minAtLower = c.signum() > 0;
-        if (restMin != null) {
-          restMin =
-              endpoint(span, minAtLower) == null
-                  ? null
-                  : restMin.add(c.multiply(endpoint(span, minAtLower)));
-        }
-        if (restMax != null) {
-          restMax =
-              endpoint(span, !minAtLower) == null
-                  ? null
-                  : restMax.add(c.multiply(endpoint(span, !minAtLower)));
-        }
+        final @Nullable BigRational min = endpoint(span, minAtLower);
+        final @Nullable BigRational max = endpoint(span, !minAtLower);
+        restMin =
+            restMin == null || min == null
+                ? null
+                : restMin.add(c.multiply(min));
+        restMax =
+            restMax == null || max == null
+                ? null
+                : restMax.add(c.multiply(max));
       }
 
       // "coefficient * atom OP -rest". An upper bound on the atom needs the
@@ -564,8 +574,8 @@ class Fbbt {
     private static boolean bound(
         State state,
         Core.Exp atom,
-        BigDecimal coefficient,
-        @Nullable BigDecimal rest,
+        BigRational coefficient,
+        @Nullable BigRational rest,
         boolean lower,
         BuiltIn op) {
       if (rest == null) {
@@ -575,17 +585,12 @@ class Fbbt {
       // bound, and the other way about.
       final boolean flip = coefficient.signum() < 0;
       final boolean resultLower = flip != lower;
-      // Round outwards, so that a bound we cannot represent exactly is
-      // weaker than the true one, never stronger. (For an integer variable
-      // 'boundConjunct' snaps it back to the tightest integer.)
-      final BigDecimal value =
-          rest.negate()
-              .divide(
-                  coefficient,
-                  SCALE,
-                  resultLower ? RoundingMode.FLOOR : RoundingMode.CEILING);
+      // Rationals divide exactly, so this is the bound itself, not an
+      // approximation to it. (For an integer variable 'boundConjunct'
+      // snaps it to the tightest integer.)
+      final BigRational value = rest.negate().divide(coefficient);
       final boolean strict = op == BuiltIn.OP_LT || op == BuiltIn.OP_GT;
-      final Range<BigDecimal> range;
+      final Range<BigRational> range;
       if (resultLower) {
         range = strict ? Range.greaterThan(value) : Range.atLeast(value);
       } else {
@@ -595,8 +600,8 @@ class Fbbt {
     }
 
     /** Returns one endpoint of {@code span}, or null if it is unbounded. */
-    private static @Nullable BigDecimal endpoint(
-        Range<BigDecimal> span, boolean lower) {
+    private static @Nullable BigRational endpoint(
+        Range<BigRational> span, boolean lower) {
       if (lower) {
         return span.hasLowerBound() ? span.lowerEndpoint() : null;
       }
@@ -612,14 +617,14 @@ class Fbbt {
     }
 
     /** Returns the interval that an atom is known to lie in. */
-    private static ImmutableRangeSet<BigDecimal> interval(
+    private static ImmutableRangeSet<BigRational> interval(
         State state, Core.Exp atom) {
       if (atom.op == Op.ID) {
         return state.get(((Core.Id) atom).idPat);
       }
       // An absolute value is never negative. (We do not track how much more
       // than zero it is; the variable inside it is what we are after.)
-      return ImmutableRangeSet.of(Range.atLeast(BigDecimal.ZERO));
+      return ImmutableRangeSet.of(Range.atLeast(BigRational.ZERO));
     }
 
     /**
@@ -628,43 +633,41 @@ class Fbbt {
      * {@code [~b, b]}, it is the variable inside {@code e} that tightens.
      */
     private static boolean tighten(
-        State state, Core.Exp atom, ImmutableRangeSet<BigDecimal> rangeSet) {
+        State state, Core.Exp atom, ImmutableRangeSet<BigRational> rangeSet) {
       if (atom.op == Op.ID) {
         return state.tighten(((Core.Id) atom).idPat, rangeSet);
       }
-      final @Nullable Pair<Core.NamedPat, BigDecimal> inner =
+      final @Nullable Pair<Core.NamedPat, BigRational> inner =
           innerVariable(atom, state);
       if (inner == null) {
         return false;
       }
-      final Range<BigDecimal> span = rangeSet.span();
+      final Range<BigRational> span = rangeSet.span();
       if (!span.hasUpperBound()) {
         return false;
       }
-      final BigDecimal b = span.upperEndpoint();
+      final BigRational b = span.upperEndpoint();
       final boolean strict = span.upperBoundType() == BoundType.OPEN;
       if (b.signum() < 0 || b.signum() == 0 && strict) {
         // 'abs e < 0' cannot be satisfied.
         return state.tighten(inner.left, ImmutableRangeSet.of());
       }
       // 'abs (c * x + k) OP b' is '(~b - k) / c OP x OP (b - k) / c', with
-      // the ends swapped if c is negative. Round each end outwards -- the
-      // lower down, the upper up -- so that the deduced interval is never
-      // tighter than the truth.
+      // the ends swapped if c is negative.
       final Bounds.LinearForm form =
           requireNonNull(Bounds.linearForm(Bounds.absArg(atom)));
-      final BigDecimal c = inner.right;
-      final BigDecimal k = form.constant;
-      final BigDecimal end1 = b.negate().subtract(k);
-      final BigDecimal end2 = b.subtract(k);
-      final BigDecimal lower;
-      final BigDecimal upper;
+      final BigRational c = inner.right;
+      final BigRational k = form.constant;
+      final BigRational end1 = b.negate().subtract(k);
+      final BigRational end2 = b.subtract(k);
+      final BigRational lower;
+      final BigRational upper;
       if (c.signum() > 0) {
-        lower = end1.divide(c, SCALE, RoundingMode.FLOOR);
-        upper = end2.divide(c, SCALE, RoundingMode.CEILING);
+        lower = end1.divide(c);
+        upper = end2.divide(c);
       } else {
-        lower = end2.divide(c, SCALE, RoundingMode.FLOOR);
-        upper = end1.divide(c, SCALE, RoundingMode.CEILING);
+        lower = end2.divide(c);
+        upper = end1.divide(c);
       }
       if (strict && lower.compareTo(upper) >= 0) {
         // The ends have met; no value satisfies the constraint.
@@ -681,14 +684,14 @@ class Fbbt {
      * variable that {@code state} is deducing bounds for, returns that variable
      * and its coefficient; otherwise null.
      */
-    private static @Nullable Pair<Core.NamedPat, BigDecimal> innerVariable(
+    private static @Nullable Pair<Core.NamedPat, BigRational> innerVariable(
         Core.Exp atom, State state) {
       final Bounds.@Nullable LinearForm form =
           Bounds.linearForm(Bounds.absArg(atom));
       if (form == null || form.coefficients.size() != 1) {
         return null;
       }
-      final Map.Entry<Core.Exp, BigDecimal> entry =
+      final Map.Entry<Core.Exp, BigRational> entry =
           form.coefficients.entrySet().iterator().next();
       if (entry.getKey().op != Op.ID) {
         // 'abs (abs (x - 2) - 1)', say. One layer is enough.
@@ -733,7 +736,7 @@ class Fbbt {
       // We only want the constant case here.
       final Core.NamedPat pat;
       final BuiltIn finalOp;
-      final BigDecimal constant;
+      final BigRational constant;
       if (lhs.var != null && rhs.var == null) {
         if (directOnly && lhs.offset.signum() != 0) {
           return false;
@@ -769,15 +772,15 @@ class Fbbt {
 
     /** Tightens {@code pat}'s interval by {@code pat OP constant}. */
     private static boolean tightenFromConstant(
-        State state, Core.NamedPat pat, BuiltIn op, BigDecimal constant) {
+        State state, Core.NamedPat pat, BuiltIn op, BigRational constant) {
       return state.tighten(pat, rangeFromOp(op, constant));
     }
 
     /**
      * Returns the range that {@code v} must lie in to satisfy {@code v OP c}.
      */
-    private static ImmutableRangeSet<BigDecimal> rangeFromOp(
-        BuiltIn op, BigDecimal c) {
+    private static ImmutableRangeSet<BigRational> rangeFromOp(
+        BuiltIn op, BigRational c) {
       switch (op) {
         case OP_LT:
           return ImmutableRangeSet.of(Range.lessThan(c));
@@ -837,7 +840,7 @@ class Fbbt {
       final Core.Exp lhs = constraint.arg(0);
       final Core.Exp rhs = constraint.arg(1);
       final Core.Apply product;
-      final BigDecimal constant;
+      final BigRational constant;
       final BuiltIn normalized;
       if (isMultiply(lhs)) {
         product = (Core.Apply) lhs;
@@ -845,7 +848,7 @@ class Fbbt {
         if (lit == null) {
           return false;
         }
-        constant = lit.unwrap(BigDecimal.class);
+        constant = BigRational.of(lit.unwrap(BigDecimal.class));
         normalized = op;
       } else if (isMultiply(rhs)) {
         product = (Core.Apply) rhs;
@@ -853,7 +856,7 @@ class Fbbt {
         if (lit == null) {
           return false;
         }
-        constant = lit.unwrap(BigDecimal.class);
+        constant = BigRational.of(lit.unwrap(BigDecimal.class));
         normalized = op.reverse();
       } else {
         return false;
@@ -888,14 +891,14 @@ class Fbbt {
         Bounds.Term self,
         Bounds.Term other,
         BuiltIn op,
-        BigDecimal c) {
+        BigRational c) {
       final Core.NamedPat selfVar = requireNonNull(self.var);
-      final @Nullable Range<BigDecimal> otherRange =
+      final @Nullable Range<BigRational> otherRange =
           span(state.get(requireNonNull(other.var)));
       if (otherRange == null) {
         return false;
       }
-      final Range<BigDecimal> otherSpan = shiftSpan(otherRange, other.offset);
+      final Range<BigRational> otherSpan = shiftSpan(otherRange, other.offset);
       // For OP_LT / OP_LE: need other.lo > 0 to divide.
       // For OP_GT / OP_GE: need other.hi > 0.
       switch (op) {
@@ -907,11 +910,11 @@ class Fbbt {
           if (otherSpan.lowerEndpoint().signum() <= 0) {
             return false;
           }
-          final BigDecimal selfUpper = divide(c, otherSpan.lowerEndpoint());
+          final BigRational selfUpper = c.divide(otherSpan.lowerEndpoint());
           // self < c / otherLow. Open because A * B < c is strict, or because
           // otherLow is open (smaller other gives looser self bound).
           // Translate back to self.var (subtract self.offset).
-          final BigDecimal varUpper = selfUpper.subtract(self.offset);
+          final BigRational varUpper = selfUpper.subtract(self.offset);
           return state.tighten(
               selfVar, ImmutableRangeSet.of(Range.lessThan(varUpper)));
         case OP_GT:
@@ -922,8 +925,8 @@ class Fbbt {
           if (otherSpan.upperEndpoint().signum() <= 0) {
             return false;
           }
-          final BigDecimal selfLower = divide(c, otherSpan.upperEndpoint());
-          final BigDecimal varLower = selfLower.subtract(self.offset);
+          final BigRational selfLower = c.divide(otherSpan.upperEndpoint());
+          final BigRational varLower = selfLower.subtract(self.offset);
           return state.tighten(
               selfVar, ImmutableRangeSet.of(Range.greaterThan(varLower)));
         default:
@@ -931,17 +934,9 @@ class Fbbt {
       }
     }
 
-    /**
-     * Returns {@code num/den} as a {@link BigDecimal} with enough precision to
-     * capture a finite decimal expansion when possible.
-     */
-    private static BigDecimal divide(BigDecimal num, BigDecimal den) {
-      return num.divide(den, 20, RoundingMode.HALF_EVEN);
-    }
-
     /** Translates {@code r} by {@code delta} along the number line. */
-    private static Range<BigDecimal> shiftSpan(
-        Range<BigDecimal> r, BigDecimal delta) {
+    private static Range<BigRational> shiftSpan(
+        Range<BigRational> r, BigRational delta) {
       if (delta.signum() == 0) {
         return r;
       }
