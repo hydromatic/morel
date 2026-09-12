@@ -22,7 +22,7 @@ Sys.set ("lineWidth", 78);
 > val it = () : unit
 Sys.set ("printLength", 64);
 > val it = () : unit
-Sys.set ("stringDepth", ~1);
+Sys.set ("stringDepth", NONE);
 > val it = () : unit
 
 (*) Enable functions in the 'Test' structure.

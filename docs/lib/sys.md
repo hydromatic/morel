@@ -40,8 +40,8 @@ val <a id='parseTree' href="#parseTree-impl">parseTree</a> : string -> string
 val <a id='plan' href="#plan-impl">plan</a> : unit -> string
 val <a id='planEx' href="#planEx-impl">planEx</a> : string -> string
 val <a id='set' href="#set-impl">set</a> : string * 'a -> unit
-val <a id='show' href="#show-impl">show</a> : string -> string option
-val <a id='showAll' href="#showAll-impl">showAll</a> : unit -> (string * string option) list
+val <a id='show' href="#show-impl">show</a> : string -> string
+val <a id='showAll' href="#showAll-impl">showAll</a> : unit -> (string * string) list
 val <a id='unset' href="#unset-impl">unset</a> : string -> unit
 </pre>
 
@@ -103,14 +103,15 @@ representation at the specified phase. The phase argument can be "0" (initial),
 <a id="show-impl"></a>
 <h3><code>show</code></h3>
 
-`show property` returns the current the value of `property`, as a
-string, or `NONE` if unset.
+`show property` returns the current value of `property`, as a string.
+A property of option type gives `SOME v` or `NONE`, so
+what is shown is a value that `set` would accept.
 
 <a id="showAll-impl"></a>
 <h3><code>showAll</code></h3>
 
-`showAll ()` returns a list of all properties and their current value
-as a string, or `NONE` if unset.
+`showAll ()` returns a list of all properties and their current
+value, as a string.
 
 <a id="unset-impl"></a>
 <h3><code>unset</code></h3>

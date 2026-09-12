@@ -91,6 +91,13 @@ import org.jspecify.annotations.Nullable;
 public class Compiler {
   protected static final EvalEnv EMPTY_ENV = Codes.emptyEnv();
 
+  /**
+   * The limit that {@link Pretty} reads as "no limit". The printing properties
+   * are options, and {@code NONE} -- no ellipsis, no truncation, no line
+   * wrapping -- reaches {@code Pretty} as this value.
+   */
+  private static final int UNLIMITED = -1;
+
   protected final TypeSystem typeSystem;
 
   public Compiler(TypeSystem typeSystem) {
@@ -650,9 +657,9 @@ public class Compiler {
             typeSystem,
             -1,
             Prop.Output.CLASSIC,
-            Prop.PRINT_LENGTH.intValue(map),
-            Prop.PRINT_DEPTH.intValue(map),
-            Prop.STRING_DEPTH.intValue(map),
+            Prop.PRINT_LENGTH.optionalIntValue(map, UNLIMITED),
+            Prop.PRINT_DEPTH.optionalIntValue(map, UNLIMITED),
+            Prop.STRING_DEPTH.optionalIntValue(map, UNLIMITED),
             0,
             BagPrinter.NATURAL);
     return new Code() {
@@ -1866,7 +1873,8 @@ public class Compiler {
         actions.add(
             (outLines, outBindings, evalEnv) -> {
               final int lineWidth =
-                  Prop.LINE_WIDTH.intValue(evalEnv.getSession().map);
+                  Prop.LINE_WIDTH.optionalIntValue(
+                      evalEnv.getSession().map, UNLIMITED);
               String line =
                   dataType.describe(new StringBuilder(), lineWidth).toString();
               outLines.accept(line);
@@ -2497,17 +2505,14 @@ public class Compiler {
     }
 
     private Pretty getPretty(Map<Prop, Object> map, BagPrinter bagPrinter) {
-      int stringDepth = Prop.STRING_DEPTH.intValue(map);
-      // STRING_FOLD is optional and only takes effect for values >= 1.
-      // Treat unset (null) and any non-positive value as 0, which the
-      // tabular printer treats as "folding disabled".
-      Integer stringFoldObj = (Integer) Prop.STRING_FOLD.get(map);
-      int stringFold =
-          stringFoldObj != null && stringFoldObj > 0 ? stringFoldObj : 0;
-      int lineWidth = Prop.LINE_WIDTH.intValue(map);
+      int stringDepth = Prop.STRING_DEPTH.optionalIntValue(map, UNLIMITED);
+      // STRING_FOLD is positive when set; NONE reaches the tabular printer
+      // as 0, which it reads as "folding disabled".
+      int stringFold = Prop.STRING_FOLD.optionalIntValue(map, 0);
+      int lineWidth = Prop.LINE_WIDTH.optionalIntValue(map, UNLIMITED);
       Prop.Output output = Prop.OUTPUT.enumValue(map, Prop.Output.class);
-      int printDepth = Prop.PRINT_DEPTH.intValue(map);
-      int printLength = Prop.PRINT_LENGTH.intValue(map);
+      int printDepth = Prop.PRINT_DEPTH.optionalIntValue(map, UNLIMITED);
+      int printLength = Prop.PRINT_LENGTH.optionalIntValue(map, UNLIMITED);
       return new Pretty(
           typeSystem,
           lineWidth,

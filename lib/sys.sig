@@ -80,16 +80,17 @@ sig
       [@@extra "(See [Properties](#properties) below.)"]
 
   (**
-   * returns the current the value of `property`, as a
-   * string, or `NONE` if unset.
+   * returns the current value of `property`, as a string.
+   * A property of option type gives `SOME v` or `NONE`, so
+   * what is shown is a value that `set` would accept.
    *)
-  val show : string -> string option [@@prototype "show property"]
+  val show : string -> string [@@prototype "show property"]
 
   (**
-   * returns a list of all properties and their current value
-   * as a string, or `NONE` if unset.
+   * returns a list of all properties and their current
+   * value, as a string.
    *)
-  val showAll : unit -> (string * string option) list [@@prototype "showAll ()"]
+  val showAll : unit -> (string * string) list [@@prototype "showAll ()"]
 
   (** clears the current the value of `property`. *)
   val unset : string -> unit [@@prototype "unset property"]

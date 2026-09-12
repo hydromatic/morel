@@ -16,13 +16,13 @@
  * language governing permissions and limitations under the
  * License.
  *)
-Sys.set ("printDepth", ~1);
+Sys.set ("printDepth", NONE);
 > val it = () : unit
-Sys.set ("printLength", ~1);
+Sys.set ("printLength", NONE);
 > val it = () : unit
 Sys.set ("lineWidth", 78);
 > val it = () : unit
-Sys.set ("stringDepth", ~1);
+Sys.set ("stringDepth", NONE);
 > val it = () : unit
 
 Datalog;

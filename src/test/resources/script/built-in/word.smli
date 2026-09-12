@@ -19,7 +19,7 @@
  * Unit tests for the built-in `Word` structure, defined
  * by the Standard ML Basis Library.
  *)
-Sys.set ("printLength", 999);
+Sys.set ("printLength", NONE);
 > val it = () : unit
 
 Word;

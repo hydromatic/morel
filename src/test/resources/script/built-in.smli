@@ -18,9 +18,9 @@
  *)
 Sys.set ("lineWidth", 78);
 > val it = () : unit
-Sys.set ("printLength", 999);
+Sys.set ("printLength", NONE);
 > val it = () : unit
-Sys.set ("stringDepth", ~1);
+Sys.set ("stringDepth", NONE);
 > val it = () : unit
 
 (*) Set properties for deterministic Date/Time tests.
@@ -574,15 +574,15 @@ Sys.set;
 
 (* "show" is a Morel alias for "Sys.show". *)
 show;
-> val it = fn : string -> string option
+> val it = fn : string -> string
 Sys.show;
-> val it = fn : string -> string option
+> val it = fn : string -> string
 
 (* "showAll" is a Morel alias for "Sys.showAll". *)
 showAll;
-> val it = fn : unit -> (string * string option) list
+> val it = fn : unit -> (string * string) list
 Sys.showAll;
-> val it = fn : unit -> (string * string option) list
+> val it = fn : unit -> (string * string) list
 
 (* "tokens" is a Morel alias for "String.tokens". *)
 tokens;

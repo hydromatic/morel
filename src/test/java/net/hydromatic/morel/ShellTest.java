@@ -656,7 +656,7 @@ public class ShellTest {
             + "x;"
             + "Sys.set (\"printLength\", 0);\n"
             + "x;"
-            + "Sys.set (\"printLength\", ~1);\n"
+            + "Sys.set (\"printLength\", NONE);\n"
             + "x;\n";
     String expected =
         "val it = () : unit\n"

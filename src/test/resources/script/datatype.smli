@@ -18,7 +18,7 @@
  *
  * Algebraic types ("datatype").
  *)
-Sys.set ("printDepth", ~1);
+Sys.set ("printDepth", NONE);
 > val it = () : unit
 
 (*) Basic operations on 'int'

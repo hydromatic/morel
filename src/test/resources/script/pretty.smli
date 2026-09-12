@@ -490,8 +490,15 @@ Sys.set ("stringFold", 10);
 Sys.unset "stringFold";
 > val it = () : unit
 
-(* A negative stringFold is treated as if unset: no folding. *)
+(* Folding at a width of zero or less is not folding, so "stringFold"
+ * refuses it; NONE says "no folding", and is the default. *)
 Sys.set ("stringFold", ~3);
+> uncaught exception Fail [Fail: value for property 'stringFold' must have type '(int check i => i > 0) option']
+>   raised at: stdIn:1.1-1.27
+Sys.set ("stringFold", 0);
+> uncaught exception Fail [Fail: value for property 'stringFold' must have type '(int check i => i > 0) option']
+>   raised at: stdIn:1.1-1.26
+Sys.set ("stringFold", NONE);
 > val it = () : unit
 
 [{id=1, name="The Avocado Tofu Salad"}];
@@ -667,7 +674,7 @@ x;
 >   : int
 >     list
 >     list
-Sys.set ("lineWidth", ~1);
+Sys.set ("lineWidth", NONE);
 > val it = () : unit
 ~1;
 > val it = ~1 : int
@@ -731,7 +738,7 @@ x;
 >   : {a:int, b:int list,
 >       c:{d:int, e:int list,
 >           f:{g:int, h:int list, i:{j:int list}} list} list}
-Sys.set ("printDepth", ~1);
+Sys.set ("printDepth", NONE);
 > val it = () : unit
 x;
 > val it = {a=1,b=[2,3],c=[{d=4,e=[5,6],f=[{g=7,h=[8],i={j=[9]}}]}]}

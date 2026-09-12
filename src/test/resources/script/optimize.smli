@@ -18,7 +18,7 @@
  *
  * Tests for inlining and other optimizations.
  *)
-Sys.set ("stringDepth", ~1);
+Sys.set ("stringDepth", NONE);
 > val it = () : unit
 
 (* --- Variable inlining ------------------------------------------ *)

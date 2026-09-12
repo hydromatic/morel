@@ -40,6 +40,7 @@ import static org.hamcrest.Matchers.anEmptyMap;
 import static org.hamcrest.Matchers.closeTo;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.emptyString;
+import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.hasToString;
@@ -900,9 +901,13 @@ public class UtilTest {
       }
       // "defaultValue" gives the value as it is displayed -- "classic" for
       // the enum constant CLASSIC -- so what is displayed is a value the
-      // property can be read from, rather than one it already holds.
+      // property can be read from, rather than one it already holds. The
+      // exception is a property of option type whose default is NONE, which
+      // displays as Morel writes it; there is no value to read back.
       final Object defaultValue = prop.defaultValue();
-      if (defaultValue != null) {
+      if (defaultValue.equals("NONE")) {
+        assertThat(prop.camelName, prop.typeName(), endsWith(" option"));
+      } else {
         assertThat(prop.camelName, prop.isValid(defaultValue, true), is(true));
       }
     }
@@ -921,13 +926,14 @@ public class UtilTest {
 
     // A property whose value is not in the map has its default value.
     final Map<Prop, Object> map = new LinkedHashMap<>();
-    assertThat(Prop.LINE_WIDTH.intValue(map), is(79));
+    assertThat(Prop.LINE_WIDTH.optionalIntValue(map), is(79));
     assertThat(Prop.LINE_WIDTH.get(map), is(79));
-    assertThat(Prop.OPTIONAL_INT.get(map), nullValue());
+    assertThat(Prop.INLINE_PASS_COUNT.intValue(map), is(5));
+    assertThat(Prop.STRING_FOLD.get(map), nullValue());
 
     // Each type has an accessor, and each accessor its type.
     Prop.LINE_WIDTH.set(map, 100);
-    assertThat(Prop.LINE_WIDTH.intValue(map), is(100));
+    assertThat(Prop.LINE_WIDTH.optionalIntValue(map), is(100));
     assertThat(Prop.HYBRID.booleanValue(map), is(false));
     assertThat(Prop.PRODUCT_NAME.stringValue(map), is("morel-java"));
     assertThat(Prop.DIRECTORY.fileValue(map), is(new File("")));
@@ -940,7 +946,13 @@ public class UtilTest {
         RuntimeException.class, () -> Prop.LINE_WIDTH.booleanValue(map));
 
     // "typeName" gives the Morel name of the type, not the Java one.
-    assertThat(Prop.LINE_WIDTH.typeName(), is("int"));
+    // A type that checks a condition is named for the type it narrows, so
+    // that the table of properties stays narrow; the message that refuses a
+    // value gives the condition.
+    assertThat(Prop.LINE_WIDTH.typeName(), is("int option"));
+    assertThat(Prop.STRING_FOLD.typeName(), is("int option"));
+    assertThat(Prop.NOW.typeName(), is("string option"));
+    assertThat(Prop.INLINE_PASS_COUNT.typeName(), is("int"));
     assertThat(Prop.HYBRID.typeName(), is("bool"));
     assertThat(Prop.PRODUCT_NAME.typeName(), is("string"));
     assertThat(Prop.DIRECTORY.typeName(), is("file"));
@@ -952,19 +964,60 @@ public class UtilTest {
         assertThrows(
                 RuntimeException.class, () -> Prop.LINE_WIDTH.set(map, "80"))
             .getMessage(),
-        is("value for property 'lineWidth' must have type 'int'"));
+        is(
+            "value for property 'lineWidth' must have type "
+                + "'(int check i => i >= 0) option'"));
 
-    // Removing restores the default; a required property may not be set to
-    // null, and an optional one may.
+    // Removing restores the default. Only a property of option type takes
+    // NONE, which "set" writes as a null value.
     Prop.LINE_WIDTH.remove(map);
-    assertThat(Prop.LINE_WIDTH.intValue(map), is(79));
+    assertThat(Prop.LINE_WIDTH.optionalIntValue(map), is(79));
     assertThat(
         assertThrows(
-                RuntimeException.class, () -> Prop.LINE_WIDTH.set(map, null))
+                RuntimeException.class,
+                () -> Prop.INLINE_PASS_COUNT.set(map, null))
             .getMessage(),
-        is("property is required"));
-    Prop.OPTIONAL_INT.set(map, null);
-    assertThat(Prop.OPTIONAL_INT.get(map), nullValue());
+        is("value for property 'inlinePassCount' must have type 'int'"));
+    Prop.STRING_FOLD.set(map, null);
+    assertThat(Prop.STRING_FOLD.get(map), nullValue());
+
+    // An option property distinguishes NONE, which is a value, from no value
+    // at all; "unset" restores the default, and NONE does not.
+    Prop.LINE_WIDTH.set(map, null);
+    assertThat(Prop.LINE_WIDTH.optionalIntValue(map), nullValue());
+    assertThat(Prop.LINE_WIDTH.optionalIntValue(map, -1), is(-1));
+    assertThat(Prop.LINE_WIDTH.showValue(map), is("NONE"));
+    Prop.LINE_WIDTH.remove(map);
+    assertThat(Prop.LINE_WIDTH.optionalIntValue(map), is(79));
+    assertThat(Prop.LINE_WIDTH.showValue(map), is("SOME 79"));
+    assertThat(Prop.INLINE_PASS_COUNT.showValue(map), is("5"));
+
+    // A type may check a condition, and then a value that fails it is
+    // outside the type, and is refused in the same terms as a value of the
+    // wrong Java type.
+    assertThat(
+        Prop.LINE_WIDTH.setLenient(map, -1),
+        is(
+            "value for property 'lineWidth' must have type "
+                + "'(int check i => i >= 0) option'"));
+    assertThat(
+        Prop.STRING_FOLD.setLenient(map, 0),
+        is(
+            "value for property 'stringFold' must have type "
+                + "'(int check i => i > 0) option'"));
+    assertThat(Prop.STRING_FOLD.setLenient(map, 1), nullValue());
+    assertThat(Prop.STRING_FOLD.optionalIntValue(map), is(1));
+    assertThat(Prop.STRING_FOLD.isValid(0), is(false));
+    assertThat(Prop.STRING_FOLD.isValid(1), is(true));
+    Prop.STRING_FOLD.remove(map);
+
+    // An option property has no "int" value; it must be read as an option.
+    assertThat(
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> Prop.LINE_WIDTH.intValue(map))
+            .getMessage(),
+        is("property lineWidth is an option; use optionalIntValue"));
 
     // Setting leniently converts a value that the property can be read from.
     // A property of arbitrary precision takes an "int", and holds a
@@ -997,7 +1050,15 @@ public class UtilTest {
     // message rather than throwing, because "Sys.set" raises it as "Fail".
     assertThat(
         Prop.RANGE_MAX_LENGTH.setLenient(map, "many"),
-        is("value for property 'rangeMaxLength' must have type 'IntInf.int'"));
+        is(
+            "value for property 'rangeMaxLength' must have type "
+                + "'IntInf.int check i => i > 0'"));
+    assertThat(
+        Prop.RANGE_MAX_LENGTH.setLenient(map, 0),
+        is(
+            "value for property 'rangeMaxLength' must have type "
+                + "'IntInf.int check i => i > 0'"));
+    assertThat(Prop.RANGE_MAX_LENGTH.typeName(), is("IntInf.int"));
     assertThat(
         Prop.OUTPUT.setLenient(map, "nosuch"),
         is("value for property 'output' must be one of: 'CLASSIC', 'TABULAR'"));
@@ -1005,6 +1066,81 @@ public class UtilTest {
     // A refused value leaves the property as it was.
     assertThat(
         Prop.OUTPUT.enumValue(map, Prop.Output.class), is(Prop.Output.TABULAR));
+  }
+
+  /**
+   * Tests {@link Prop#setFromString}, which reads a value out of a string
+   * because the command line has nothing else to give it.
+   */
+  @Test
+  void testPropSetFromString() {
+    final Map<Prop, Object> map = new LinkedHashMap<>();
+
+    // A numeral sets a property of option type to SOME of that value, and
+    // "NONE" sets it to NONE. Both are strings on the command line, and
+    // neither would be accepted by "set", which expects a typed value.
+    Prop.LINE_WIDTH.setFromString(map, "80");
+    assertThat(Prop.LINE_WIDTH.optionalIntValue(map), is(80));
+    assertThat(Prop.LINE_WIDTH.showValue(map), is("SOME 80"));
+    Prop.LINE_WIDTH.setFromString(map, "NONE");
+    assertThat(Prop.LINE_WIDTH.optionalIntValue(map), nullValue());
+    assertThat(Prop.LINE_WIDTH.showValue(map), is("NONE"));
+
+    // Every kind of property is read from a string: an int that is not an
+    // option, a bool, an enum, and an IntInf.int too large for an int.
+    Prop.INLINE_PASS_COUNT.setFromString(map, "3");
+    assertThat(Prop.INLINE_PASS_COUNT.intValue(map), is(3));
+    Prop.MATCH_COVERAGE_ENABLED.setFromString(map, "false");
+    assertThat(Prop.MATCH_COVERAGE_ENABLED.booleanValue(map), is(false));
+    Prop.OUTPUT.setFromString(map, "tabular");
+    assertThat(
+        Prop.OUTPUT.enumValue(map, Prop.Output.class), is(Prop.Output.TABULAR));
+    Prop.RANGE_MAX_LENGTH.setFromString(map, "4722366482869645213696");
+    assertThat(
+        Prop.RANGE_MAX_LENGTH.bigIntegerValue(map),
+        is(BigInteger.ONE.shiftLeft(72)));
+
+    // A string that is not a value of the property's type is refused, in the
+    // same terms as a value of the wrong type given to "set". A caller that
+    // parsed the numeral itself would instead let a NumberFormatException
+    // escape.
+    assertThat(
+        assertThrows(
+                RuntimeException.class,
+                () -> Prop.LINE_WIDTH.setFromString(map, "abc"))
+            .getMessage(),
+        is(
+            "value for property 'lineWidth' must have type "
+                + "'(int check i => i >= 0) option'"));
+
+    // A condition the type checks is applied to a parsed value as to any
+    // other; "NONE" is how the command line asks for no value, not "-1".
+    assertThat(
+        assertThrows(
+                RuntimeException.class,
+                () -> Prop.LINE_WIDTH.setFromString(map, "-1"))
+            .getMessage(),
+        is(
+            "value for property 'lineWidth' must have type "
+                + "'(int check i => i >= 0) option'"));
+    assertThat(
+        assertThrows(
+                RuntimeException.class,
+                () -> Prop.OUTPUT.setFromString(map, "nosuch"))
+            .getMessage(),
+        is("value for property 'output' must be one of: 'CLASSIC', 'TABULAR'"));
+
+    // A property that is not an option has no NONE, and reads "NONE" as it
+    // reads any other string: here, as a numeral it cannot parse.
+    assertThat(
+        assertThrows(
+                RuntimeException.class,
+                () -> Prop.INLINE_PASS_COUNT.setFromString(map, "NONE"))
+            .getMessage(),
+        is("value for property 'inlinePassCount' must have type 'int'"));
+
+    // A refused value leaves the property as it was.
+    assertThat(Prop.INLINE_PASS_COUNT.intValue(map), is(3));
   }
 
   /**

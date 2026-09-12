@@ -21,9 +21,9 @@
  *)
 Sys.set ("lineWidth", 78);
 > val it = () : unit
-Sys.set ("printLength", 999);
+Sys.set ("printLength", NONE);
 > val it = () : unit
-Sys.set ("stringDepth", ~1);
+Sys.set ("stringDepth", NONE);
 > val it = () : unit
 
 Option;

@@ -20,9 +20,9 @@
  *)
 Sys.set ("lineWidth", 78);
 > val it = () : unit
-Sys.set ("printLength", 999);
+Sys.set ("printLength", NONE);
 > val it = () : unit
-Sys.set ("stringDepth", ~1);
+Sys.set ("stringDepth", NONE);
 > val it = () : unit
 Sys.set ("timeZone", "UTC");
 > val it = () : unit
@@ -42,8 +42,8 @@ Sys;
 >       deduceColorScheme:unit -> string, env:unit -> (string * string) list,
 >       file:{...}, parseTree:string -> string, plan:unit -> string,
 >       planEx:string -> string, set:string * 'a -> unit,
->       show:string -> string option,
->       showAll:unit -> (string * string option) list, unset:string -> unit}
+>       show:string -> string, showAll:unit -> (string * string) list,
+>       unset:string -> unit}
 
 (*) val colorSchemes : unit -> {...} list
 Sys.colorSchemes ();
@@ -169,7 +169,7 @@ from (name, t) in Sys.env ()
 > StringCvt      {dropl:forall 'a. (char -> bool) -> ('a -> (char * 'a) option) -> 'a -> 'a, padLeft:char -> int -> string -> string, padRight:char -> int -> string -> string, scanString:forall 'a 'b. (('a -> (char * 'a) option) -> 'a -> ('b * 'a) option) -> string -> 'b option, skipWS:forall 'a. ('a -> (char * 'a) option) -> 'a -> 'a, splitl:forall 'a. (char -> bool) -> ('a -> (char * 'a) option) -> 'a -> string * 'a, takel:forall 'a. (char -> bool) -> ('a -> (char * 'a) option) -> 'a -> string}
 > Subscript      exn
 > Sun            weekday
-> Sys            {clearEnv:unit -> unit, colorSchemes:unit -> {comment:string, constant:string, error:string, identifier:string, keyword:string, name:string, numeric:string, string:string, symbol:string, typeVar:string} list, deduceColorScheme:unit -> string, env:unit -> (string * string) list, file:{...}, parseTree:string -> string, plan:unit -> string, planEx:string -> string, set:forall 'a. string * 'a -> unit, show:string -> string option, showAll:unit -> (string * string option) list, unset:string -> unit}
+> Sys            {clearEnv:unit -> unit, colorSchemes:unit -> {comment:string, constant:string, error:string, identifier:string, keyword:string, name:string, numeric:string, string:string, symbol:string, typeVar:string} list, deduceColorScheme:unit -> string, env:unit -> (string * string) list, file:{...}, parseTree:string -> string, plan:unit -> string, planEx:string -> string, set:forall 'a. string * 'a -> unit, show:string -> string, showAll:unit -> (string * string) list, unset:string -> unit}
 > Thu            weekday
 > Time           {+:time * time -> time, -:time * time -> time, <:time * time -> bool, <=:time * time -> bool, >:time * time -> bool, >=:time * time -> bool, compare:time * time -> order, fmt:int -> time -> string, fromMicroseconds:int -> time, fromMilliseconds:int -> time, fromNanoseconds:int -> time, fromReal:real -> time, fromSeconds:int -> time, fromString:string -> time option, now:unit -> time, scan:forall 'a. ('a -> (char * 'a) option) -> 'a -> (time * 'a) option, toMicroseconds:time -> int, toMilliseconds:time -> int, toNanoseconds:time -> int, toReal:time -> real, toSeconds:time -> int, toString:time -> string, zeroTime:time}
 > Tue            weekday
@@ -248,8 +248,8 @@ from (name, t) in Sys.env ()
 > rev            forall 'a. 'a list -> 'a list
 > round          real -> int
 > set            forall 'a. string * 'a -> unit
-> show           string -> string option
-> showAll        unit -> (string * string option) list
+> show           string -> string
+> showAll        unit -> (string * string) list
 > size           string -> int
 > str            char -> string
 > substring      string * int * int -> string
@@ -351,63 +351,62 @@ Sys.planEx "0";
 Sys.planEx "-1";
 > val it = "val x = 1 + 2" : string
 
-(*) val show : string -> string option
+(*) val show : string -> string
 Sys.show;
-> val it = fn : string -> string option
+> val it = fn : string -> string
 show;
-> val it = fn : string -> string option
+> val it = fn : string -> string
 Sys.show "hybrid";
-> val it = SOME "false" : string option
+> val it = "false" : string
 Sys.set ("hybrid", true);
 > val it = () : unit
 Sys.show "hybrid";
-> val it = SOME "true" : string option
-Sys.show "optionalInt";
-> val it = NONE : string option
+> val it = "true" : string
+Sys.show "stringFold";
+> val it = "NONE" : string
 Sys.plan ();
-> val it = "apply(fnValue Sys.show, argCode constant(optionalInt))" : string
+> val it = "apply(fnValue Sys.show, argCode constant(stringFold))" : string
 
-(*) val showAll : unit -> string * string option list
+(*) val showAll : unit -> (string * string) list
 Sys.showAll;
-> val it = fn : unit -> (string * string option) list
+> val it = fn : unit -> (string * string) list
 showAll;
-> val it = fn : unit -> (string * string option) list
+> val it = fn : unit -> (string * string) list
 map
   (fn (p,v) =>
     (p, if p elem ["directory", "scriptDirectory", "banner", "productVersion"]
-      then SOME "?" else v))
+      then "?" else v))
   (Sys.showAll ());
 > 1                    2
-> -------------------- --------------------
+> -------------------- -------------------------
 > banner               ?
-> colorScheme
+> colorScheme          NONE
 > directory            ?
 > excludeStructures    ^Test$
 > hybrid               true
 > inlinePassCount      5
-> lineWidth            78
+> lineWidth            SOME 78
 > matchCoverageEnabled true
 > matchStrict          false
-> now                  2024-01-01T00:00:00Z
-> optionalInt
+> now                  SOME 2024-01-01T00:00:00Z
 > output               TABULAR
-> printDepth           5
-> printLength          999
+> printDepth           SOME 5
+> printLength          NONE
 > productName          morel-java
 > productVersion       ?
 > rangeMaxLength       16777215
 > relationalize        false
 > scriptDirectory      ?
-> stringDepth          -1
-> stringFold
-> terminalBackground
-> timeZone             UTC
+> stringDepth          NONE
+> stringFold           NONE
+> terminalBackground   NONE
+> timeZone             SOME UTC
 >
-> val it : (string * string option) list
+> val it : (string * string) list
 List.length (Sys.showAll ());
-> val it = 23 : int
+> val it = 22 : int
 List.length (showAll ());
-> val it = 23 : int
+> val it = 22 : int
 Sys.plan ();
 > val it =
 >   "apply(fnValue List.length, argCode apply(fnValue Sys.showAll, argCode constant([])))"
@@ -415,18 +414,14 @@ Sys.plan ();
 
 (*) Test new product properties (MOREL-319)
 Sys.show "productName";
-> val it = SOME "morel-java" : string option
+> val it = "morel-java" : string
 
 (*) Mask version number since it changes with each release
-case Sys.show "productVersion" of
-  SOME v => String.size v > 0
-| NONE => false;
+String.size (Sys.show "productVersion") > 0;
 > val it = true : bool
 
 (*) Mask banner since it includes version and Java version
-case Sys.show "banner" of
-  SOME v => String.isPrefix "morel-java version " v
-| NONE => false;
+String.isPrefix "morel-java version " (Sys.show "banner");
 > val it = true : bool
 
 (*) Verify new properties are in showAll
@@ -445,20 +440,20 @@ case List.find (fn (p, v) => p = "banner") (Sys.showAll ()) of
 | NONE => false;
 > val it = true : bool
 
-Sys.set ("optionalInt", ~5);
+Sys.set ("stringFold", 5);
 > val it = () : unit
-Sys.show "optionalInt";
-> val it = SOME "-5" : string option
+Sys.show "stringFold";
+> val it = "SOME 5" : string
 
 (*) val unset : string -> unit
 Sys.unset;
 > val it = fn : string -> unit
 Sys.unset "hybrid";
 > val it = () : unit
-Sys.unset "optionalInt";
+Sys.unset "stringFold";
 > val it = () : unit
 Sys.plan ();
-> val it = "apply(fnValue Sys.unset, argCode constant(optionalInt))" : string
+> val it = "apply(fnValue Sys.unset, argCode constant(stringFold))" : string
 
 (* [MOREL-458] "set" of an unknown property raises "Fail", rather than
  * throwing an internal error. *)
@@ -481,9 +476,9 @@ Sys.show "bogusProp";
 (* Property names are case-sensitive. A property has two names, the
  * camelCase name and the UPPER_CASE name; other spellings are unknown. *)
 Sys.show "printLength";
-> val it = SOME "999" : string option
+> val it = "NONE" : string
 Sys.show "PRINT_LENGTH";
-> val it = SOME "999" : string option
+> val it = "NONE" : string
 Sys.show "printlength";
 > uncaught exception Fail [Fail: show: unknown property 'printlength']
 >   raised at: stdIn:1.1-1.23
@@ -493,33 +488,140 @@ Sys.show "printlength";
 Sys.set ("printLength", 3);
 > val it = () : unit
 Sys.show "printLength";
-> val it = SOME "3" : string option
+> val it = "SOME 3" : string
 Sys.unset "printLength";
 > val it = () : unit
 Sys.show "printLength";
-> val it = SOME "12" : string option
+> val it = "SOME 12" : string
 
 (*) Ditto the other properties that control how the shell prints values.
 Sys.set ("printDepth", 2);
 > val it = () : unit
 Sys.show "printDepth";
-> val it = SOME "2" : string option
+> val it = "SOME 2" : string
 Sys.set ("output", "tabular");
 > val it = () : unit
 Sys.show "output";
-> val it = SOME "TABULAR" : string option
-Sys.set ("stringDepth", 4);
+> val it = "TABULAR" : string
+Sys.set ("stringDepth", 40);
 > val it = () : unit
 Sys.show "stringDepth";
-> val it = SOME "4" : string option
+> val it = "SOME 40" : string
 Sys.set ("matchStrict", true);
 > val it = () : unit
 Sys.show "matchStrict";
-> val it = SOME "true" : string option
+> val it = "true" : string
 Sys.set ("lineWidth", 40);
 > val it = () : unit
 Sys.show "lineWidth";
-> val it = SOME "40" : string option
+> val it = "SOME 40" : string
+
+(* The properties that control printing are options, and NONE means "no
+ * limit": no ellipsis, no truncation, no line wrapping. A bare value
+ * means the same as "SOME" of it. *)
+Sys.set ("printLength", SOME 3);
+> val it = () : unit
+List.tabulate (10, fn i => i);
+> val it = [0,1,2,...] : int list
+Sys.set ("printLength", NONE);
+> val it = () : unit
+List.tabulate (10, fn i => i);
+> val it = [0,1,2,3,4,5,6,7,8,9]
+>   : int list
+
+(*) Ditto strings, which "stringDepth" truncates.
+Sys.set ("stringDepth", SOME 4);
+> val it = () : unit
+"abcdefghij";
+> val it = "abcd#" : string
+Sys.set ("stringDepth", NONE);
+> val it = () : unit
+"abcdefghij";
+> val it = "abcdefghij" : string
+
+(*) Ditto nesting, which "printDepth" elides.
+Sys.set ("printDepth", SOME 2);
+> val it = () : unit
+SOME (SOME (SOME (SOME 1)));
+> val it = SOME (SOME (#))
+>   : int option option option option
+Sys.set ("printDepth", NONE);
+> val it = () : unit
+SOME (SOME (SOME (SOME 1)));
+> val it = SOME (SOME (SOME (SOME 1)))
+>   : int option option option option
+
+(* "unset" restores the default, which is a "SOME" for each of them; NONE
+ * does not. *)
+Sys.unset "printLength";
+> val it = () : unit
+Sys.unset "stringDepth";
+> val it = () : unit
+Sys.unset "printDepth";
+> val it = () : unit
+Sys.show "printLength";
+> val it = "SOME 12" : string
+Sys.show "stringDepth";
+> val it = "SOME 70" : string
+Sys.show "printDepth";
+> val it = "SOME 5" : string
+Sys.show "lineWidth";
+> val it = "SOME 40" : string
+
+(* "set" takes a bare value or a "SOME" for a property of option type;
+ * what the "SOME" wraps must still be a value of the type. *)
+Sys.set ("printDepth", SOME 3);
+> val it = () : unit
+Sys.show "printDepth";
+> val it = "SOME 3" : string
+Sys.set ("printDepth", SOME "three");
+> uncaught exception Fail [Fail: value for property 'printDepth' must have type '(int check i => i >= 0) option']
+>   raised at: stdIn:1.1-1.37
+Sys.show "printDepth";
+> val it = "SOME 3" : string
+Sys.unset "printDepth";
+> val it = () : unit
+
+(* A negative value used to be how a property said "no limit". NONE says
+ * it now, so a negative value says nothing, and is refused. *)
+Sys.set ("printLength", ~1);
+> uncaught exception Fail [Fail: value for property 'printLength' must have type '(int check i => i >= 0) option']
+>   raised at: stdIn:1.1-1.28
+Sys.set ("stringDepth", ~1);
+> uncaught exception Fail [Fail: value for property 'stringDepth' must have type '(int check i => i >= 0) option']
+>   raised at: stdIn:1.1-1.28
+Sys.set ("lineWidth", ~1);
+> uncaught exception Fail [Fail: value for property 'lineWidth' must have type '(int check i => i >= 0) option']
+>   raised at: stdIn:1.1-1.26
+Sys.set ("printDepth", ~1);
+> uncaught exception Fail [Fail: value for property 'printDepth' must have type '(int check i => i >= 0) option']
+>   raised at: stdIn:1.1-1.27
+Sys.show "printLength";
+> val it = "SOME 12" : string
+
+(* "rangeMaxLength" and "inlinePassCount" are not options: they bound a
+ * resource and a number of passes, and have no unlimited state. A bound of
+ * zero or less would leave nothing to expand, so "rangeMaxLength" must be
+ * positive. *)
+Sys.show "inlinePassCount";
+> val it = "5" : string
+Sys.set ("inlinePassCount", NONE);
+> uncaught exception Fail [Fail: value for property 'inlinePassCount' must have type 'int']
+>   raised at: stdIn:1.1-1.34
+Sys.set ("inlinePassCount", SOME 3);
+> uncaught exception Fail [Fail: value for property 'inlinePassCount' must have type 'int']
+>   raised at: stdIn:1.1-1.36
+
+Sys.show "rangeMaxLength";
+> val it = "16777215" : string
+Sys.set ("rangeMaxLength", 0);
+> uncaught exception Fail [Fail: value for property 'rangeMaxLength' must have type 'IntInf.int check i => i > 0']
+>   raised at: stdIn:1.1-1.30
+Sys.set ("rangeMaxLength", ~1);
+> uncaught exception Fail [Fail: value for property 'rangeMaxLength' must have type 'IntInf.int check i => i > 0']
+>   raised at: stdIn:1.1-1.31
+Sys.show "rangeMaxLength";
+> val it = "16777215" : string
 
 (*) Restore the values that this script set at the start.
 Sys.unset "printDepth";
@@ -528,9 +630,9 @@ Sys.unset "output";
 > val it = () : unit
 Sys.unset "matchStrict";
 > val it = () : unit
-Sys.set ("printLength", 999);
+Sys.set ("printLength", NONE);
 > val it = () : unit
-Sys.set ("stringDepth", ~1);
+Sys.set ("stringDepth", NONE);
 > val it = () : unit
 Sys.set ("lineWidth", 78);
 > val it = () : unit

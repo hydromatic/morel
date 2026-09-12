@@ -87,22 +87,22 @@ Sys.set ("output", "bad");
 Sys.unset "output";
 > val it = () : unit
 Sys.show "output";
-> val it = SOME "CLASSIC" : string option
+> val it = "CLASSIC" : string
 
 (*) After you unset a property with a default value, it reverts to the default.
-Sys.show "optionalInt";
-> val it = NONE : string option
-Sys.set ("optionalInt", "foo");
-> uncaught exception Fail [Fail: value for property 'optionalInt' must have type 'int']
->   raised at: stdIn:1.1-1.31
-Sys.set ("optionalInt", 12);
+Sys.show "stringFold";
+> val it = "NONE" : string
+Sys.set ("stringFold", "foo");
+> uncaught exception Fail [Fail: value for property 'stringFold' must have type '(int check i => i > 0) option']
+>   raised at: stdIn:1.1-1.30
+Sys.set ("stringFold", 12);
 > val it = () : unit
-Sys.show "optionalInt";
-> val it = SOME "12" : string option
-Sys.unset "optionalInt";
+Sys.show "stringFold";
+> val it = "SOME 12" : string
+Sys.unset "stringFold";
 > val it = () : unit
-Sys.show "optionalInt";
-> val it = NONE : string option
+Sys.show "stringFold";
+> val it = "NONE" : string
 
 (* A value of the wrong type is refused, and the message names the property
  * and the Morel type the property will take. It does not name the value it
@@ -114,7 +114,7 @@ Sys.set ("scriptDirectory", true);
 > uncaught exception Fail [Fail: value for property 'scriptDirectory' must have type 'file']
 >   raised at: stdIn:1.1-1.34
 Sys.set ("now", 0);
-> uncaught exception Fail [Fail: value for property 'now' must have type 'string']
+> uncaught exception Fail [Fail: value for property 'now' must have type 'string option']
 >   raised at: stdIn:1.1-1.19
 
 (* "rangeMaxLength" takes an "IntInf.int": an "int", or a numeral in a
@@ -123,10 +123,10 @@ Sys.set ("now", 0);
 Sys.set ("rangeMaxLength", "4722366482869645213696");
 > val it = () : unit
 Sys.set ("rangeMaxLength", "banana");
-> uncaught exception Fail [Fail: value for property 'rangeMaxLength' must have type 'IntInf.int']
+> uncaught exception Fail [Fail: value for property 'rangeMaxLength' must have type 'IntInf.int check i => i > 0']
 >   raised at: stdIn:1.1-1.37
 Sys.set ("rangeMaxLength", true);
-> uncaught exception Fail [Fail: value for property 'rangeMaxLength' must have type 'IntInf.int']
+> uncaught exception Fail [Fail: value for property 'rangeMaxLength' must have type 'IntInf.int check i => i > 0']
 >   raised at: stdIn:1.1-1.33
 Sys.unset "rangeMaxLength";
 > val it = () : unit

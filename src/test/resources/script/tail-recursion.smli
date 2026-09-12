@@ -19,7 +19,7 @@
  * Tests for tail-call optimization (TCO).
  * See https://github.com/hydromatic/morel/issues/151.
  *)
-Sys.set ("printLength", ~1);
+Sys.set ("printLength", NONE);
 > val it = () : unit
 
 (* Simple tail recursion ---------------------------------------------

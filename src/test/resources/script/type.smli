@@ -1543,7 +1543,7 @@ factorize 84;
 factorize 101;
 > val it = [101] : int list
 
-Sys.set ("stringDepth", 1000000);
+Sys.set ("stringDepth", NONE);
 > val it = () : unit
 
 (* Generates a program of length 'n', to stress the unifier. *)

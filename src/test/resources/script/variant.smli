@@ -19,11 +19,11 @@
  * Variant structure tests - universal value representation for
  * embedded language interoperability
  *)
-Sys.set ("printDepth", ~1);
+Sys.set ("printDepth", NONE);
 > val it = () : unit
 Sys.set ("lineWidth", 78);
 > val it = () : unit
-Sys.set ("stringDepth", ~1);
+Sys.set ("stringDepth", NONE);
 > val it = () : unit
 
 (*) Test the variant datatype constructors

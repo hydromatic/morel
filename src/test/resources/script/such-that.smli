@@ -26,7 +26,7 @@
  *)
 Sys.set ("output", "tabular");
 > val it = () : unit
-Sys.set ("stringDepth", ~1);
+Sys.set ("stringDepth", NONE);
 > val it = () : unit
 
 (* Convert predicates into ranges --------------------------------- *)

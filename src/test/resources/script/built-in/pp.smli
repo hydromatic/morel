@@ -19,7 +19,7 @@
  * Unit tests for the built-in `PP` structure, a Wadler-Leijen
  * pretty-printer.
  *)
-Sys.set ("printLength", 999);
+Sys.set ("printLength", NONE);
 > val it = () : unit
 
 (*) The whole structure.

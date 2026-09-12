@@ -4559,19 +4559,17 @@ public enum BuiltIn {
           ts.forallType(
               1, h -> ts.fnType(ts.tupleType(STRING, h.get(0)), UNIT))),
 
-  /** Function "Sys.show", aka "show", of type "string &rarr; string option". */
-  SYS_SHOW("Sys", "show", ts -> ts.fnType(STRING, ts.option(STRING))),
+  /** Function "Sys.show", aka "show", of type "string &rarr; string". */
+  SYS_SHOW("Sys", "show", ts -> ts.fnType(STRING, STRING)),
 
   /**
    * Function "Sys.showAll", aka "showAll", of type "unit &rarr; (string *
-   * string option) list".
+   * string) list".
    */
   SYS_SHOW_ALL(
       "Sys",
       "showAll",
-      ts ->
-          ts.fnType(
-              UNIT, ts.listType(ts.tupleType(STRING, ts.option(STRING))))),
+      ts -> ts.fnType(UNIT, ts.listType(ts.tupleType(STRING, STRING)))),
 
   /** Function "Sys.unset", aka "unset", of type "string &rarr; unit". */
   SYS_UNSET("Sys", "unset", ts -> ts.fnType(STRING, UNIT)),

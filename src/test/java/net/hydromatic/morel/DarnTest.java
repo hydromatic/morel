@@ -839,7 +839,7 @@ public class DarnTest {
     List<String> input =
         Arrays.asList(
             "<!-- morel silent",
-            "Sys.set (\"printLength\", ~1);",
+            "Sys.set (\"printLength\", NONE);",
             "> val it = () : unit",
             "-->");
     Darn.ProcessResult result = Darn.processLines(input, KERNEL);

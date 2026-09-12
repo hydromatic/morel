@@ -55,15 +55,14 @@ public enum Prop {
    */
   BANNER(
       "banner",
-      String.class,
-      true,
+      Kind.STRING,
       JavaVersion.banner(null),
       "Startup banner message displayed when launching the Morel " //
           + "shell."),
 
   /**
-   * String property "colorScheme" selects the color scheme used for syntax
-   * highlighting in the shell.
+   * String option property "colorScheme" selects the color scheme used for
+   * syntax highlighting in the shell.
    *
    * <p>Its value is a built-in scheme ("dark", "light" or "none") or the name
    * of a user-defined scheme. If unset (the default), the scheme is deduced
@@ -71,8 +70,7 @@ public enum Prop {
    */
   COLOR_SCHEME(
       "colorScheme",
-      String.class,
-      false,
+      Kind.STRING_OPTION,
       null,
       "Color scheme for syntax highlighting in the shell: a built-in scheme "
           + "('dark', 'light' or 'none'), or a user-defined scheme. If unset, "
@@ -88,8 +86,7 @@ public enum Prop {
    */
   DIRECTORY(
       "directory",
-      File.class,
-      true,
+      Kind.FILE,
       new File(""),
       "Path of the directory that the 'file' variable maps to in " //
           + "this connection."),
@@ -103,8 +100,7 @@ public enum Prop {
    */
   EXCLUDE_STRUCTURES(
       "excludeStructures",
-      String.class,
-      true,
+      Kind.STRING,
       "^Test$",
       "Regular expression that controls which built-in structures are excluded "
           + "from the environment."),
@@ -116,33 +112,28 @@ public enum Prop {
    */
   HYBRID(
       "hybrid",
-      Boolean.class,
-      true,
+      Kind.BOOL,
       false,
       "Whether to try to create a hybrid execution plan that uses Apache Calcite relational algebra."),
 
   /** Maximum number of inlining passes. */
   INLINE_PASS_COUNT(
-      "inlinePassCount",
-      Integer.class,
-      true,
-      5,
-      "Maximum number of inlining passes."),
+      "inlinePassCount", Kind.INT, 5, "Maximum number of inlining passes."),
 
   /**
-   * Integer property "lineWidth" controls printing. The length at which lines
-   * are wrapped.
+   * Integer option property "lineWidth" controls printing. The length at which
+   * lines are wrapped; {@code NONE} means that lines are not wrapped.
    *
    * <p>It is based upon the "linewidth" property in the <a
    * href="https://www.smlnj.org/doc/Compiler/pages/printcontrol.html">PRINTCONTROL
-   * signature</a> of the Standard Basis Library. Default is 79.
+   * signature</a> of the Standard Basis Library. Default is {@code SOME 79}.
    */
   LINE_WIDTH(
       "lineWidth",
-      Integer.class,
-      true,
+      Kind.NON_NEGATIVE_INT_OPTION,
       79,
-      "When printing, the length at which lines are wrapped."),
+      "When printing, the length at which lines are wrapped. Must not be "
+          + "negative; NONE means that lines are not wrapped."),
 
   /**
    * Boolean property "matchCoverageEnabled" controls whether to check the
@@ -153,8 +144,7 @@ public enum Prop {
    */
   MATCH_COVERAGE_ENABLED(
       "matchCoverageEnabled",
-      Boolean.class,
-      true,
+      Kind.BOOL,
       true,
       "Whether to check whether patterns are exhaustive and/or redundant."),
 
@@ -167,28 +157,23 @@ public enum Prop {
    */
   MATCH_STRICT(
       "matchStrict",
-      Boolean.class,
-      true,
+      Kind.BOOL,
       false,
       "Whether the script-test harness compares output verbatim, rather than "
           + "modulo whitespace and bag-element order."),
 
   /**
-   * String property "now" overrides the current time returned by {@code
+   * String option property "now" overrides the current time returned by {@code
    * Time.now()} and used by {@code Date.localOffset()}. Value is an ISO-8601
    * instant string (e.g. {@code "2024-01-01T00:00:00Z"}). If not set, the
    * system clock is used.
    */
   NOW(
       "now",
-      String.class,
-      false,
+      Kind.STRING_OPTION,
       null,
       "Overrides the current time. Value is an ISO-8601 string (e.g. "
           + "'2024-01-01T00:00:00Z'). If not set, the system clock is used."),
-
-  /** Integer property "optionalInt" is for testing. Default is null. */
-  OPTIONAL_INT("optionalInt", Integer.class, false, null, "For testing."),
 
   /**
    * String property "output" controls how values are printed in the shell.
@@ -196,42 +181,44 @@ public enum Prop {
    */
   OUTPUT(
       "output",
-      Output.class,
-      true,
+      Kind.OUTPUT_ENUM,
       Output.CLASSIC,
       "How values should be formatted. \"classic\" (the default) prints values in a compact nested format; \"tabular\" prints values in a table if their type is a list of records."),
 
   /**
-   * Integer property "printDepth" controls printing. The depth of nesting of
-   * recursive data structure at which ellipsis begins.
+   * Integer option property "printDepth" controls printing. The depth of
+   * nesting of recursive data structure at which ellipsis begins.
    *
    * <p>It is based upon the "printDepth" property in the <a
    * href="https://www.smlnj.org/doc/Compiler/pages/printcontrol.html">PRINTCONTROL
-   * signature</a> of the Standard Basis Library. Default is 5.
+   * signature</a> of the Standard Basis Library. Default is {@code SOME 5};
+   * {@code NONE} means that values are printed in full.
    */
   PRINT_DEPTH(
       "printDepth",
-      Integer.class,
-      true,
+      Kind.NON_NEGATIVE_INT_OPTION,
       5,
-      "When printing, the depth of nesting of recursive data structure at which ellipsis begins."),
+      "When printing, the depth of nesting of recursive data structure at "
+          + "which ellipsis begins. Must not be negative; NONE means that "
+          + "values are printed in full."),
 
   /**
-   * Integer property "printLength" controls printing. The length of lists at
-   * which ellipsis begins.
+   * Integer option property "printLength" controls printing. The length of
+   * lists at which ellipsis begins.
    *
    * <p>It is based upon the "printLength" property in the <a
    * href="https://www.smlnj.org/doc/Compiler/pages/printcontrol.html">PRINTCONTROL
    * signature</a> of the Standard Basis Library.
    *
-   * <p>Default is 12.
+   * <p>Default is {@code SOME 12}; {@code NONE} means that lists are printed in
+   * full.
    */
   PRINT_LENGTH(
       "printLength",
-      Integer.class,
-      true,
+      Kind.NON_NEGATIVE_INT_OPTION,
       12,
-      "When printing, the length of lists at which ellipsis begins."),
+      "When printing, the length of lists at which ellipsis begins. Must "
+          + "not be negative; NONE means that lists are printed in full."),
 
   /**
    * String property "productName" is the name of the Morel product.
@@ -241,8 +228,7 @@ public enum Prop {
    */
   PRODUCT_NAME(
       "productName",
-      String.class,
-      true,
+      Kind.STRING,
       JavaVersion.MOREL_PRODUCT,
       "Name of the Morel product."),
 
@@ -254,8 +240,7 @@ public enum Prop {
    */
   PRODUCT_VERSION(
       "productVersion",
-      String.class,
-      true,
+      Kind.STRING,
       JavaVersion.MOREL_VERSION.toString(),
       "Current version of Morel."),
 
@@ -276,10 +261,10 @@ public enum Prop {
    */
   RANGE_MAX_LENGTH(
       "rangeMaxLength",
-      BigInteger.class,
-      true,
+      Kind.POSITIVE_INT_INF,
       BigInteger.ONE.shiftLeft(24).subtract(BigInteger.ONE),
-      "Largest number of values that expanding a range may produce."),
+      "Largest number of values that expanding a range may produce. Must be "
+          + "positive."),
 
   /**
    * Boolean property "relationalize" is whether to convert to relational
@@ -287,8 +272,7 @@ public enum Prop {
    */
   RELATIONALIZE(
       "relationalize",
-      Boolean.class,
-      true,
+      Kind.BOOL,
       false,
       "Whether to convert to relational algebra."),
 
@@ -299,75 +283,73 @@ public enum Prop {
    */
   SCRIPT_DIRECTORY(
       "scriptDirectory",
-      File.class,
-      true,
+      Kind.FILE,
       new File(""),
       "Path of the directory where the 'use' command looks for scripts. "
           + "When running a script, it is generally set to the directory that "
           + "contains the script."),
 
   /**
-   * Integer property "stringDepth" is the length of strings at which ellipsis
-   * begins.
+   * Integer option property "stringDepth" is the length of strings at which
+   * ellipsis begins.
    *
    * <p>It is based upon the "stringDepth" property in the <a
    * href="https://www.smlnj.org/doc/Compiler/pages/printcontrol.html">PRINTCONTROL
-   * signature</a> of the Standard Basis Library. Default is 70.
+   * signature</a> of the Standard Basis Library. Default is {@code SOME 70};
+   * {@code NONE} means that strings are printed in full.
    */
   STRING_DEPTH(
       "stringDepth",
-      Integer.class,
-      true,
+      Kind.NON_NEGATIVE_INT_OPTION,
       70,
-      "When printing, the length of strings at which ellipsis begins."),
+      "When printing, the length of strings at which ellipsis begins. Must "
+          + "not be negative; NONE means that strings are printed in "
+          + "full."),
 
   /**
-   * Integer property "stringFold" controls how tabular mode renders long
+   * Integer option property "stringFold" controls how tabular mode renders long
    * strings. When set, strings longer than this value are folded across
-   * multiple lines, breaking at word boundaries when possible. Legal values are
-   * 1 or greater. If not set (the default), folding is disabled.
+   * multiple lines, breaking at word boundaries when possible. The value must
+   * be positive; {@code NONE}, the default, disables folding.
    */
   STRING_FOLD(
       "stringFold",
-      Integer.class,
-      false,
+      Kind.POSITIVE_INT_OPTION,
       null,
       "In tabular mode, the column width at which long strings are folded "
-          + "across multiple lines. If not set, folding is disabled. "
-          + "Legal values are 1 or greater."),
+          + "across multiple lines. Must be positive; NONE disables "
+          + "folding."),
 
   /**
-   * String property "terminalBackground" is the terminal's background color, of
-   * the form {@code "rgb:RRRR/GGGG/BBBB"} (each channel 1 to 4 hexadecimal
-   * digits). The shell sets it at startup by querying the terminal; it is used
-   * to deduce the color scheme when {@code colorScheme} is unset.
+   * String option property "terminalBackground" is the terminal's background
+   * color, of the form {@code "rgb:RRRR/GGGG/BBBB"} (each channel 1 to 4
+   * hexadecimal digits). The shell sets it at startup by querying the terminal;
+   * it is used to deduce the color scheme when {@code colorScheme} is unset.
    */
   TERMINAL_BACKGROUND(
       "terminalBackground",
-      String.class,
-      false,
+      Kind.STRING_OPTION,
       null,
       "The terminal's background color, of the form 'rgb:RRRR/GGGG/BBBB'. Set "
           + "by the shell at startup; used to deduce the color scheme when "
           + "'colorScheme' is unset."),
 
   /**
-   * String property "timeZone" overrides the local timezone used by {@code
-   * Date.fromTimeLocal()}, {@code Date.localOffset()}, and {@code Date.date}
-   * when {@code offset=NONE}. Value is a timezone ID (e.g. {@code "UTC"} or
-   * {@code "America/New_York"}). If not set, the JVM default timezone is used.
+   * String option property "timeZone" overrides the local timezone used by
+   * {@code Date.fromTimeLocal()}, {@code Date.localOffset()}, and {@code
+   * Date.date} when {@code offset=NONE}. Value is a timezone ID (e.g. {@code
+   * "UTC"} or {@code "America/New_York"}). If not set, the JVM default timezone
+   * is used.
    */
   TIME_ZONE(
       "timeZone",
-      String.class,
-      false,
+      Kind.STRING_OPTION,
       null,
       "Overrides the local timezone. Value is a timezone ID (e.g. 'UTC' or "
           + "'America/New_York'). If not set, the JVM default timezone is used.");
 
   public final String camelName;
-  public final Class<?> type;
-  private final boolean required;
+  private final Kind kind;
   private final @Nullable Object defaultValue;
   public final String description;
 
@@ -397,13 +379,11 @@ public enum Prop {
 
   Prop(
       String camelName,
-      Class<?> type,
-      boolean required,
+      Kind kind,
       @Nullable Object defaultValue,
       String description) {
     this.camelName = camelName;
-    this.type = type;
-    this.required = required;
+    this.kind = kind;
     this.defaultValue = defaultValue;
     this.description = description;
     checkArgument(
@@ -411,8 +391,10 @@ public enum Prop {
             .to(CaseFormat.UPPER_UNDERSCORE, camelName)
             .equals(name()));
     if (defaultValue == null) {
+      // Every property has a value. A property whose default is null is of
+      // option type, and its default value is NONE.
       checkArgument(
-          !required, "required property %s must have default value", camelName);
+          kind.option, "property %s must have a default value", camelName);
     } else {
       checkArgument(isValid(defaultValue));
     }
@@ -428,18 +410,14 @@ public enum Prop {
    * conversions if {@code lenient}.
    */
   public boolean isValid(Object value, boolean lenient) {
-    return isPropertyType(type)
-        && (type.isInstance(value) || lenient && convert(value) != null);
-  }
-
-  /** Returns whether a property may have a given type. */
-  private static boolean isPropertyType(Class<?> type) {
-    return type == BigInteger.class
-        || type == Boolean.class
-        || type == File.class
-        || type == Integer.class
-        || type == String.class
-        || type.isEnum();
+    if (!kind.javaType.isInstance(value)) {
+      final @Nullable Object converted = lenient ? convert(value) : null;
+      if (converted == null) {
+        return false;
+      }
+      value = converted;
+    }
+    return kind.checks(value);
   }
 
   /**
@@ -448,11 +426,11 @@ public enum Prop {
    */
   @SuppressWarnings({"unchecked", "rawtypes"})
   private @Nullable Object convert(Object value) {
-    if (type.isEnum() && value instanceof String) {
+    if (kind.javaType.isEnum() && value instanceof String) {
       final String name = ((String) value).toUpperCase(Locale.ROOT);
-      return Enums.getIfPresent((Class<Enum>) type, name).orNull();
+      return Enums.getIfPresent((Class<Enum>) kind.javaType, name).orNull();
     }
-    if (type == BigInteger.class) {
+    if (kind.javaType == BigInteger.class) {
       if (value instanceof Integer) {
         return BigInteger.valueOf((Integer) value);
       }
@@ -468,6 +446,43 @@ public enum Prop {
   }
 
   /**
+   * Reads a value of this property's type from a string, as the command line
+   * writes it; null if the string is not one.
+   *
+   * <p>This is a wider conversion than {@link #convert}, which serves {@code
+   * Sys.set}. A value from a Morel program already has a type, and a string
+   * there is a string; a value from the command line is only ever a string, and
+   * every type must be read out of one.
+   */
+  private @Nullable Object parse(String value) {
+    if (kind.javaType == String.class) {
+      return value;
+    }
+    if (kind.javaType == Boolean.class) {
+      switch (value) {
+        case "true":
+          return Boolean.TRUE;
+        case "false":
+          return Boolean.FALSE;
+        default:
+          return null;
+      }
+    }
+    if (kind.javaType == File.class) {
+      return new File(value);
+    }
+    if (kind.javaType == Integer.class) {
+      try {
+        return Integer.valueOf(value);
+      } catch (NumberFormatException e) {
+        return null;
+      }
+    }
+    // An enum and an IntInf.int are read from a string already.
+    return convert(value);
+  }
+
+  /**
    * Returns the message to give for a value this property cannot take.
    *
    * <p>The message names the property, and describes what it will take in
@@ -476,16 +491,74 @@ public enum Prop {
    * type.
    */
   private String invalidValueMessage() {
-    if (type.isEnum()) {
+    if (kind.javaType.isEnum()) {
       String values =
-          Arrays.stream((Enum[]) type.getEnumConstants())
+          Arrays.stream((Enum[]) kind.javaType.getEnumConstants())
               .map(Enum::name)
               .collect(Collectors.joining("', '", "'", "'"));
       return format(
           "value for property '%s' must be one of: %s", camelName, values);
     }
+    return mustHaveType();
+  }
+
+  /**
+   * Returns the message to give for a value outside this property's type. The
+   * message gives the type in full, conditions and all, because a value that
+   * fails a condition is as far outside the type as one of the wrong class.
+   */
+  private String mustHaveType() {
     return format(
-        "value for property '%s' must have type '%s'", camelName, typeName());
+        "value for property '%s' must have type '%s'",
+        camelName, kind.typeString);
+  }
+
+  /** Returned by {@link #match} for a value that the property will not take. */
+  private static final Object MISMATCH = new Object();
+
+  /** Returned by {@link #match} for {@code NONE}, which is stored as null. */
+  private static final Object NONE_VALUE = new Object();
+
+  /**
+   * Returns {@code value} as a value of this property's type, or {@link
+   * #MISMATCH} if it is not one.
+   *
+   * <p>For a property of option type, a bare {@code v} means {@code SOME v}, so
+   * that {@code Sys.set ("printDepth", 3)} and {@code Sys.set ("printDepth",
+   * SOME 3)} mean the same; {@code NONE} gives null; and {@code SOME v} gives
+   * {@code v}. A value that is none of those, such as a string where the
+   * property takes an {@code int}, is a mismatch, and so is {@code SOME v}
+   * where {@code v} is.
+   *
+   * <p>Morel writes {@code SOME v} as a two-element list, so a list whose head
+   * is {@code "SOME"} and whose tail is a value of the property's type reads as
+   * an option, whatever the caller meant. Telling the two apart would need the
+   * type of the argument, which {@code Sys.set} does not see.
+   */
+  private Object match(@Nullable Object value) {
+    if (value == null) {
+      return kind.option ? NONE_VALUE : MISMATCH;
+    }
+    if (kind.javaType.isInstance(value)) {
+      return value;
+    }
+    if (kind.option && value instanceof List) {
+      final List<?> list = (List<?>) value;
+      if (list.size() == 1 && "NONE".equals(list.get(0))) {
+        return NONE_VALUE;
+      }
+      if (list.size() == 2 && "SOME".equals(list.get(0))) {
+        final Object v = list.get(1);
+        return kind.javaType.isInstance(v) ? v : convertOrMismatch(v);
+      }
+    }
+    return convertOrMismatch(value);
+  }
+
+  /** Converts a value to this property's type, or returns {@link #MISMATCH}. */
+  private Object convertOrMismatch(Object value) {
+    final @Nullable Object converted = convert(value);
+    return converted == null ? MISMATCH : converted;
   }
 
   /**
@@ -495,18 +568,58 @@ public enum Prop {
     return BY_NAME.get(propName);
   }
 
-  /** Returns the value of a property. */
+  /**
+   * Returns the value of a property, or null if the property is an option that
+   * has been set to {@code NONE}.
+   *
+   * <p>A property whose value has been removed (by {@code Sys.unset}) reverts
+   * to its default value. That is a different thing from a property that has
+   * been set to {@code NONE}: {@code lineWidth}, for instance, defaults to
+   * {@code SOME 79}, and only an explicit {@code NONE} stops it wrapping.
+   */
   public @Nullable Object get(Map<Prop, Object> map) {
-    @Nullable Object o = map.get(this);
-    return o != null ? o : defaultValue;
+    return map.containsKey(this) ? map.get(this) : defaultValue;
+  }
+
+  /**
+   * Returns the value of an integer option property; null if it is {@code
+   * NONE}.
+   */
+  public @Nullable Integer optionalIntValue(Map<Prop, Object> map) {
+    checkType(Integer.class);
+    return (Integer) get(map);
+  }
+
+  /**
+   * Returns the value of an integer option property, or {@code ifNone} if it is
+   * {@code NONE}.
+   */
+  public int optionalIntValue(Map<Prop, Object> map, int ifNone) {
+    final @Nullable Integer value = optionalIntValue(map);
+    return value == null ? ifNone : value;
+  }
+
+  /**
+   * Returns the value of a property, spelled as a Morel value that {@code
+   * Sys.set} would accept: for an option property, {@code NONE} or {@code SOME
+   * v}; for any other property, the value alone.
+   *
+   * @see #typeName()
+   */
+  public String showValue(Map<Prop, Object> map) {
+    final @Nullable Object value = get(map);
+    if (!kind.option) {
+      return requireNonNull(value, camelName).toString();
+    }
+    return value == null ? "NONE" : "SOME " + value;
   }
 
   /** Throws if the requested type does not match this property's type. */
   private void checkType(Class<?> requestedType) {
     checkArgument(
-        type == requestedType,
+        kind.javaType == requestedType,
         "invalid type %s for property %s",
-        type,
+        kind,
         camelName);
   }
 
@@ -517,9 +630,19 @@ public enum Prop {
     return this.<Boolean>typeValue(o);
   }
 
-  /** Returns the value of an integer property. */
+  /**
+   * Returns the value of an integer property.
+   *
+   * <p>The property must not be of option type. Such a property has no {@code
+   * int} value when it is {@code NONE}, and so must be read with {@link
+   * #optionalIntValue(Map)} or {@link #optionalIntValue(Map, int)}.
+   */
   public int intValue(Map<Prop, Object> map) {
     checkType(Integer.class);
+    checkArgument(
+        !kind.option,
+        "property %s is an option; use optionalIntValue",
+        camelName);
     Object o = map.get(this);
     return this.<Integer>typeValue(o);
   }
@@ -546,8 +669,9 @@ public enum Prop {
   }
 
   /** Returns the value of an enum property. */
-  public <E extends Enum<E>> E enumValue(Map<Prop, Object> map, Class<E> type) {
-    checkType(type);
+  public <E extends Enum<E>> E enumValue(
+      Map<Prop, Object> map, Class<E> enumType) {
+    checkType(enumType);
     Object o = map.get(this);
     return this.typeValue(o);
   }
@@ -576,37 +700,52 @@ public enum Prop {
    */
   public @Nullable String setLenient(
       Map<Prop, Object> map, @Nullable Object value) {
-    if (value == null) {
-      if (required) {
-        return "property is required";
-      }
-      map.remove(this);
-      return null;
+    final Object matched = match(value);
+    if (matched == MISMATCH) {
+      return invalidValueMessage();
     }
-    if (!type.isInstance(value)) {
-      final @Nullable Object converted = convert(value);
-      if (converted == null) {
-        return invalidValueMessage();
-      }
-      value = converted;
+    final @Nullable Object v = matched == NONE_VALUE ? null : matched;
+    if (!kind.checks(v)) {
+      return invalidValueMessage();
     }
-    map.put(this, value);
+    // NONE is a value in its own right, distinct from the property having no
+    // value; see #get(Map).
+    map.put(this, v);
     return null;
   }
 
   /** Sets the value of a property. Checks that its type is valid. */
   public void set(Map<Prop, Object> map, @Nullable Object value) {
-    if (value == null) {
-      if (required) {
-        throw new RuntimeException("property is required");
-      }
-      map.remove(this);
-    } else {
-      if (!type.isInstance(value)) {
-        throw new RuntimeException(invalidValueMessage());
-      }
-      map.put(this, value);
+    final @Nullable String message = setLenient(map, value);
+    if (message != null) {
+      throw new RuntimeException(message);
     }
+  }
+
+  /**
+   * Sets the value of a property from a string, as the command line gives it:
+   * for a property of option type, {@code NONE} means no value, and any other
+   * string is read as a value of the property's type, so that {@code 50} sets a
+   * property of type {@code int option} to {@code SOME 50}.
+   *
+   * <p>Throws if the property will not take the value, as {@link #set} does.
+   * Use {@link #setLenient} where the value comes from a Morel program: there
+   * it already has a type, and {@code "NONE"} is the string.
+   *
+   * <p>A property of type {@code string option} therefore cannot be set to the
+   * string {@code "NONE"} from the command line. No such property needs to be.
+   */
+  public void setFromString(Map<Prop, Object> map, String value) {
+    if (kind.option && value.equals("NONE")) {
+      // NONE is a value in its own right; "setLenient" reads null as NONE.
+      set(map, null);
+      return;
+    }
+    final @Nullable Object parsed = parse(value);
+    if (parsed == null) {
+      throw new RuntimeException(invalidValueMessage());
+    }
+    set(map, parsed);
   }
 
   /**
@@ -617,40 +756,139 @@ public enum Prop {
     return map.remove(this);
   }
 
-  /** The type name, in printable form. */
+  /**
+   * The type name, in printable form, without any condition the type checks; a
+   * property whose type checks one says so in its {@link #description}.
+   */
   public String typeName() {
-    if (type.isEnum()) {
-      return "enum";
-    } else if (type == BigInteger.class) {
-      // Not "int"; the value may be larger than a Morel "int" can hold, and is
-      // then written as a numeral in a string. "IntInf.int" is the name the
-      // Standard Basis gives arbitrary-precision integers, though Morel has
-      // no such structure yet.
-      return "IntInf.int";
-    } else if (type == Integer.class) {
-      return "int";
-    } else if (type == String.class) {
-      return "string";
-    } else if (type == File.class) {
-      return "file";
-    } else if (type == Boolean.class) {
-      return "bool";
-    } else {
-      throw new IllegalArgumentException(type.getTypeName());
-    }
+    return kind.typeName;
   }
 
-  /** The default value, in printable form. */
-  public @Nullable Object defaultValue() {
-    switch (this) {
-      case BANNER:
-        return "Morel version ...";
-      case OUTPUT:
-        return requireNonNull((Output) defaultValue)
-            .name()
-            .toLowerCase(Locale.ROOT);
-      default:
-        return defaultValue;
+  /**
+   * The default value, in printable form. A property of option type whose
+   * default is {@code NONE} prints it as Morel writes it; one whose default is
+   * a value prints the value alone, without the {@code SOME}.
+   */
+  public Object defaultValue() {
+    final @Nullable Object value = rawDefaultValue();
+    return value == null ? "NONE" : value;
+  }
+
+  /**
+   * The default value, in printable form, ignoring whether this property is an
+   * option.
+   */
+  private @Nullable Object rawDefaultValue() {
+    // Do not switch on 'this'. In JDK 8, javac puts the switch maps of every
+    // enum switch in this file into one synthetic class, and so a switch here
+    // would make the switch in 'Kind.checks' -- which the constructor reaches,
+    // via 'isValid' -- call 'Prop.values()' before 'Prop' is initialized.
+    if (this == BANNER) {
+      return "Morel version ...";
+    }
+    if (this == OUTPUT) {
+      return requireNonNull((Output) defaultValue)
+          .name()
+          .toLowerCase(Locale.ROOT);
+    }
+    return defaultValue;
+  }
+
+  /**
+   * The type of a property.
+   *
+   * <p>Every property has a value; a property of option type may have the value
+   * {@code NONE}, which each such property reads as an absence of its own sort
+   * -- no limit, no folding, no override -- and which is a value to set,
+   * distinct from {@code Sys.unset} restoring the default.
+   *
+   * <p>A property of arbitrary precision has type {@code IntInf.int}, not
+   * {@code int}: its value may be larger than a Morel {@code int} can hold, and
+   * is then written as a numeral in a string. {@code IntInf} is the name the
+   * Standard Basis gives such integers, though Morel has no such structure yet.
+   */
+  private enum Kind {
+    // lint: sort until '##Kind' where '##[A-Z]'
+    BOOL("bool", Boolean.class),
+    FILE("file", File.class),
+    INT("int", Integer.class),
+    INT_OPTION("int option", Integer.class),
+    NON_NEGATIVE_INT_OPTION(
+        "(int check i => i >= 0) option", "int option", Integer.class),
+    OUTPUT_ENUM("enum", Output.class),
+    POSITIVE_INT_INF(
+        "IntInf.int check i => i > 0", "IntInf.int", BigInteger.class),
+    POSITIVE_INT_OPTION(
+        "(int check i => i > 0) option", "int option", Integer.class),
+    STRING("string", String.class),
+    STRING_OPTION("string option", String.class);
+
+    /** The type, as Morel writes it, including any condition it checks. */
+    final String typeString;
+
+    /**
+     * The type without its conditions: the name that a table of properties
+     * gives, where the conditions are prose.
+     */
+    final String typeName;
+
+    /**
+     * The Java class of the property's value; of the value inside the option,
+     * if {@link #option}.
+     */
+    final Class<?> javaType;
+
+    /** Whether the type is an option, and so admits {@code NONE}. */
+    final boolean option;
+
+    Kind(String typeName, Class<?> javaType) {
+      this(typeName, typeName, javaType);
+    }
+
+    Kind(String typeString, String typeName, Class<?> javaType) {
+      this.typeString = requireNonNull(typeString, "typeString");
+      this.typeName = requireNonNull(typeName, "typeName");
+      this.javaType = requireNonNull(javaType, "javaType");
+      this.option = typeName.endsWith(" option");
+      checkArgument(
+          javaType == BigInteger.class
+              || javaType == Boolean.class
+              || javaType == File.class
+              || javaType == Integer.class
+              || javaType == String.class
+              || javaType.isEnum(),
+          "not a property type: %s",
+          javaType);
+    }
+
+    /**
+     * Returns whether a value -- null for {@code NONE} -- satisfies the
+     * condition that this type checks.
+     *
+     * <p>A type that checks nothing admits every value of its Java class, and
+     * most do. The rest are listed here, so that a condition is stated once, in
+     * the type, however many properties have that type.
+     */
+    boolean checks(@Nullable Object value) {
+      switch (this) {
+        case NON_NEGATIVE_INT_OPTION:
+          return value == null || (Integer) value >= 0;
+        case POSITIVE_INT_INF:
+          // Not an option type, so the value is never NONE.
+          return ((BigInteger) requireNonNull(value)).signum() > 0;
+        case POSITIVE_INT_OPTION:
+          return value == null || (Integer) value > 0;
+        default:
+          if (this.typeString.contains(" check ")) {
+            throw new AssertionError("'check' requires 'case'");
+          }
+          return value != null || option;
+      }
+    }
+
+    @Override
+    public String toString() {
+      return typeString;
     }
   }
 

@@ -20,7 +20,7 @@
  *)
 Sys.set ("printLength", 64);
 > val it = () : unit
-Sys.set ("stringDepth", ~1);
+Sys.set ("stringDepth", NONE);
 > val it = () : unit
 
 (*) Query in Hybrid mode (100% Calcite)

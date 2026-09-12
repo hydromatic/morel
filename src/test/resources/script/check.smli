@@ -1411,7 +1411,7 @@ mustBeNat ~3;
 (* 'Sys.parseTree' parses a statement and prints the tree, so it shows which
  * parentheses survive: a condition should get the ones it needs, and no
  * others. *)
-Sys.set ("stringDepth", ~1);
+Sys.set ("stringDepth", NONE);
 > val it = () : unit
 
 (*) A condition on the whole type needs none.

@@ -5874,8 +5874,7 @@ public abstract class Codes {
     public Object apply(Stack stack, Object arg) {
       final String propName = (String) arg;
       final Prop prop = lookupProp("show", propName, pos);
-      final Object value = prop.get(stack.session.map);
-      return value == null ? OPTION_NONE : optionSome(value.toString());
+      return prop.showValue(stack.session.map);
     }
   }
 
@@ -5885,13 +5884,11 @@ public abstract class Codes {
         @Override
         public Object apply(Stack stack, Object arg) {
           final Session session = stack.session;
-          final ImmutableList.Builder<List<List>> list =
+          final ImmutableList.Builder<List<String>> list =
               ImmutableList.builder();
           for (Prop prop : Prop.BY_CAMEL_NAME) {
-            final @Nullable Object value = prop.get(session.map);
-            List option =
-                value == null ? OPTION_NONE : optionSome(value.toString());
-            list.add((List) ImmutableList.of(prop.camelName, option));
+            list.add(
+                ImmutableList.of(prop.camelName, prop.showValue(session.map)));
           }
           return list.build();
         }

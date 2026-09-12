@@ -62,8 +62,7 @@ public class Generation {
     checkArgument(libDir.isDirectory(), "lib directory not found: %s", libDir);
     final SignatureChecker checker = new SignatureChecker();
     final Map<String, StrDef> structures = new TreeMap<>();
-    final File @Nullable [] files =
-        libDir.listFiles((d, n) -> n.endsWith(".sig"));
+    final File[] files = libDir.listFiles((d, n) -> n.endsWith(".sig"));
     requireNonNull(files, "no .sig files under lib/");
     for (File f : files) {
       final String structure =
@@ -384,16 +383,19 @@ public class Generation {
   public static String fromKebab(String kebab) {
     final StringBuilder sb = new StringBuilder();
     for (String segment : kebab.split("-")) {
-      if (segment.isEmpty()) {
-        continue;
-      }
-      if (segment.equals("ieee")) {
-        sb.append("IEEE");
-      } else if (segment.equals("pp")) {
-        sb.append("PP");
-      } else {
-        sb.append(Character.toUpperCase(segment.charAt(0)));
-        sb.append(segment, 1, segment.length());
+      switch (segment) {
+        case "":
+          continue;
+        case "ieee":
+          sb.append("IEEE");
+          break;
+        case "pp":
+          sb.append("PP");
+          break;
+        default:
+          sb.append(Character.toUpperCase(segment.charAt(0)));
+          sb.append(segment, 1, segment.length());
+          break;
       }
     }
     return sb.toString();
@@ -517,10 +519,6 @@ public class Generation {
       this.method = method;
     }
 
-    String qualifiedName() {
-      return structure + '.' + name;
-    }
-
     /** Returns the name, stripping any disambiguation qualifier. */
     String canonicalName() {
       int comma = name.indexOf(", ");
@@ -576,10 +574,6 @@ public class Generation {
       this.description = requireNonNull(description, "description");
       this.implemented = implemented;
     }
-
-    String qualifiedName() {
-      return structure + '.' + name;
-    }
   }
 
   /** Exception definition. */
@@ -601,10 +595,6 @@ public class Generation {
       this.type = type;
       this.description = requireNonNull(description, "description");
       this.implemented = implemented;
-    }
-
-    String qualifiedName() {
-      return structure + '.' + name;
     }
   }
 
@@ -921,6 +911,17 @@ public class Generation {
       final List<Prop> propList =
           Ordering.from(Comparator.comparing((Prop p) -> p.name()))
               .sortedCopy(Arrays.asList(Prop.values()));
+      // Size each column to its widest value, so that the columns line up
+      // however long a property's name, type or default value is.
+      int nameWidth = "Name".length();
+      int typeWidth = "Type".length();
+      int defaultWidth = "Default".length();
+      for (Prop p : propList) {
+        nameWidth = Math.max(nameWidth, p.camelName.length());
+        typeWidth = Math.max(typeWidth, p.typeName().length());
+        defaultWidth =
+            Math.max(defaultWidth, p.defaultValue().toString().length());
+      }
       final Tabulator tabulator = new Tabulator(pw, 20, 6, 7, -1);
       tabulator.header("Name", "Type", "Default", "Description");
       for (Prop p : propList) {
@@ -934,25 +935,33 @@ public class Generation {
   /** Generates a Markdown table. */
   private static class Tabulator {
     private final PrintWriter pw;
-    private final String format;
+    private final StringBuilder sb = new StringBuilder();
     private final int[] widths;
 
     private Tabulator(PrintWriter pw, int... widths) {
       this.pw = pw;
       this.widths = widths;
-
-      final StringBuilder b = new StringBuilder("|");
-      for (int width : widths) {
-        b.append(" ")
-            .append(width < 0 ? "%s" : "%-" + width + "s")
-            .append(" |");
-      }
-      b.append("%n");
-      this.format = b.toString();
     }
 
     void row(@Nullable Object... values) {
-      pw.printf(format, values);
+      int target = 0;
+      for (int i = 0; i < widths.length; i++) {
+        sb.append("| ");
+        target += 2;
+        sb.append(values[i]);
+        final int width = widths[i];
+        if (width > 0) {
+          target += width;
+          while (sb.length() < target) {
+            sb.append(' ');
+          }
+        }
+        sb.append(" ");
+        ++target;
+      }
+      sb.append("|");
+      pw.println(sb);
+      sb.setLength(0);
     }
 
     void header(String... names) {

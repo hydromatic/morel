@@ -712,28 +712,27 @@ and unset using `Sys.unset name`.
 | Name                 | Type   | Default | Description |
 | -------------------- | ------ | ------- | ----------- |
 | banner               | string | Morel version ... | Startup banner message displayed when launching the Morel shell. |
-| colorScheme          | string | null    | Color scheme for syntax highlighting in the shell: a built-in scheme ('dark', 'light' or 'none'), or a user-defined scheme. If unset, the scheme is deduced from the environment. |
+| colorScheme          | string option | NONE | Color scheme for syntax highlighting in the shell: a built-in scheme ('dark', 'light' or 'none'), or a user-defined scheme. If unset, the scheme is deduced from the environment. |
 | directory            | file   |         | Path of the directory that the 'file' variable maps to in this connection. |
 | excludeStructures    | string | ^Test$  | Regular expression that controls which built-in structures are excluded from the environment. |
 | hybrid               | bool   | false   | Whether to try to create a hybrid execution plan that uses Apache Calcite relational algebra. |
 | inlinePassCount      | int    | 5       | Maximum number of inlining passes. |
-| lineWidth            | int    | 79      | When printing, the length at which lines are wrapped. |
+| lineWidth            | int option | 79  | When printing, the length at which lines are wrapped. Must not be negative; NONE means that lines are not wrapped. |
 | matchCoverageEnabled | bool   | true    | Whether to check whether patterns are exhaustive and/or redundant. |
 | matchStrict          | bool   | false   | Whether the script-test harness compares output verbatim, rather than modulo whitespace and bag-element order. |
-| now                  | string | null    | Overrides the current time. Value is an ISO-8601 string (e.g. '2024-01-01T00:00:00Z'). If not set, the system clock is used. |
-| optionalInt          | int    | null    | For testing. |
+| now                  | string option | NONE | Overrides the current time. Value is an ISO-8601 string (e.g. '2024-01-01T00:00:00Z'). If not set, the system clock is used. |
 | output               | enum   | classic | How values should be formatted. "classic" (the default) prints values in a compact nested format; "tabular" prints values in a table if their type is a list of records. |
-| printDepth           | int    | 5       | When printing, the depth of nesting of recursive data structure at which ellipsis begins. |
-| printLength          | int    | 12      | When printing, the length of lists at which ellipsis begins. |
+| printDepth           | int option | 5   | When printing, the depth of nesting of recursive data structure at which ellipsis begins. Must not be negative; NONE means that values are printed in full. |
+| printLength          | int option | 12  | When printing, the length of lists at which ellipsis begins. Must not be negative; NONE means that lists are printed in full. |
 | productName          | string | morel-java | Name of the Morel product. |
 | productVersion       | string | 0.9.0   | Current version of Morel. |
-| rangeMaxLength       | IntInf.int | 16777215 | Largest number of values that expanding a range may produce. |
+| rangeMaxLength       | IntInf.int | 16777215 | Largest number of values that expanding a range may produce. Must be positive. |
 | relationalize        | bool   | false   | Whether to convert to relational algebra. |
 | scriptDirectory      | file   |         | Path of the directory where the 'use' command looks for scripts. When running a script, it is generally set to the directory that contains the script. |
-| stringDepth          | int    | 70      | When printing, the length of strings at which ellipsis begins. |
-| stringFold           | int    | null    | In tabular mode, the column width at which long strings are folded across multiple lines. If not set, folding is disabled. Legal values are 1 or greater. |
-| terminalBackground   | string | null    | The terminal's background color, of the form 'rgb:RRRR/GGGG/BBBB'. Set by the shell at startup; used to deduce the color scheme when 'colorScheme' is unset. |
-| timeZone             | string | null    | Overrides the local timezone. Value is a timezone ID (e.g. 'UTC' or 'America/New_York'). If not set, the JVM default timezone is used. |
+| stringDepth          | int option | 70  | When printing, the length of strings at which ellipsis begins. Must not be negative; NONE means that strings are printed in full. |
+| stringFold           | int option | NONE | In tabular mode, the column width at which long strings are folded across multiple lines. Must be positive; NONE disables folding. |
+| terminalBackground   | string option | NONE | The terminal's background color, of the form 'rgb:RRRR/GGGG/BBBB'. Set by the shell at startup; used to deduce the color scheme when 'colorScheme' is unset. |
+| timeZone             | string option | NONE | Overrides the local timezone. Value is a timezone ID (e.g. 'UTC' or 'America/New_York'). If not set, the JVM default timezone is used. |
 
 [//]: # (end:properties)
 

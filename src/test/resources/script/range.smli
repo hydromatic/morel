@@ -536,7 +536,7 @@ Sys.set ("rangeMaxLength", "4722366482869645213696");
 List.length (Range.flatten [CLOSED (1, 100)]);
 > val it = 100 : int
 Sys.show "rangeMaxLength";
-> val it = SOME "4722366482869645213696" : string option
+> val it = "4722366482869645213696" : string
 Sys.unset "rangeMaxLength";
 > val it = () : unit
 

@@ -18,7 +18,7 @@
  *
  * Script that calls other scripts; tests the "use" command.
  *)
-Sys.set ("stringDepth", ~1);
+Sys.set ("stringDepth", NONE);
 
 (* First, let's check that plans are assigned, but variables
  * are not assigned, when there are exceptions. *)

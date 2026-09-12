@@ -145,7 +145,7 @@ case #"a" of #"" => 1 | _ => 2;
 >   raised at: stdIn:1.14-1.17
 
 (*) All the characters
-Sys.set ("printLength", 300);
+Sys.set ("printLength", NONE);
 > val it = () : unit
 List.tabulate(256, fn i => (i, Char.chr i));
 > val it =
