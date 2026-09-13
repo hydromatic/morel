@@ -2158,6 +2158,12 @@ public class Resolver {
     return pos[0] != null ? pos[0] : compute.pos;
   }
 
+  /** Creates a {@link FromBuilder} whose environment is this resolver's. */
+  private FromBuilder newFromBuilder() {
+    return core.fromBuilder(
+        typeMap.typeSystem, () -> env.bindAll(aggregateResolver.bindings()));
+  }
+
   /**
    * Visitor that converts a {@link Ast.From}, {@link Ast.Exists} or {@link
    * Ast.Forall} to {@link Core.From} by handling each subtype of {@link
@@ -2178,11 +2184,7 @@ public class Resolver {
     private final Core.@Nullable StepEnv stepPriorEnv;
 
     FromResolver() {
-      this(
-          core.fromBuilder(
-              typeMap.typeSystem,
-              () -> env.bindAll(aggregateResolver.bindings())),
-          null);
+      this(newFromBuilder(), null);
     }
 
     private FromResolver(
