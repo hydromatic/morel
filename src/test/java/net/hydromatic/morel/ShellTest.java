@@ -150,6 +150,37 @@ public class ShellTest {
     assertThat(outString, is("val it = [4,5] : int list\n"));
   }
 
+  /**
+   * Tests that {@code use} raises {@code Interact.EvalOnly} in eval mode.
+   *
+   * <p>Eval mode has no shell to read a file into, which is a different thing
+   * from a file that cannot be opened, so it raises a different exception from
+   * {@code Interact.Error}. This cannot be tested from a script, because a
+   * script is not eval mode.
+   */
+  @Test
+  void testEvalUse() throws IOException {
+    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    final ByteArrayInputStream bais = new ByteArrayInputStream(new byte[0]);
+    final Shell.Config config =
+        Shell.parse(
+            Shell.Config.DEFAULT,
+            ImmutableList.of(
+                "--system=false",
+                "--terminal=dumb",
+                "--banner=false",
+                "-e",
+                "use \"any.sml\""));
+    final Shell shell = Shell.create(config, bais, baos);
+    shell.run();
+    final String outString = baos.toString(UTF_8.name()).replace("\r\n", "\n");
+    assertThat(
+        outString,
+        is(
+            "uncaught exception EvalOnly "
+                + "[use is not available in this environment]\n"));
+  }
+
   /** Tests {@link Shell} with --eval= option. */
   @Test
   void testEvalEquals() throws IOException {
@@ -581,6 +612,33 @@ public class ShellTest {
     fixture()
         .withArgListPlusDirectory()
         .withArgList(list -> plus(list, "--maxUseDepth=3"))
+        .withInputString(in)
+        .assertOutput(is(expected));
+  }
+
+  /**
+   * Tests that {@code --maxUseDepth} takes {@code NONE}, which is how a
+   * property of option type says "no limit".
+   *
+   * <p>That there is then no limit cannot be tested: a file that uses itself
+   * would recurse until the stack was exhausted, which is the very thing the
+   * limit exists to prevent. This checks that the value is accepted and that a
+   * {@code use} within the limit still works.
+   */
+  @Test
+  void testUseMaxDepthNone() {
+    final String in = "use \"z.sml\";\n";
+    final String expected =
+        "- use \"z.sml\";\r\n"
+            + "[opening z.sml]\n"
+            + "val z = 7 : int\n"
+            + "val x = 1 : int\n"
+            + "val it = 8 : int\n"
+            + "val it = () : unit\n"
+            + "- \r\n";
+    fixture()
+        .withArgListPlusDirectory()
+        .withArgList(list -> plus(list, "--maxUseDepth=NONE"))
         .withInputString(in)
         .assertOutput(is(expected));
   }

@@ -6153,10 +6153,10 @@ public enum BuiltIn {
                 Keys.apply(Keys.name("range"), ImmutableList.of(h.get(0))))),
     EITHER_INL(Datatype.EITHER, "INL", h -> h.get(0)),
     EITHER_INR(Datatype.EITHER, "INR", h -> h.get(1)),
-    // Built-in exceptions. Some (Date, Error, Option, Time) are not chained
-    // on the EXN datatype below — they are intentionally not visible at top
-    // level (Date/Option/Time would clash with a structure name; Error is
-    // not in the standard basis). They exist here so that
+    // Built-in exceptions. Some (Date, Error, EvalOnly, Option, Time) are not
+    // chained on the EXN datatype below — they are intentionally not visible
+    // at top level (Date/Option/Time would clash with a structure name; Error
+    // and EvalOnly are not in the standard basis). They exist here so that
     // Codes.BuiltInExn can refer to them by name.
     EXN_BIND(Datatype.EXN, "Bind"),
     EXN_CHR(Datatype.EXN, "Chr"),
@@ -6166,6 +6166,7 @@ public enum BuiltIn {
     EXN_DOMAIN(Datatype.EXN, "Domain"),
     EXN_EMPTY(Datatype.EXN, "Empty"),
     EXN_ERROR(Datatype.EXN, "Error"),
+    EXN_EVAL_ONLY(Datatype.EXN, "EvalOnly"),
     EXN_FAIL(Datatype.EXN, "Fail", h -> STRING.key()),
     EXN_MATCH(Datatype.EXN, "Match"),
     EXN_OPTION(Datatype.EXN, "Option"),

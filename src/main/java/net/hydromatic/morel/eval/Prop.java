@@ -163,6 +163,23 @@ public enum Prop {
           + "modulo whitespace and bag-element order."),
 
   /**
+   * Integer option property "maxUseDepth" is how deeply {@code use} may nest. A
+   * {@code use} at a greater depth fails as if the file could not be opened,
+   * rather than recursing until the Java stack is exhausted.
+   *
+   * <p>Default is 50. A script that nests {@code use} more deeply than that is
+   * almost certainly recursing, directly or indirectly, into a file it is
+   * already reading. {@code NONE} means no limit; a depth, if given, must not
+   * be negative.
+   */
+  MAX_USE_DEPTH(
+      "maxUseDepth",
+      Kind.NON_NEGATIVE_INT_OPTION,
+      50,
+      "How deeply the 'use' command may nest. Must not be negative; NONE "
+          + "means no limit."),
+
+  /**
    * String option property "now" overrides the current time returned by {@code
    * Time.now()} and used by {@code Date.localOffset()}. Value is an ISO-8601
    * instant string (e.g. {@code "2024-01-01T00:00:00Z"}). If not set, the
@@ -574,8 +591,8 @@ public enum Prop {
    *
    * <p>A property whose value has been removed (by {@code Sys.unset}) reverts
    * to its default value. That is a different thing from a property that has
-   * been set to {@code NONE}: {@code lineWidth}, for instance, defaults to
-   * {@code SOME 79}, and only an explicit {@code NONE} stops it wrapping.
+   * been set to {@code NONE}: {@code maxUseDepth}, for instance, defaults to
+   * {@code SOME 50}, and only an explicit {@code NONE} makes it unlimited.
    */
   public @Nullable Object get(Map<Prop, Object> map) {
     return map.containsKey(this) ? map.get(this) : defaultValue;

@@ -530,6 +530,13 @@ public class Main {
     protected final Consumer<String> echoLines;
     protected final Consumer<String> outLines;
     /**
+     * How many nested {@code use} commands are in progress. The root shell is
+     * at depth 0, the shell reading the file named by a top-level {@code use}
+     * is at depth 1, and so forth. {@link Prop#MAX_USE_DEPTH} bounds it, so
+     * that a file that uses itself fails rather than exhausting the stack.
+     */
+    protected final int depth;
+    /**
      * Contains the environment created by previous commands in this shell. It
      * is a multimap so that overloads with the same name can all be stored.
      */
@@ -541,11 +548,22 @@ public class Main {
         Consumer<String> echoLines,
         Consumer<String> outLines,
         Multimap<String, Binding> bindingMap) {
+      this(main, env0, echoLines, outLines, bindingMap, 0);
+    }
+
+    Shell(
+        Main main,
+        Environment env0,
+        Consumer<String> echoLines,
+        Consumer<String> outLines,
+        Multimap<String, Binding> bindingMap,
+        int depth) {
       this.main = main;
       this.env0 = env0;
       this.echoLines = echoLines;
       this.outLines = outLines;
       this.bindingMap = bindingMap;
+      this.depth = depth;
     }
 
     void run(
@@ -559,7 +577,8 @@ public class Main {
               ? new BufferingLineConsumer(outLines)
               : new DirectLineConsumer(outLines);
       final SubShell subShell =
-          new SubShell(main, echoLines, lineConsumer, bindingMap, env0);
+          new SubShell(
+              main, echoLines, lineConsumer, bindingMap, env0, depth + 1);
       for (; ; ) {
         try {
           Pos pos = parser.nextTokenPos();
@@ -617,7 +636,7 @@ public class Main {
 
     @Override
     public void use(String fileName, boolean silent, Pos pos) {
-      throw new UnsupportedOperationException();
+      throw new Codes.MorelRuntimeException(Codes.BuiltInExn.EVAL_ONLY, pos);
     }
 
     @Override
@@ -714,8 +733,9 @@ public class Main {
         Consumer<String> echoLines,
         Consumer<String> outLines,
         Multimap<String, Binding> outBindings,
-        Environment env0) {
-      super(main, env0, echoLines, outLines, outBindings);
+        Environment env0,
+        int depth) {
+      super(main, env0, echoLines, outLines, outBindings, depth);
     }
 
     @Override
@@ -734,6 +754,18 @@ public class Main {
             "[use failed: Io: openIn failed on "
                 + fileName
                 + ", No such file or directory]");
+        throw new Codes.MorelRuntimeException(Codes.BuiltInExn.ERROR, pos);
+      }
+      final Integer maxDepth =
+          Prop.MAX_USE_DEPTH.optionalIntValue(main.session.map);
+      if (maxDepth != null && depth > maxDepth) {
+        // The file exists but we will not open it: a file that uses itself,
+        // directly or indirectly, would recurse until the stack is exhausted.
+        // Report it the way SML/NJ does, as a failure to open the file.
+        outLines.accept(
+            "[use failed: Io: openIn failed on "
+                + fileName
+                + ", Too many open files]");
         throw new Codes.MorelRuntimeException(Codes.BuiltInExn.ERROR, pos);
       }
       final Consumer<String> echoLines2 = silent ? line -> {} : echoLines;

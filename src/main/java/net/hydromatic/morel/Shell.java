@@ -181,9 +181,7 @@ public class Shell {
         c = c.withDirectory(new File(directoryPath));
       }
       if (arg.startsWith("--maxUseDepth=")) {
-        int maxUseDepth =
-            Integer.parseInt(arg.substring("--maxUseDepth=".length()));
-        c = c.withMaxUseDepth(maxUseDepth);
+        c = c.withMaxUseDepth(arg.substring("--maxUseDepth=".length()));
       }
       if (arg.equals("-e") || arg.equals("--eval")) {
         if (i + 1 < argList.size()) {
@@ -377,6 +375,9 @@ public class Shell {
     final Map<Prop, Object> map = new LinkedHashMap<>();
     Prop.DIRECTORY.set(map, config.directory);
     Prop.SCRIPT_DIRECTORY.set(map, config.directory);
+    if (config.maxUseDepth != null) {
+      Prop.MAX_USE_DEPTH.setFromString(map, config.maxUseDepth);
+    }
     if (config.colorScheme != null) {
       Prop.COLOR_SCHEME.set(map, config.colorScheme);
     }
@@ -407,7 +408,6 @@ public class Shell {
     final SubShell subShell =
         new SubShell(
             1,
-            config.maxUseDepth,
             lineFn,
             config.echo,
             typeSystem,
@@ -592,7 +592,7 @@ public class Shell {
 
     Config withDirectory(File directory);
 
-    Config withMaxUseDepth(int maxUseDepth);
+    Config withMaxUseDepth(@Nullable String maxUseDepth);
 
     Config withEval(@Nullable String eval);
 
@@ -608,7 +608,7 @@ public class Shell {
     private final boolean system;
     private final ImmutableMap<String, ForeignValue> valueMap;
     private final File directory;
-    private final int maxUseDepth;
+    private final @Nullable String maxUseDepth;
     private final @Nullable String eval;
     private final @Nullable String colorScheme;
 
@@ -621,7 +621,7 @@ public class Shell {
             false,
             ImmutableMap.of(),
             new File(""),
-            -1,
+            null,
             null,
             null);
 
@@ -633,7 +633,7 @@ public class Shell {
         boolean help,
         ImmutableMap<String, ForeignValue> valueMap,
         File directory,
-        int maxUseDepth,
+        @Nullable String maxUseDepth,
         @Nullable String eval,
         @Nullable String colorScheme) {
       this.banner = banner;
@@ -777,8 +777,8 @@ public class Shell {
     }
 
     @Override
-    public ConfigImpl withMaxUseDepth(int maxUseDepth) {
-      if (this.maxUseDepth == maxUseDepth) {
+    public ConfigImpl withMaxUseDepth(@Nullable String maxUseDepth) {
+      if (Objects.equals(this.maxUseDepth, maxUseDepth)) {
         return this;
       }
       return new ConfigImpl(
@@ -856,7 +856,6 @@ public class Shell {
    */
   static class SubShell {
     private final int depth;
-    private final int maxDepth;
     private final LineFn lineFn;
     private final boolean echo;
     private final TypeSystem typeSystem;
@@ -867,7 +866,6 @@ public class Shell {
 
     SubShell(
         int depth,
-        int maxDepth,
         LineFn lineFn,
         boolean echo,
         TypeSystem typeSystem,
@@ -876,7 +874,6 @@ public class Shell {
         Session session,
         File directory) {
       this.depth = depth;
-      this.maxDepth = maxDepth;
       this.lineFn = lineFn;
       this.echo = echo;
       this.typeSystem = typeSystem;
@@ -999,7 +996,9 @@ public class Shell {
                   + ", No such file or directory]");
           throw new Codes.MorelRuntimeException(Codes.BuiltInExn.ERROR, pos);
         }
-        if (depth > maxDepth && maxDepth >= 0) {
+        final Integer maxDepth =
+            Prop.MAX_USE_DEPTH.optionalIntValue(session.map);
+        if (maxDepth != null && depth > maxDepth) {
           outLines.accept(
               "[use failed: Io: openIn failed on "
                   + fileName
@@ -1011,7 +1010,6 @@ public class Shell {
           final SubShell subShell =
               new SubShell(
                   depth + 1,
-                  maxDepth,
                   new ReaderLineFn(bufferedReader),
                   false,
                   typeSystem,

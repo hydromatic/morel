@@ -31,6 +31,7 @@ Morel REPL, such as loading source files.
 
 <pre>
 exception <a id='Error' href="#Error-impl">Error</a>
+exception <a id='EvalOnly' href="#EvalOnly-impl">EvalOnly</a>
 
 val <a id='use' href="#use-impl">use</a> : string -> unit
 val <a id='useSilently' href="#useSilently-impl">useSilently</a> : string -> unit
@@ -41,6 +42,14 @@ val <a id='useSilently' href="#useSilently-impl">useSilently</a> : string -> uni
 
 is raised by `use` and `useSilently` when the file named cannot be
 opened.
+
+<a id="EvalOnly-impl"></a>
+<h3><code><strong>exception</strong> EvalOnly</code></h3>
+
+is raised by `use` and `useSilently` when the environment has no
+shell to read a file into, as when Morel is evaluating a single
+expression given on the command line. It is distinct from `Error`,
+which says that a particular file could not be opened.
 
 <a id="use-impl"></a>
 <h3><code>use</code></h3>

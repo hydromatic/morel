@@ -35,4 +35,33 @@ Interact.use;
 use;
 > val it = fn : string -> unit
 
+(* A file that cannot be opened is announced, and raises Interact.Error,
+ * so that a script can tell success from failure rather than carry on as
+ * if the file were empty. The name appears as written, not as the path it
+ * resolved to, so this output does not depend on where the shell is
+ * running. *)
+use "missing.sml";
+> [opening missing.sml]
+> [use failed: Io: openIn failed on missing.sml, No such file or directory]
+> uncaught exception Error
+>   raised at: stdIn:1.1-1.18
+
+(*) useSilently - load source from a file, without printing
+Interact.useSilently;
+> val it = fn : string -> unit
+useSilently;
+> val it = fn : string -> unit
+
+(* "useSilently" suppresses the output of the statements it reads, but
+ * a file that is not there is still announced and still raises. *)
+useSilently "missing.sml";
+> [opening missing.sml]
+> [use failed: Io: openIn failed on missing.sml, No such file or directory]
+> uncaught exception Error
+>   raised at: stdIn:1.1-1.26
+
+(*) The session carries on.
+1 + 1;
+> val it = 2 : int
+
 (*) End interact.smli

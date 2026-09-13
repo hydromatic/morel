@@ -31,6 +31,14 @@ sig
    *)
   exception Error
 
+  (**
+   * is raised by `use` and `useSilently` when the environment has no
+   * shell to read a file into, as when Morel is evaluating a single
+   * expression given on the command line. It is distinct from `Error`,
+   * which says that a particular file could not be opened.
+   *)
+  exception EvalOnly
+
   (** loads source text from the file named `f`. *)
   val use : string -> unit [@@prototype "use f"]
 

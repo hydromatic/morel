@@ -8262,7 +8262,11 @@ public abstract class Codes {
     DIV("General", BuiltIn.Constructor.EXN_DIV, "divide by zero"),
     DOMAIN("General", BuiltIn.Constructor.EXN_DOMAIN, "domain error"),
     EMPTY("List", BuiltIn.Constructor.EXN_EMPTY, null),
-    ERROR("Interact", BuiltIn.Constructor.EXN_ERROR, null), // not in basis
+    ERROR("Interact", BuiltIn.Constructor.EXN_ERROR, null),
+    EVAL_ONLY(
+        "Interact",
+        BuiltIn.Constructor.EXN_EVAL_ONLY,
+        "use is not available in this environment"),
     FAIL("General", BuiltIn.Constructor.EXN_FAIL, null),
     MATCH(
         "General",

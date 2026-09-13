@@ -1130,6 +1130,22 @@ public class UtilTest {
             .getMessage(),
         is("value for property 'output' must be one of: 'CLASSIC', 'TABULAR'"));
 
+    // "maxUseDepth" is read this way from the "--maxUseDepth" flag, and is
+    // the property the command line most needs to set: "NONE" for no limit,
+    // a numeral for a limit, and anything else refused before it is used.
+    Prop.MAX_USE_DEPTH.setFromString(map, "NONE");
+    assertThat(Prop.MAX_USE_DEPTH.optionalIntValue(map), nullValue());
+    Prop.MAX_USE_DEPTH.setFromString(map, "3");
+    assertThat(Prop.MAX_USE_DEPTH.optionalIntValue(map), is(3));
+    assertThat(
+        assertThrows(
+                RuntimeException.class,
+                () -> Prop.MAX_USE_DEPTH.setFromString(map, "abc"))
+            .getMessage(),
+        is(
+            "value for property 'maxUseDepth' must have type "
+                + "'(int check i => i >= 0) option'"));
+
     // A property that is not an option has no NONE, and reads "NONE" as it
     // reads any other string: here, as a numeral it cannot parse.
     assertThat(
