@@ -2324,7 +2324,7 @@ public class Core {
             return w.infix(left, args().get(0), op, args().get(1), right);
           }
       }
-      return w.infix(left, fn, op, arg, right);
+      return w.apply(left, fn, arg, right);
     }
 
     public Apply copy(Exp fn, Exp arg) {

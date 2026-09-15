@@ -150,7 +150,7 @@ public enum Op {
   PLUS(" + ", 6),
   MINUS(" - ", 6),
   CARET(" ^ ", 6),
-  NEGATE("~ "),
+  NEGATE("~ ", 8, Assoc.PREFIX),
   CONS(" :: ", 5, Assoc.RIGHT),
   AT(" @ ", 5, Assoc.RIGHT),
   LE(" <= ", 4),
@@ -209,8 +209,8 @@ public enum Op {
   public final int left;
   /** Right precedence */
   public final int right;
-  /** Associativity (LEFT, RIGHT, or NONE). */
-  private final Assoc assoc;
+  /** Associativity. */
+  final Assoc assoc;
   /** Operator name. Sometimes null, sometimes something like "op +". */
   public final @Nullable String opName;
 
@@ -253,20 +253,27 @@ public enum Op {
 
   Op(String padded, int precedence, Assoc assoc) {
     this.padded = requireNonNull(padded);
-    this.left = precedence * 2 + (assoc == Assoc.LEFT ? 0 : 1);
+    // A prefix operator has no left operand, so anything to its left
+    // parenthesizes it: "2 * (~ x)", never "2 * ~ x".
+    this.left =
+        assoc == Assoc.PREFIX
+            ? 0
+            : precedence * 2 + (assoc == Assoc.LEFT ? 0 : 1);
     this.right = precedence * 2 + (assoc == Assoc.RIGHT ? 0 : 1);
     this.assoc = assoc;
     this.opName = padded.isEmpty() ? null : "op " + padded.trim();
   }
 
   /** Associativity of an operator. */
-  private enum Assoc {
+  enum Assoc {
     /** Left-associative binary infix, e.g. {@code +}. */
     LEFT,
     /** Right-associative binary infix, e.g. {@code ->}. */
     RIGHT,
     /** Non-associative binary infix, e.g. {@code *} as a type constructor. */
     NONE,
+    /** Unary prefix, e.g. {@code ~}. */
+    PREFIX,
     /** Atomic; not an infix operator (e.g. literals, identifiers). */
     ATOM,
     /** Not an expression. */
