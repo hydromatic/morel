@@ -109,30 +109,40 @@ public class AstWriter {
     return this;
   }
 
-  /** Appends a call to an infix operator. */
-  public AstWriter infix(int left, AstNode a0, Op op, AstNode a1, int right) {
-    if (op == Op.APPLY && a0.op == Op.ID) {
-      if (a0 instanceof Ast.Id) {
-        final Op op2 = Op.BY_OP_NAME.get(((Ast.Id) a0).name);
-        if (op2 != null && op2.left > 0) {
-          final List<Ast.Exp> args = ((Ast.Tuple) a1).args;
-          final Ast.InfixCall call =
-              new Ast.InfixCall(Pos.ZERO, op2, args.get(0), args.get(1));
-          return call.unparse(this, left, right);
-        }
+  /**
+   * Appends a function application. If the function is a named operator and the
+   * argument has the shape the operator is written with -- a pair for an infix
+   * operator, anything for a prefix operator -- the application is written in
+   * operator syntax.
+   */
+  public AstWriter apply(int left, AstNode fn, AstNode arg, int right) {
+    // TODO: obsolete Core.Id for these purposes. The operator should
+    // be a function literal, and we would use a reverse mapping to
+    // figure out which built-in operator it implements, and whether it
+    // is infix (e.g. "+") or in a namespace (e.g. "#translate String")
+    final Op op =
+        fn instanceof Ast.Id
+            ? Op.BY_OP_NAME.get(((Ast.Id) fn).name)
+            : fn instanceof Core.Id
+                ? Op.BY_OP_NAME.get(((Core.Id) fn).idPat.name)
+                : null;
+    if (op != null) {
+      if (op.assoc == Op.Assoc.PREFIX) {
+        return prefix(left, op, arg, right);
       }
-      if (a0 instanceof Core.Id) {
-        // TODO: obsolete Core.Id for these purposes. The operator should
-        // be a function literal, and we would use a reverse mapping to
-        // figure out which built-in operator it implements, and whether it
-        // is infix (e.g. "+") or in a namespace (e.g. "#translate String")
-        final Op op2 = Op.BY_OP_NAME.get(((Core.Id) a0).idPat.name);
-        if (op2 != null && op2.left > 0) {
-          final List<Core.Exp> args = ((Core.Tuple) a1).args;
-          return infix(left, args.get(0), op2, args.get(1), right);
-        }
+      final List<? extends AstNode> args =
+          arg instanceof Ast.Tuple
+              ? ((Ast.Tuple) arg).args
+              : arg instanceof Core.Tuple ? ((Core.Tuple) arg).args : null;
+      if (args != null && args.size() == 2) {
+        return infix(left, args.get(0), op, args.get(1), right);
       }
     }
+    return infix(left, fn, Op.APPLY, arg, right);
+  }
+
+  /** Appends a call to an infix operator. */
+  public AstWriter infix(int left, AstNode a0, Op op, AstNode a1, int right) {
     final boolean p = parenthesize || left > op.left || op.right < right;
     if (p) {
       b.append('(');
