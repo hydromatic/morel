@@ -433,7 +433,7 @@ public class MainTest {
             + " NEITHER"
             + " | LEFT of 'a"
             + " | RIGHT of 'b"
-            + " | BOTH of {a: 'a, b: 'b}";
+            + " | BOTH of {a:'a, b:'b}";
     ml(ml).assertParseSame();
 
     // -> is right-associative
@@ -467,7 +467,7 @@ public class MainTest {
 
     ml("type myInt = int").assertParseSame();
     ml("type myInt = int and myRealList = real list").assertParseSame();
-    ml("type emp = {empno: int, pets: string list}").assertParseSame();
+    ml("type emp = {empno:int, pets:string list}").assertParseSame();
 
     // Most 'check' tests are in 'script/check.smli'. Two facts are only
     // visible here. First, that a type may carry a clause at all.
@@ -499,9 +499,9 @@ public class MainTest {
         .assertParseEquivalent("fn x : int * (string list) option => 0");
     ml("fn x : (int * string) list option => 0")
         .assertParseEquivalent("fn x : ((int * string) list) option => 0");
-    ml("fn x : {a: int} => 0").assertParseSame();
-    ml("fn x : {a: int, b: boolean} => 0").assertParseSame();
-    ml("fn x : {a: int list * unit, b: boolean} => 0").assertParseSame();
+    ml("fn x : {a:int} => 0").assertParseSame();
+    ml("fn x : {a:int, b:boolean} => 0").assertParseSame();
+    ml("fn x : {a:int list * unit, b:boolean} => 0").assertParseSame();
     ml("fn x : typeof 1 => 0").assertParseSame();
     ml("fn x : typeof (1 + 2) => 0").assertParseSame();
 
@@ -2317,8 +2317,8 @@ public class MainTest {
     // script/such-that.smli.
     ml("from x, y in [1, 2], z").assertParseSame();
     ml("from x: int").assertParse("from x : int");
-    ml("from x: int, y: bool list").assertParse("from x : int, y : bool list");
-    ml("from x in [1, 2], y: bool where y")
+    ml("from x: int, y:bool list").assertParse("from x : int, y : bool list");
+    ml("from x in [1, 2], y:bool where y")
         .assertParse("from x in [1, 2], y : bool where y");
     ml("from x: int in [1, 2]").assertParse("from x : int in [1, 2]");
     ml("exists x: int where x > 1").assertParse("exists x : int where x > 1");

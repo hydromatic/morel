@@ -418,7 +418,10 @@ public class AstDumper {
   }
 
   private static void dumpModifier(StringBuilder b, Ast.Modifier modifier) {
-    b.append(' ').append('(').append(modifier.toString().trim().split(" ")[0]);
+    // All of the modifier's keywords, not the first: "extend" and
+    // "extend or skip" are different modifiers, and so are "replace"
+    // and "replace lenient all".
+    b.append(' ').append('(').append(modifier.verbs());
     if (modifier instanceof Ast.AssignModifier) {
       ((Ast.AssignModifier) modifier)
           .args.forEach(
@@ -430,6 +433,18 @@ public class AstDumper {
     } else if (modifier instanceof Ast.RemoveModifier) {
       ((Ast.RemoveModifier) modifier)
           .labels.forEach(label -> b.append(' ').append(label.name));
+    } else if (modifier instanceof Ast.RenameModifier) {
+      // A rename names two labels, neither of them an expression, so
+      // forEachExp below would yield nothing and lose the pair.
+      ((Ast.RenameModifier) modifier)
+          .args.forEach(
+              (to, from) ->
+                  b.append(' ')
+                      .append('(')
+                      .append(to.name)
+                      .append(' ')
+                      .append(from.name)
+                      .append(')'));
     } else {
       modifier.forEachExp(
           exp -> {
@@ -458,7 +473,13 @@ public class AstDumper {
     } else if (v instanceof Character) {
       b.append('#').append('"').append(v).append('"');
     } else {
-      b.append(v);
+      // A number is written as it was written in the source, not as its
+      // value prints: Morel writes a negative literal "~1", where the
+      // value gives "-1", and "1e~2" is a literal in its own right,
+      // where the value gives "0.01". Fall back to the value for a
+      // literal that has no source text -- one the parser synthesized.
+      final String text = lit.pos.text();
+      b.append(text != null ? text : v.toString());
     }
     b.append(')');
   }

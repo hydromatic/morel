@@ -53,7 +53,7 @@ datatype <a id='weekday' href="#weekday-impl">weekday</a> = Mon | Tue | Wed | Th
 exception <a id='Date' href="#Date-impl">Date</a>
 
 val <a id='compare' href="#compare-impl">compare</a> : date * date -> order
-val <a id='date' href="#date-impl">date</a> : {day: int, hour: int, minute: int, month: month, offset: time option, second: int, year: int} -> date
+val <a id='date' href="#date-impl">date</a> : {day:int, hour:int, minute:int, month:month, offset:time option, second:int, year:int} -> date
 val <a id='day' href="#day-impl">day</a> : date -> int
 val <a id='fmt' href="#fmt-impl">fmt</a> : string -> date -> string
 val <a id='fromString' href="#fromString-impl">fromString</a> : string -> date option

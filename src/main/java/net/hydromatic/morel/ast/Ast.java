@@ -1163,7 +1163,7 @@ public class Ast {
           (i, field, type) ->
               w.append(i > 0 ? ", " : "")
                   .idQuoted(field)
-                  .append(": ")
+                  .append(":")
                   .append(type, 0, 0));
       return w.append("}");
     }

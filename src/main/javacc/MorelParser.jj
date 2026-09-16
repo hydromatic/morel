@@ -252,12 +252,12 @@ Literal numericLiteral() :
       if (d.compareTo(BigDecimal.ZERO) == 0) {
         // In IEEE floating point, and ML's 'real' type, negative zero is
         // different from positive zero.
-        return ast.realLiteral(pos(), -0.f);
+        return ast.realLiteral(pos().withText(token.image), -0.f);
       }
     } else {
       d = new BigDecimal(token.image);
     }
-    return ast.realLiteral(pos(), d);
+    return ast.realLiteral(pos().withText(token.image), d);
   }
 |
   <SCIENTIFIC_LITERAL> {
@@ -268,7 +268,7 @@ Literal numericLiteral() :
       if (d.compareTo(BigDecimal.ZERO) == 0) {
         // In IEEE floating point, and ML's 'real' type, negative zero is
         // different from positive zero.
-        return ast.realLiteral(pos(), -0.f);
+        return ast.realLiteral(pos().withText(token.image), -0.f);
       }
     } else {
       d = new BigDecimal(token.image.substring(0, e));
@@ -279,7 +279,7 @@ Literal numericLiteral() :
     } else {
       exponent = Integer.parseInt(token.image.substring(e + 1));
     }
-    return ast.realLiteral(pos(), d.scaleByPowerOfTen(exponent));
+    return ast.realLiteral(pos().withText(token.image), d.scaleByPowerOfTen(exponent));
   }
 }
 

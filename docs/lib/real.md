@@ -66,9 +66,9 @@ val <a id='unordered' href="#unordered-impl">unordered</a> : real * real -> bool
 val <a id='isFinite' href="#isFinite-impl">isFinite</a> : real -> bool
 val <a id='isNan' href="#isNan-impl">isNan</a> : real -> bool
 val <a id='isNormal' href="#isNormal-impl">isNormal</a> : real -> bool
-val <a id='toManExp' href="#toManExp-impl">toManExp</a> : real -> {man: real, exp: int}
-val <a id='fromManExp' href="#fromManExp-impl">fromManExp</a> : {man: real, exp: int} -> real
-val <a id='split' href="#split-impl">split</a> : real -> {whole: real, frac: real}
+val <a id='toManExp' href="#toManExp-impl">toManExp</a> : real -> {man:real, exp:int}
+val <a id='fromManExp' href="#fromManExp-impl">fromManExp</a> : {man:real, exp:int} -> real
+val <a id='split' href="#split-impl">split</a> : real -> {whole:real, frac:real}
 val <a id='realMod' href="#realMod-impl">realMod</a> : real -> real
 val <a id='checkFloat' href="#checkFloat-impl">checkFloat</a> : real -> real
 val <a id='realFloor' href="#realFloor-impl">realFloor</a> : real -> real

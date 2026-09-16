@@ -32,7 +32,7 @@ environment.
 
 <pre>
 val <a id='clearEnv' href="#clearEnv-impl">clearEnv</a> : unit -> unit
-val <a id='colorSchemes' href="#colorSchemes-impl">colorSchemes</a> : unit -> {comment: string, constant: string, error: string, identifier: string, keyword: string, name: string, numeric: string, string: string, symbol: string, typeVar: string} list
+val <a id='colorSchemes' href="#colorSchemes-impl">colorSchemes</a> : unit -> {comment:string, constant:string, error:string, identifier:string, keyword:string, name:string, numeric:string, string:string, symbol:string, typeVar:string} list
 val <a id='deduceColorScheme' href="#deduceColorScheme-impl">deduceColorScheme</a> : unit -> string
 val <a id='env' href="#env-impl">env</a> : unit -> (string * string) list
 val <a id='file' href="#file-impl">file</a> : {}
