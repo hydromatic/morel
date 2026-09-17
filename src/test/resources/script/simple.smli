@@ -34,6 +34,26 @@ Sys.set ("printDepth", 6);
 2147483647;
 > val it = 2147483647 : int
 
+(* Negation binds tighter than any infix operator, so it takes the
+ * operand and not the chain: "~x div 2" is "(~x) div 2". Only an
+ * operator that is not commutative under negation can tell the two
+ * apart -- "~(x * 2)" and "(~x) * 2" are the same number -- and 5 is
+ * the value that separates them, giving ~3 rather than ~2. *)
+let val x = 5 in ~x div 2 end;
+> val it = ~3 : int
+let val x = 5 in (~x) div 2 end;
+> val it = ~3 : int
+let val x = 5 in ~(x div 2) end;
+> val it = ~2 : int
+
+(*) Negation is looser than application: "~f x" negates the result.
+let fun f y = y + 1 in ~f 2 end;
+> val it = ~3 : int
+
+(*) And it composes with itself.
+let val x = 3 in ~~x end;
+> val it = 3 : int
+
 (* Integer literals outside the 32-bit 'int' range (~2147483648 to
  * 2147483647) are rejected during validation. *)
 2147483648;

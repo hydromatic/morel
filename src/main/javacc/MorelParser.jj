@@ -1127,6 +1127,21 @@ Exp expression7b() :
   { return e; }
 }
 
+/**
+ * Parses a negation, which binds tighter than any infix operator:
+ * "~x div 2" is "(~x) div 2", not "~(x div 2)". Recurses into itself
+ * so that "~~x" is a negated negation.
+ */
+Exp expression7a() :
+{
+  Exp e;
+}
+{
+  <TILDE> e = expression7a() { return ast.negate(pos(), e); }
+|
+  e = expression7b() { return e; }
+}
+
 /** Parses an expression of precedence level 7 (*, /, div, mod). */
 Exp expression7() :
 {
@@ -1134,23 +1149,21 @@ Exp expression7() :
   Exp e2;
 }
 {
-  <TILDE> e = expression7() { return ast.negate(pos(), e); }
-|
-  e = expression7b()
+  e = expression7a()
   (
-    <STAR> e2 = expression7b() {
+    <STAR> e2 = expression7a() {
       e = ast.times(e, e2);
     }
   |
-    <SLASH> e2 = expression7b() {
+    <SLASH> e2 = expression7a() {
       e = ast.divide(e, e2);
     }
   |
-    <DIV> e2 = expression7b() {
+    <DIV> e2 = expression7a() {
       e = ast.div(e, e2);
     }
   |
-    <MOD> e2 = expression7b() {
+    <MOD> e2 = expression7a() {
       e = ast.mod(e, e2);
     }
   )*

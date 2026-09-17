@@ -605,6 +605,7 @@ This grammar uses the following notation:
 
 | Operator | Precedence | Meaning |
 | :------- | ---------: | :------ |
+| ~        |   prefix 8 | Negate |
 | *        |    infix 7 | Multiplication |
 | /        |    infix 7 | Division |
 | div      |    infix 7 | Integer division |
@@ -612,7 +613,6 @@ This grammar uses the following notation:
 | +        |    infix 6 | Plus |
 | -        |    infix 6 | Minus |
 | ^        |    infix 6 | String concatenate |
-| ~        |   prefix 6 | Negate |
 | ::       |   infixr 5 | List cons |
 | @        |   infixr 5 | List append |
 | &lt;=    |    infix 4 | Less than or equal |
@@ -628,6 +628,10 @@ This grammar uses the following notation:
 | andalso  |    infix 2 | Logical and |
 | orelse   |    infix 1 | Logical or |
 | implies  |    infix 0 | Logical implication |
+
+`~` binds tighter than every infix operator, so `~x div 2` is
+`(~x) div 2`, and looser than function application, so `~f x` negates
+the result of the call.
 
 `abs` is a built-in function (not an operator, because it uses function
 syntax rather than prefix or infix syntax). It is overloaded: its type is
