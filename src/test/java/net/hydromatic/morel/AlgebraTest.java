@@ -23,6 +23,7 @@ import static net.hydromatic.morel.Matchers.equalsUnordered;
 import static net.hydromatic.morel.Matchers.isCode;
 import static net.hydromatic.morel.Matchers.isFullyCalcite;
 import static net.hydromatic.morel.Matchers.list;
+import static net.hydromatic.morel.Matchers.some;
 import static net.hydromatic.morel.Ml.ml;
 import static org.hamcrest.core.Is.is;
 
@@ -728,34 +729,34 @@ public class AlgebraTest {
             + "          (from d in descendants union newDescendants)\n"
             + "          (from d in newDescendants,\n"
             + "              e in scott.emps\n"
-            + "            where e.mgr = d.e.empno\n"
+            + "            where e.mgr = SOME d.e.empno\n"
             + "            yield {e, level = d.level + 1})\n"
             + "in\n"
             + "  from d in descendants2 Bag.nil\n"
             + "      (from e in scott.emps\n"
-            + "        where e.mgr = 0\n"
+            + "        where e.mgr = NONE\n"
             + "        yield {e, level = 0})\n"
             + "    yield {d.e.empno, d.e.mgr, d.e.ename, d.level}\n"
             + "end";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
-        .assertType("{empno:int, ename:string, level:int, mgr:int} bag")
+        .assertType("{empno:int, ename:string, level:int, mgr:int option} bag")
         .assertEvalIter(
             equalsOrdered(
-                list(7839, "KING", 0, 0),
-                list(7566, "JONES", 1, 7839),
-                list(7698, "BLAKE", 1, 7839),
-                list(7782, "CLARK", 1, 7839),
-                list(7788, "SCOTT", 2, 7566),
-                list(7902, "FORD", 2, 7566),
-                list(7499, "ALLEN", 2, 7698),
-                list(7521, "WARD", 2, 7698),
-                list(7654, "MARTIN", 2, 7698),
-                list(7844, "TURNER", 2, 7698),
-                list(7900, "JAMES", 2, 7698),
-                list(7934, "MILLER", 2, 7782),
-                list(7876, "ADAMS", 3, 7788),
-                list(7369, "SMITH", 3, 7902)));
+                list(7839, "KING", 0, list("NONE")),
+                list(7566, "JONES", 1, some(7839)),
+                list(7698, "BLAKE", 1, some(7839)),
+                list(7782, "CLARK", 1, some(7839)),
+                list(7788, "SCOTT", 2, some(7566)),
+                list(7902, "FORD", 2, some(7566)),
+                list(7499, "ALLEN", 2, some(7698)),
+                list(7521, "WARD", 2, some(7698)),
+                list(7654, "MARTIN", 2, some(7698)),
+                list(7844, "TURNER", 2, some(7698)),
+                list(7900, "JAMES", 2, some(7698)),
+                list(7934, "MILLER", 2, some(7782)),
+                list(7876, "ADAMS", 3, some(7788)),
+                list(7369, "SMITH", 3, some(7902))));
   }
 
   /**
@@ -768,33 +769,33 @@ public class AlgebraTest {
     final String ml =
         "from i in iterate\n"
             + "    (from e in scott.emps\n"
-            + "      where e.mgr = 0\n"
+            + "      where e.mgr = NONE\n"
             + "      yield {e, level = 0})\n"
             + "    fn (oldList, newList) =>\n"
             + "      (from d in newList,\n"
             + "          e in scott.emps\n"
-            + "        where e.mgr = d.e.empno\n"
+            + "        where e.mgr = SOME d.e.empno\n"
             + "        yield {e, level = d.level + 1})\n"
             + "  yield {i.e.empno, i.e.ename, i.level, i.e.mgr}";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
-        .assertType("{empno:int, ename:string, level:int, mgr:int} bag")
+        .assertType("{empno:int, ename:string, level:int, mgr:int option} bag")
         .assertEvalIter(
             equalsOrdered(
-                list(7839, "KING", 0, 0),
-                list(7566, "JONES", 1, 7839),
-                list(7698, "BLAKE", 1, 7839),
-                list(7782, "CLARK", 1, 7839),
-                list(7788, "SCOTT", 2, 7566),
-                list(7902, "FORD", 2, 7566),
-                list(7499, "ALLEN", 2, 7698),
-                list(7521, "WARD", 2, 7698),
-                list(7654, "MARTIN", 2, 7698),
-                list(7844, "TURNER", 2, 7698),
-                list(7900, "JAMES", 2, 7698),
-                list(7934, "MILLER", 2, 7782),
-                list(7876, "ADAMS", 3, 7788),
-                list(7369, "SMITH", 3, 7902)));
+                list(7839, "KING", 0, list("NONE")),
+                list(7566, "JONES", 1, some(7839)),
+                list(7698, "BLAKE", 1, some(7839)),
+                list(7782, "CLARK", 1, some(7839)),
+                list(7788, "SCOTT", 2, some(7566)),
+                list(7902, "FORD", 2, some(7566)),
+                list(7499, "ALLEN", 2, some(7698)),
+                list(7521, "WARD", 2, some(7698)),
+                list(7654, "MARTIN", 2, some(7698)),
+                list(7844, "TURNER", 2, some(7698)),
+                list(7900, "JAMES", 2, some(7698)),
+                list(7934, "MILLER", 2, some(7782)),
+                list(7876, "ADAMS", 3, some(7788)),
+                list(7369, "SMITH", 3, some(7902))));
   }
 }
 

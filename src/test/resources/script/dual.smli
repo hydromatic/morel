@@ -43,22 +43,22 @@ from;
 from e in scott.emps;
 > comm deptno empno ename  hiredate   job       mgr  sal
 > ---- ------ ----- ------ ---------- --------- ---- ----
->    0     20  7369 SMITH  1980-12-17 CLERK     7902  800
+>          20  7369 SMITH  1980-12-17 CLERK     7902  800
 >  300     30  7499 ALLEN  1981-02-20 SALESMAN  7698 1600
 >  500     30  7521 WARD   1981-02-22 SALESMAN  7698 1250
->    0     20  7566 JONES  1981-02-04 MANAGER   7839 2975
+>          20  7566 JONES  1981-02-04 MANAGER   7839 2975
 > 1400     30  7654 MARTIN 1981-09-28 SALESMAN  7698 1250
->    0     30  7698 BLAKE  1981-01-05 MANAGER   7839 2850
->    0     10  7782 CLARK  1981-06-09 MANAGER   7839 2450
->    0     20  7788 SCOTT  1987-04-19 ANALYST   7566 3000
->    0     10  7839 KING   1981-11-17 PRESIDENT    0 5000
+>          30  7698 BLAKE  1981-01-05 MANAGER   7839 2850
+>          10  7782 CLARK  1981-06-09 MANAGER   7839 2450
+>          20  7788 SCOTT  1987-04-19 ANALYST   7566 3000
+>          10  7839 KING   1981-11-17 PRESIDENT      5000
 >    0     30  7844 TURNER 1981-09-08 SALESMAN  7698 1500
->    0     20  7876 ADAMS  1987-05-23 CLERK     7788 1100
->    0     30  7900 JAMES  1981-12-03 CLERK     7698  950
->    0     20  7902 FORD   1981-12-03 ANALYST   7566 3000
->    0     10  7934 MILLER 1982-01-23 CLERK     7782 1300
+>          20  7876 ADAMS  1987-05-23 CLERK     7788 1100
+>          30  7900 JAMES  1981-12-03 CLERK     7698  950
+>          20  7902 FORD   1981-12-03 ANALYST   7566 3000
+>          10  7934 MILLER 1982-01-23 CLERK     7782 1300
 >
-> val it : {comm:real, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int, sal:real} bag
+> val it : {comm:real option, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int option, sal:real} bag
 
 from e in scott.emps yield e.deptno;
 > val it = [20,30,30,20,30,30,10,20,10,30,20,30,20,10] : int bag
@@ -129,32 +129,32 @@ from e in scott.emps yield ();
 from e in scott.emps yield e;
 > comm deptno empno ename  hiredate   job       mgr  sal
 > ---- ------ ----- ------ ---------- --------- ---- ----
->    0     20  7369 SMITH  1980-12-17 CLERK     7902  800
+>          20  7369 SMITH  1980-12-17 CLERK     7902  800
 >  300     30  7499 ALLEN  1981-02-20 SALESMAN  7698 1600
 >  500     30  7521 WARD   1981-02-22 SALESMAN  7698 1250
->    0     20  7566 JONES  1981-02-04 MANAGER   7839 2975
+>          20  7566 JONES  1981-02-04 MANAGER   7839 2975
 > 1400     30  7654 MARTIN 1981-09-28 SALESMAN  7698 1250
->    0     30  7698 BLAKE  1981-01-05 MANAGER   7839 2850
->    0     10  7782 CLARK  1981-06-09 MANAGER   7839 2450
->    0     20  7788 SCOTT  1987-04-19 ANALYST   7566 3000
->    0     10  7839 KING   1981-11-17 PRESIDENT    0 5000
+>          30  7698 BLAKE  1981-01-05 MANAGER   7839 2850
+>          10  7782 CLARK  1981-06-09 MANAGER   7839 2450
+>          20  7788 SCOTT  1987-04-19 ANALYST   7566 3000
+>          10  7839 KING   1981-11-17 PRESIDENT      5000
 >    0     30  7844 TURNER 1981-09-08 SALESMAN  7698 1500
->    0     20  7876 ADAMS  1987-05-23 CLERK     7788 1100
->    0     30  7900 JAMES  1981-12-03 CLERK     7698  950
->    0     20  7902 FORD   1981-12-03 ANALYST   7566 3000
->    0     10  7934 MILLER 1982-01-23 CLERK     7782 1300
+>          20  7876 ADAMS  1987-05-23 CLERK     7788 1100
+>          30  7900 JAMES  1981-12-03 CLERK     7698  950
+>          20  7902 FORD   1981-12-03 ANALYST   7566 3000
+>          10  7934 MILLER 1982-01-23 CLERK     7782 1300
 >
-> val it : {comm:real, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int, sal:real} bag
+> val it : {comm:real option, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int option, sal:real} bag
 
 from e in scott.emps where e.job = "CLERK" yield e;
 > comm deptno empno ename  hiredate   job   mgr  sal
 > ---- ------ ----- ------ ---------- ----- ---- ----
->    0     20  7369 SMITH  1980-12-17 CLERK 7902  800
->    0     20  7876 ADAMS  1987-05-23 CLERK 7788 1100
->    0     30  7900 JAMES  1981-12-03 CLERK 7698  950
->    0     10  7934 MILLER 1982-01-23 CLERK 7782 1300
+>          20  7369 SMITH  1980-12-17 CLERK 7902  800
+>          20  7876 ADAMS  1987-05-23 CLERK 7788 1100
+>          30  7900 JAMES  1981-12-03 CLERK 7698  950
+>          10  7934 MILLER 1982-01-23 CLERK 7782 1300
 >
-> val it : {comm:real, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int, sal:real} bag
+> val it : {comm:real option, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int option, sal:real} bag
 
 from n in [1,2,3] yield n;
 > val it = [1,2,3] : int list
@@ -252,22 +252,22 @@ from e in scott.emps
 order e.ename;
 > comm deptno empno ename  hiredate   job       mgr  sal
 > ---- ------ ----- ------ ---------- --------- ---- ----
->    0     20  7876 ADAMS  1987-05-23 CLERK     7788 1100
+>          20  7876 ADAMS  1987-05-23 CLERK     7788 1100
 >  300     30  7499 ALLEN  1981-02-20 SALESMAN  7698 1600
->    0     30  7698 BLAKE  1981-01-05 MANAGER   7839 2850
->    0     10  7782 CLARK  1981-06-09 MANAGER   7839 2450
->    0     20  7902 FORD   1981-12-03 ANALYST   7566 3000
->    0     30  7900 JAMES  1981-12-03 CLERK     7698  950
->    0     20  7566 JONES  1981-02-04 MANAGER   7839 2975
->    0     10  7839 KING   1981-11-17 PRESIDENT    0 5000
+>          30  7698 BLAKE  1981-01-05 MANAGER   7839 2850
+>          10  7782 CLARK  1981-06-09 MANAGER   7839 2450
+>          20  7902 FORD   1981-12-03 ANALYST   7566 3000
+>          30  7900 JAMES  1981-12-03 CLERK     7698  950
+>          20  7566 JONES  1981-02-04 MANAGER   7839 2975
+>          10  7839 KING   1981-11-17 PRESIDENT      5000
 > 1400     30  7654 MARTIN 1981-09-28 SALESMAN  7698 1250
->    0     10  7934 MILLER 1982-01-23 CLERK     7782 1300
->    0     20  7788 SCOTT  1987-04-19 ANALYST   7566 3000
->    0     20  7369 SMITH  1980-12-17 CLERK     7902  800
+>          10  7934 MILLER 1982-01-23 CLERK     7782 1300
+>          20  7788 SCOTT  1987-04-19 ANALYST   7566 3000
+>          20  7369 SMITH  1980-12-17 CLERK     7902  800
 >    0     30  7844 TURNER 1981-09-08 SALESMAN  7698 1500
 >  500     30  7521 WARD   1981-02-22 SALESMAN  7698 1250
 >
-> val it : {comm:real, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int, sal:real} list
+> val it : {comm:real option, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int option, sal:real} list
 
 from e in scott.emps
 order DESC e.ename
@@ -276,9 +276,9 @@ take 3;
 > ---- ------ ----- ------ ---------- -------- ---- ----
 >  500     30  7521 WARD   1981-02-22 SALESMAN 7698 1250
 >    0     30  7844 TURNER 1981-09-08 SALESMAN 7698 1500
->    0     20  7369 SMITH  1980-12-17 CLERK    7902  800
+>          20  7369 SMITH  1980-12-17 CLERK    7902  800
 >
-> val it : {comm:real, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int, sal:real} list
+> val it : {comm:real option, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int option, sal:real} list
 
 from e in scott.emps,
   d in scott.depts
@@ -309,22 +309,22 @@ where e.deptno = d.deptno;
 > d                          e
 > deptno dname      loc      comm deptno empno ename  hiredate   job       mgr  sal
 > ------ ---------- -------- ---- ------ ----- ------ ---------- --------- ---- ----
->     20 RESEARCH   DALLAS      0     20  7369 SMITH  1980-12-17 CLERK     7902  800
+>     20 RESEARCH   DALLAS            20  7369 SMITH  1980-12-17 CLERK     7902  800
 >     30 SALES      CHICAGO   300     30  7499 ALLEN  1981-02-20 SALESMAN  7698 1600
 >     30 SALES      CHICAGO   500     30  7521 WARD   1981-02-22 SALESMAN  7698 1250
->     20 RESEARCH   DALLAS      0     20  7566 JONES  1981-02-04 MANAGER   7839 2975
+>     20 RESEARCH   DALLAS            20  7566 JONES  1981-02-04 MANAGER   7839 2975
 >     30 SALES      CHICAGO  1400     30  7654 MARTIN 1981-09-28 SALESMAN  7698 1250
->     30 SALES      CHICAGO     0     30  7698 BLAKE  1981-01-05 MANAGER   7839 2850
->     10 ACCOUNTING NEW YORK    0     10  7782 CLARK  1981-06-09 MANAGER   7839 2450
->     20 RESEARCH   DALLAS      0     20  7788 SCOTT  1987-04-19 ANALYST   7566 3000
->     10 ACCOUNTING NEW YORK    0     10  7839 KING   1981-11-17 PRESIDENT    0 5000
+>     30 SALES      CHICAGO           30  7698 BLAKE  1981-01-05 MANAGER   7839 2850
+>     10 ACCOUNTING NEW YORK          10  7782 CLARK  1981-06-09 MANAGER   7839 2450
+>     20 RESEARCH   DALLAS            20  7788 SCOTT  1987-04-19 ANALYST   7566 3000
+>     10 ACCOUNTING NEW YORK          10  7839 KING   1981-11-17 PRESIDENT      5000
 >     30 SALES      CHICAGO     0     30  7844 TURNER 1981-09-08 SALESMAN  7698 1500
->     20 RESEARCH   DALLAS      0     20  7876 ADAMS  1987-05-23 CLERK     7788 1100
->     30 SALES      CHICAGO     0     30  7900 JAMES  1981-12-03 CLERK     7698  950
->     20 RESEARCH   DALLAS      0     20  7902 FORD   1981-12-03 ANALYST   7566 3000
->     10 ACCOUNTING NEW YORK    0     10  7934 MILLER 1982-01-23 CLERK     7782 1300
+>     20 RESEARCH   DALLAS            20  7876 ADAMS  1987-05-23 CLERK     7788 1100
+>     30 SALES      CHICAGO           30  7900 JAMES  1981-12-03 CLERK     7698  950
+>     20 RESEARCH   DALLAS            20  7902 FORD   1981-12-03 ANALYST   7566 3000
+>     10 ACCOUNTING NEW YORK          10  7934 MILLER 1982-01-23 CLERK     7782 1300
 >
-> val it : {d:{deptno:int, dname:string, loc:string}, e:{comm:real, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int, sal:real}} bag
+> val it : {d:{deptno:int, dname:string, loc:string}, e:{comm:real option, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int option, sal:real}} bag
 
 from e in scott.emps,
   d in scott.depts
@@ -332,22 +332,22 @@ where e.deptno = d.deptno
 yield e;
 > comm deptno empno ename  hiredate   job       mgr  sal
 > ---- ------ ----- ------ ---------- --------- ---- ----
->    0     20  7369 SMITH  1980-12-17 CLERK     7902  800
+>          20  7369 SMITH  1980-12-17 CLERK     7902  800
 >  300     30  7499 ALLEN  1981-02-20 SALESMAN  7698 1600
 >  500     30  7521 WARD   1981-02-22 SALESMAN  7698 1250
->    0     20  7566 JONES  1981-02-04 MANAGER   7839 2975
+>          20  7566 JONES  1981-02-04 MANAGER   7839 2975
 > 1400     30  7654 MARTIN 1981-09-28 SALESMAN  7698 1250
->    0     30  7698 BLAKE  1981-01-05 MANAGER   7839 2850
->    0     10  7782 CLARK  1981-06-09 MANAGER   7839 2450
->    0     20  7788 SCOTT  1987-04-19 ANALYST   7566 3000
->    0     10  7839 KING   1981-11-17 PRESIDENT    0 5000
+>          30  7698 BLAKE  1981-01-05 MANAGER   7839 2850
+>          10  7782 CLARK  1981-06-09 MANAGER   7839 2450
+>          20  7788 SCOTT  1987-04-19 ANALYST   7566 3000
+>          10  7839 KING   1981-11-17 PRESIDENT      5000
 >    0     30  7844 TURNER 1981-09-08 SALESMAN  7698 1500
->    0     20  7876 ADAMS  1987-05-23 CLERK     7788 1100
->    0     30  7900 JAMES  1981-12-03 CLERK     7698  950
->    0     20  7902 FORD   1981-12-03 ANALYST   7566 3000
->    0     10  7934 MILLER 1982-01-23 CLERK     7782 1300
+>          20  7876 ADAMS  1987-05-23 CLERK     7788 1100
+>          30  7900 JAMES  1981-12-03 CLERK     7698  950
+>          20  7902 FORD   1981-12-03 ANALYST   7566 3000
+>          10  7934 MILLER 1982-01-23 CLERK     7782 1300
 >
-> val it : {comm:real, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int, sal:real} bag
+> val it : {comm:real option, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int option, sal:real} bag
 
 from e in scott.emps,
   d in scott.depts
@@ -368,7 +368,7 @@ from e in scott.emps,
 where e.deptno = d.deptno
 andalso e.job = "CLERK"
 group e.mgr;
-> val it = [7902,7788,7698,7782] : int bag
+> val it = [SOME 7698,SOME 7782,SOME 7788,SOME 7902] : int option bag
 
 from e in scott.emps,
   g in scott.salgrades
@@ -377,20 +377,20 @@ where e.sal >= g.losal
 > e                                                       g
 > comm deptno empno ename  hiredate   job       mgr  sal  grade hisal losal
 > ---- ------ ----- ------ ---------- --------- ---- ---- ----- ----- -----
->    0     20  7369 SMITH  1980-12-17 CLERK     7902  800     1  1200   700
+>          20  7369 SMITH  1980-12-17 CLERK     7902  800     1  1200   700
 >  300     30  7499 ALLEN  1981-02-20 SALESMAN  7698 1600     3  2000  1401
 >  500     30  7521 WARD   1981-02-22 SALESMAN  7698 1250     2  1400  1201
->    0     20  7566 JONES  1981-02-04 MANAGER   7839 2975     4  3000  2001
+>          20  7566 JONES  1981-02-04 MANAGER   7839 2975     4  3000  2001
 > 1400     30  7654 MARTIN 1981-09-28 SALESMAN  7698 1250     2  1400  1201
->    0     30  7698 BLAKE  1981-01-05 MANAGER   7839 2850     4  3000  2001
->    0     10  7782 CLARK  1981-06-09 MANAGER   7839 2450     4  3000  2001
->    0     10  7839 KING   1981-11-17 PRESIDENT    0 5000     5  9999  3001
+>          30  7698 BLAKE  1981-01-05 MANAGER   7839 2850     4  3000  2001
+>          10  7782 CLARK  1981-06-09 MANAGER   7839 2450     4  3000  2001
+>          10  7839 KING   1981-11-17 PRESIDENT      5000     5  9999  3001
 >    0     30  7844 TURNER 1981-09-08 SALESMAN  7698 1500     3  2000  1401
->    0     20  7876 ADAMS  1987-05-23 CLERK     7788 1100     1  1200   700
->    0     30  7900 JAMES  1981-12-03 CLERK     7698  950     1  1200   700
->    0     10  7934 MILLER 1982-01-23 CLERK     7782 1300     2  1400  1201
+>          20  7876 ADAMS  1987-05-23 CLERK     7788 1100     1  1200   700
+>          30  7900 JAMES  1981-12-03 CLERK     7698  950     1  1200   700
+>          10  7934 MILLER 1982-01-23 CLERK     7782 1300     2  1400  1201
 >
-> val it : {e:{comm:real, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int, sal:real}, g:{grade:int, hisal:real, losal:real}} bag
+> val it : {e:{comm:real option, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int option, sal:real}, g:{grade:int, hisal:real, losal:real}} bag
 
 from e in scott.emps,
   d in scott.depts,
@@ -401,20 +401,20 @@ where e.sal >= g.losal
 > d                          e                                                       g
 > deptno dname      loc      comm deptno empno ename  hiredate   job       mgr  sal  grade hisal losal
 > ------ ---------- -------- ---- ------ ----- ------ ---------- --------- ---- ---- ----- ----- -----
->     20 RESEARCH   DALLAS      0     20  7369 SMITH  1980-12-17 CLERK     7902  800     1  1200   700
+>     20 RESEARCH   DALLAS            20  7369 SMITH  1980-12-17 CLERK     7902  800     1  1200   700
 >     30 SALES      CHICAGO   300     30  7499 ALLEN  1981-02-20 SALESMAN  7698 1600     3  2000  1401
 >     30 SALES      CHICAGO   500     30  7521 WARD   1981-02-22 SALESMAN  7698 1250     2  1400  1201
->     20 RESEARCH   DALLAS      0     20  7566 JONES  1981-02-04 MANAGER   7839 2975     4  3000  2001
+>     20 RESEARCH   DALLAS            20  7566 JONES  1981-02-04 MANAGER   7839 2975     4  3000  2001
 >     30 SALES      CHICAGO  1400     30  7654 MARTIN 1981-09-28 SALESMAN  7698 1250     2  1400  1201
->     30 SALES      CHICAGO     0     30  7698 BLAKE  1981-01-05 MANAGER   7839 2850     4  3000  2001
->     10 ACCOUNTING NEW YORK    0     10  7782 CLARK  1981-06-09 MANAGER   7839 2450     4  3000  2001
->     10 ACCOUNTING NEW YORK    0     10  7839 KING   1981-11-17 PRESIDENT    0 5000     5  9999  3001
+>     30 SALES      CHICAGO           30  7698 BLAKE  1981-01-05 MANAGER   7839 2850     4  3000  2001
+>     10 ACCOUNTING NEW YORK          10  7782 CLARK  1981-06-09 MANAGER   7839 2450     4  3000  2001
+>     10 ACCOUNTING NEW YORK          10  7839 KING   1981-11-17 PRESIDENT      5000     5  9999  3001
 >     30 SALES      CHICAGO     0     30  7844 TURNER 1981-09-08 SALESMAN  7698 1500     3  2000  1401
->     20 RESEARCH   DALLAS      0     20  7876 ADAMS  1987-05-23 CLERK     7788 1100     1  1200   700
->     30 SALES      CHICAGO     0     30  7900 JAMES  1981-12-03 CLERK     7698  950     1  1200   700
->     10 ACCOUNTING NEW YORK    0     10  7934 MILLER 1982-01-23 CLERK     7782 1300     2  1400  1201
+>     20 RESEARCH   DALLAS            20  7876 ADAMS  1987-05-23 CLERK     7788 1100     1  1200   700
+>     30 SALES      CHICAGO           30  7900 JAMES  1981-12-03 CLERK     7698  950     1  1200   700
+>     10 ACCOUNTING NEW YORK          10  7934 MILLER 1982-01-23 CLERK     7782 1300     2  1400  1201
 >
-> val it : {d:{deptno:int, dname:string, loc:string}, e:{comm:real, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int, sal:real}, g:{grade:int, hisal:real, losal:real}} bag
+> val it : {d:{deptno:int, dname:string, loc:string}, e:{comm:real option, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int option, sal:real}, g:{grade:int, hisal:real, losal:real}} bag
 
 from e in scott.emps,
   d in scott.depts,

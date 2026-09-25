@@ -20,6 +20,7 @@ package net.hydromatic.morel.foreign;
 
 import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.util.Static.append;
+import static net.hydromatic.morel.util.Static.transformEager;
 
 import com.google.common.collect.ImmutableList;
 import java.util.List;
@@ -27,12 +28,14 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.stream.Collectors;
+import net.hydromatic.morel.type.RecordLikeType;
 import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.Ord;
 import net.hydromatic.morel.util.PairList;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.Schemas;
@@ -48,13 +51,27 @@ public class CalciteForeignValue implements ForeignValue {
   private final Calcite calcite;
   private final SchemaPlus schema;
   private final NameConverter nameConverter;
+  private final NullabilityPolicy nullabilityPolicy;
 
   /** Creates a CalciteForeignValue. */
   public CalciteForeignValue(
-      Calcite calcite, SchemaPlus schema, NameConverter nameConverter) {
+      Calcite calcite,
+      SchemaPlus schema,
+      NameConverter nameConverter,
+      NullabilityPolicy nullabilityPolicy) {
     this.calcite = requireNonNull(calcite);
     this.schema = requireNonNull(schema);
     this.nameConverter = requireNonNull(nameConverter);
+    this.nullabilityPolicy = requireNonNull(nullabilityPolicy);
+  }
+
+  /**
+   * Creates a CalciteForeignValue whose columns are nullable if their SQL types
+   * are nullable.
+   */
+  public CalciteForeignValue(
+      Calcite calcite, SchemaPlus schema, NameConverter nameConverter) {
+    this(calcite, schema, nameConverter, NullabilityPolicy.DECLARED);
   }
 
   /**
@@ -103,16 +120,32 @@ public class CalciteForeignValue implements ForeignValue {
 
   private Type toType(
       List<String> tablePath, Table table, TypeSystem typeSystem) {
+    return typeSystem.bagType(
+        rowType(
+            tablePath,
+            table.getRowType(calcite.typeFactory).getFieldList(),
+            typeSystem));
+  }
+
+  /**
+   * Returns the Morel record type of a table's rows. A column that is nullable
+   * (according to {@link #nullabilityPolicy}) has an {@code option} type.
+   */
+  private RecordLikeType rowType(
+      List<String> tablePath,
+      List<RelDataTypeField> fieldList,
+      TypeSystem typeSystem) {
     final PairList<String, Type> fields = PairList.of();
-    table
-        .getRowType(calcite.typeFactory)
-        .getFieldList()
-        .forEach(
-            field ->
-                fields.add(
-                    nameConverter.convert(tablePath, field.getName()),
-                    Converters.fieldType(field)));
-    return typeSystem.bagType(typeSystem.recordType(fields));
+    fieldList.forEach(
+        field -> {
+          final Type type = Converters.fieldType(field);
+          fields.add(
+              nameConverter.convert(tablePath, field.getName()),
+              nullabilityPolicy.isNullable(tablePath, field)
+                  ? typeSystem.option(type)
+                  : type);
+        });
+    return typeSystem.recordType(fields);
   }
 
   public Object value() {
@@ -130,8 +163,11 @@ public class CalciteForeignValue implements ForeignValue {
               b.scan(plus(schemaPath, tableName));
               final List<String> tablePath =
                   append(Schemas.path(schema).names(), tableName);
-              final List<RexNode> exprList =
-                  b.peek().getRowType().getFieldList().stream()
+              // Sort the columns by their Morel names, as in a record.
+              final List<RelDataTypeField> fieldList =
+                  b.peek().getRowType().getFieldList();
+              final List<Ord<String>> ords =
+                  fieldList.stream()
                       .map(
                           f ->
                               Ord.of(
@@ -139,12 +175,19 @@ public class CalciteForeignValue implements ForeignValue {
                                   nameConverter.convert(
                                       tablePath, f.getName())))
                       .sorted(Map.Entry.comparingByValue())
-                      .map(p -> b.alias(b.field(p.i), p.e))
                       .collect(Collectors.toList());
+              final List<RexNode> exprList =
+                  transformEager(ords, p -> b.alias(b.field(p.i), p.e));
+              final List<Boolean> nullables =
+                  transformEager(
+                      ords,
+                      p ->
+                          nullabilityPolicy.isNullable(
+                              tablePath, fieldList.get(p.i)));
               b.project(exprList, ImmutableList.of(), true);
               final RelNode rel = b.build();
               final Converter<Object[]> converter =
-                  Converters.ofRow(rel.getRowType());
+                  Converters.ofRow(rel.getRowType(), nullables);
               fieldValues.put(
                   nameConverter.convert(schemaPath, tableName),
                   new RelList(rel, calcite.dataContext, converter));
@@ -178,6 +221,18 @@ public class CalciteForeignValue implements ForeignValue {
 
     /** Converter that leaves all names unchanged. */
     NameConverter IDENTITY = (path, name) -> name;
+  }
+
+  /**
+   * Decides whether a column is nullable, and therefore has an {@code option}
+   * type in Morel.
+   */
+  public interface NullabilityPolicy {
+    boolean isNullable(List<String> tablePath, RelDataTypeField field);
+
+    /** Policy that uses the nullability of the column's SQL type. */
+    NullabilityPolicy DECLARED =
+        (tablePath, field) -> field.getType().isNullable();
   }
 }
 

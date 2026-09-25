@@ -34,6 +34,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
+import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.eval.Unit;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.PrimitiveType;
@@ -51,17 +52,26 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.ImmutableNullableList;
+import org.jspecify.annotations.Nullable;
 
 /** Utilities for Converter. */
 public class Converters {
   private Converters() {}
 
-  public static Converter<Object[]> ofRow(RelDataType rowType) {
+  /**
+   * Creates a converter for a row. If {@code nullables[i]} is true, the {@code
+   * i}th field is converted to an {@code option} value.
+   */
+  public static Converter<Object[]> ofRow(
+      RelDataType rowType, List<Boolean> nullables) {
     final List<RelDataTypeField> fields = rowType.getFieldList();
+    checkArgument(fields.size() == nullables.size());
     final ImmutableList.Builder<Converter<Object[]>> converters =
         ImmutableList.builder();
     forEachIndexed(
-        fields, (field, i) -> converters.add(ofField(field.getType(), i)));
+        fields,
+        (field, i) ->
+            converters.add(ofField(field.getType(), i, nullables.get(i))));
     return new RecordConverter(converters.build());
   }
 
@@ -86,8 +96,31 @@ public class Converters {
   }
 
   public static Converter<Object[]> ofField(RelDataType type, int ordinal) {
+    return ofField(type, ordinal, false);
+  }
+
+  /**
+   * Creates a converter for the {@code ordinal}th field of a row. If {@code
+   * nullable}, converts to an {@code option} value: {@code NONE} if the field
+   * is null, otherwise {@code SOME v}.
+   */
+  static Converter<Object[]> ofField(
+      RelDataType type, int ordinal, boolean nullable) {
     final FieldConverter fieldConverter = FieldConverter.toType(type);
+    if (nullable) {
+      return values -> {
+        final Object o = values[ordinal];
+        return o == null
+            ? Codes.OPTION_NONE
+            : Codes.optionSome(fieldConverter.convertFrom(o));
+      };
+    }
     return values -> fieldConverter.convertFrom(values[ordinal]);
+  }
+
+  /** Returns whether a type is {@code option}. */
+  private static boolean isOption(Type type) {
+    return type instanceof DataType && ((DataType) type).name.equals("option");
   }
 
   static Converter<Object[]> ofField2(
@@ -127,10 +160,8 @@ public class Converters {
           ordinal,
           Linq4j.singletonEnumerator(type));
     }
-    final FieldConverter fieldConverter =
-        FieldConverter.toType(field.getType());
     final int i = ordinal.getAndIncrement();
-    return values -> fieldConverter.convertFrom(values[i]);
+    return ofField(field.getType(), i, isOption(type));
   }
 
   @SuppressWarnings("unchecked")
@@ -156,6 +187,10 @@ public class Converters {
     }
     if (type instanceof RecordLikeType) {
       return (Converter<E>) ofRow2(fromType, (RecordLikeType) type);
+    }
+    if (isOption(type) && fromType.isStruct()) {
+      RelDataTypeField field = only(fromType.getFieldList());
+      return (Converter<E>) ofField(field.getType(), 0, true);
     }
     if (fromType.isStruct() && fromType.getFieldCount() == 1) {
       // A single-column row whose Morel type is not a record, e.g. a
@@ -294,6 +329,18 @@ public class Converters {
     }
 
     /**
+     * Creates a converter between a given Calcite type and Morel type. If the
+     * Morel type is {@code option}, the converter maps null to {@code NONE}.
+     */
+    static C2m of(RelDataType calciteType, Type morelType) {
+      if (isOption(morelType)) {
+        return new OptionC2m(
+            new C2m(calciteType, ((DataType) morelType).arg(0)), morelType);
+      }
+      return new C2m(calciteType, morelType);
+    }
+
+    /**
      * Creates a converter for a given Morel type, in the process deducing the
      * corresponding Calcite type.
      */
@@ -310,8 +357,8 @@ public class Converters {
             return forMorelCollection(type, typeFactory, nullable, recordList);
           }
           if (dataType.name.equals("option")) {
-            return forMorel(
-                dataType.parameterTypes.get(0), typeFactory, true, false);
+            return new OptionC2m(
+                forMorel(dataType.arg(0), typeFactory, true, false), type);
           }
           throw new AssertionError("unknown type " + type);
 
@@ -406,7 +453,7 @@ public class Converters {
       return new C2m(typeFactory.createMultisetType(elementType, -1), type);
     }
 
-    public Object toCalciteObject(Object v) {
+    public @Nullable Object toCalciteObject(Object v) {
       return v;
     }
 
@@ -450,9 +497,7 @@ public class Converters {
               calciteType.getFieldList(),
               ((TupleType) morelType).argTypes,
               (field, argType) ->
-                  b.add(
-                      new C2m(field.getType(), argType)
-                          .toMorelObjectFunction()));
+                  b.add(of(field.getType(), argType).toMorelObjectFunction()));
           final ImmutableList<Function<Object, Object>> converters = b.build();
           return v -> {
             final Object[] values = (Object[]) v;
@@ -485,6 +530,31 @@ public class Converters {
           }
           throw new AssertionError("unknown type " + morelType);
       }
+    }
+  }
+
+  /**
+   * Converter between a Morel {@code option} and a nullable Calcite value.
+   * {@code NONE} is null, and {@code SOME v} is {@code v}.
+   */
+  private static class OptionC2m extends C2m {
+    private final C2m elementC2m;
+
+    OptionC2m(C2m elementC2m, Type morelType) {
+      super(elementC2m.calciteType, morelType);
+      this.elementC2m = elementC2m;
+    }
+
+    @Override
+    public @Nullable Object toCalciteObject(Object v) {
+      final List<?> list = (List<?>) v;
+      return list.size() < 2 ? null : elementC2m.toCalciteObject(list.get(1));
+    }
+
+    @Override
+    public Function<Object, Object> toMorelObjectFunction() {
+      final Function<Object, Object> f = elementC2m.toMorelObjectFunction();
+      return v -> v == null ? Codes.OPTION_NONE : Codes.optionSome(f.apply(v));
     }
   }
 

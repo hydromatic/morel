@@ -3711,7 +3711,7 @@ public abstract class Codes {
    *
    * @see #optionSome(Object)
    */
-  static final List OPTION_NONE = ImmutableList.of("NONE");
+  public static final List OPTION_NONE = ImmutableList.of("NONE");
 
   /**
    * Creates a value of {@code SOME v}.
@@ -3719,7 +3719,7 @@ public abstract class Codes {
    * @see net.hydromatic.morel.compile.BuiltIn.Constructor#OPTION_SOME
    * @see #OPTION_NONE
    */
-  static List optionSome(Object o) {
+  public static List optionSome(Object o) {
     return ImmutableList.of(BuiltIn.Constructor.OPTION_SOME.constructor, o);
   }
 

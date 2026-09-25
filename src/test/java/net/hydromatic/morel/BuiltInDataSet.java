@@ -19,7 +19,9 @@
 package net.hydromatic.morel;
 
 import static java.util.Objects.requireNonNull;
+import static net.hydromatic.morel.util.Static.last;
 
+import com.google.common.collect.ImmutableSet;
 import java.util.AbstractMap;
 import java.util.List;
 import java.util.Locale;
@@ -61,7 +63,50 @@ public enum BuiltInDataSet implements DataSet {
    *   <li>{@code warehouse} - Warehouse dimension table (24 rows)
    * </ul>
    */
-  FOODMART("foodmart", NameConverter.TO_LOWER) {
+  FOODMART(
+      "foodmart",
+      NameConverter.TO_LOWER,
+      "account.account_parent",
+      "account.Custom_Members",
+      "category.category_parent",
+      "category.category_rollup",
+      "customer.mi",
+      "customer.address2",
+      "customer.address3",
+      "customer.address4",
+      "employee.end_date",
+      "promotion.start_date",
+      "promotion.end_date",
+      "reserve_employee.position_id",
+      "reserve_employee.position_title",
+      "reserve_employee.hire_date",
+      "reserve_employee.end_date",
+      "store.store_manager",
+      "store.store_phone",
+      "store.store_fax",
+      "store.first_opened_date",
+      "store.last_remodel_date",
+      "store.store_sqft",
+      "store.grocery_sqft",
+      "store.frozen_sqft",
+      "store.meat_sqft",
+      "store_ragged.store_city",
+      "store_ragged.store_manager",
+      "store_ragged.store_phone",
+      "store_ragged.store_fax",
+      "store_ragged.first_opened_date",
+      "store_ragged.last_remodel_date",
+      "store_ragged.store_sqft",
+      "store_ragged.grocery_sqft",
+      "store_ragged.frozen_sqft",
+      "store_ragged.meat_sqft",
+      "time_by_day.fiscal_period",
+      "warehouse.wa_address2",
+      "warehouse.wa_address3",
+      "warehouse.wa_address4",
+      "warehouse.warehouse_owner_name",
+      "warehouse.warehouse_phone",
+      "warehouse.warehouse_fax") {
     SchemaPlus schema(SchemaPlus rootSchema) {
       final DataSource dataSource =
           createDataSource(
@@ -89,7 +134,7 @@ public enum BuiltInDataSet implements DataSet {
    * <p>The underlying tables are {@code BONUS}, {@code DEPT}, {@code EMP},
    * {@code SALGRADE}.
    */
-  SCOTT("scott", BuiltInDataSet::scottNameConverter) {
+  SCOTT("scott", BuiltInDataSet::scottNameConverter, "EMP.MGR", "EMP.COMM") {
     SchemaPlus schema(SchemaPlus rootSchema) {
       final DataSource dataSource =
           createDataSource(
@@ -134,9 +179,20 @@ public enum BuiltInDataSet implements DataSet {
   final String schemaName;
   final NameConverter nameConverter;
 
-  BuiltInDataSet(String schemaName, NameConverter nameConverter) {
+  /**
+   * Columns, in the form "table.column", that contain nulls. They have {@code
+   * option} types in Morel. Other columns are treated as {@code NOT NULL} even
+   * if the database declares them nullable.
+   */
+  final Set<String> nullableColumns;
+
+  BuiltInDataSet(
+      String schemaName,
+      NameConverter nameConverter,
+      String... nullableColumns) {
     this.schemaName = requireNonNull(schemaName);
     this.nameConverter = requireNonNull(nameConverter);
+    this.nullableColumns = ImmutableSet.copyOf(nullableColumns);
   }
 
   /** Returns the Calcite schema of this data set. */
@@ -145,7 +201,12 @@ public enum BuiltInDataSet implements DataSet {
   @Override
   public ForeignValue foreignValue(Calcite calcite) {
     SchemaPlus schema = schema(calcite.rootSchema);
-    return new CalciteForeignValue(calcite, schema, nameConverter);
+    return new CalciteForeignValue(
+        calcite,
+        schema,
+        nameConverter,
+        (tablePath, field) ->
+            nullableColumns.contains(last(tablePath) + "." + field.getName()));
   }
 
   /** Creates a {@link NameConverter} for the "scott" database. */

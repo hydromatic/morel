@@ -53,7 +53,7 @@ Sys.plan();
 >   "fields": [
 >     {
 >       "type": "REAL",
->       "nullable": false,
+>       "nullable": true,
 >       "name": "comm"
 >     },
 >     {
@@ -86,7 +86,7 @@ Sys.plan();
 >     },
 >     {
 >       "type": "INTEGER",
->       "nullable": false,
+>       "nullable": true,
 >       "name": "mgr"
 >     },
 >     {
@@ -296,9 +296,9 @@ let
       val pred =
         if (exists prev) then
           fn e => e.mgr in (from p in newEmps
-                            yield p.empno)
+                            yield SOME p.empno)
         else
-          fn e => e.mgr = 0
+          fn e => e.mgr = NONE
       val nextEmps = from e in scott.emps
         where (pred e)
         yield {level, e.empno}
@@ -317,12 +317,12 @@ end;
 let
   fun descendants () =
     (from e in scott.emps
-      where e.mgr = 0
+      where e.mgr = NONE
       yield {e, level = 0})
     union
     (from d in descendants (),
         e in scott.emps
-      where e.mgr = d.e.empno
+      where e.mgr = SOME d.e.empno
       yield {e, level = d.level + 1});
 in
   descendants ()
@@ -340,31 +340,31 @@ let
       descendants2 (from d in descendants union newDescendants)
           (from d in newDescendants,
               e in scott.emps
-            where e.mgr = d.e.empno
+            where e.mgr = SOME d.e.empno
             yield {e, level = d.level + 1})
 in
   from d in descendants2 Bag.nil
       (from e in scott.emps
-        where e.mgr = 0
+        where e.mgr = NONE
         yield {e, level = 0})
     yield {d.e.empno, d.e.mgr, d.e.ename, d.level}
 end;
 > val it =
->   [{empno=7839,ename="KING",level=0,mgr=0},
->    {empno=7566,ename="JONES",level=1,mgr=7839},
->    {empno=7698,ename="BLAKE",level=1,mgr=7839},
->    {empno=7782,ename="CLARK",level=1,mgr=7839},
->    {empno=7788,ename="SCOTT",level=2,mgr=7566},
->    {empno=7902,ename="FORD",level=2,mgr=7566},
->    {empno=7499,ename="ALLEN",level=2,mgr=7698},
->    {empno=7521,ename="WARD",level=2,mgr=7698},
->    {empno=7654,ename="MARTIN",level=2,mgr=7698},
->    {empno=7844,ename="TURNER",level=2,mgr=7698},
->    {empno=7900,ename="JAMES",level=2,mgr=7698},
->    {empno=7934,ename="MILLER",level=2,mgr=7782},
->    {empno=7876,ename="ADAMS",level=3,mgr=7788},
->    {empno=7369,ename="SMITH",level=3,mgr=7902}]
->   : {empno:int, ename:string, level:int, mgr:int} bag
+>   [{empno=7839,ename="KING",level=0,mgr=NONE},
+>    {empno=7566,ename="JONES",level=1,mgr=SOME 7839},
+>    {empno=7698,ename="BLAKE",level=1,mgr=SOME 7839},
+>    {empno=7782,ename="CLARK",level=1,mgr=SOME 7839},
+>    {empno=7788,ename="SCOTT",level=2,mgr=SOME 7566},
+>    {empno=7902,ename="FORD",level=2,mgr=SOME 7566},
+>    {empno=7499,ename="ALLEN",level=2,mgr=SOME 7698},
+>    {empno=7521,ename="WARD",level=2,mgr=SOME 7698},
+>    {empno=7654,ename="MARTIN",level=2,mgr=SOME 7698},
+>    {empno=7844,ename="TURNER",level=2,mgr=SOME 7698},
+>    {empno=7900,ename="JAMES",level=2,mgr=SOME 7698},
+>    {empno=7934,ename="MILLER",level=2,mgr=SOME 7782},
+>    {empno=7876,ename="ADAMS",level=3,mgr=SOME 7788},
+>    {empno=7369,ename="SMITH",level=3,mgr=SOME 7902}]
+>   : {empno:int, ename:string, level:int, mgr:int option} bag
 
 (* 'max' and 'min' over a type that the Calcite adapter cannot order the way
  * Morel does -- 'word' (which Calcite compares as a signed integer) or a
@@ -392,6 +392,46 @@ Sys.plan ();
 > val it =
 >   "globalMarshal(globals [SOME], body apply(fnValue Relational.only, argCode from(sink join(pat ox, exp tuple(apply(fnValue tyCon, argCode constant(1)), constant([NONE]), apply(fnValue tyCon, argCode constant(3))), sink group(key tuple, agg aggregate, sink collect(get(name min)))))))"
 >   : string
+Sys.set ("hybrid", false);
+> val it = () : unit
+
+(* A column that contains nulls, such as 'comm' and 'mgr' in 'scott.emps', has
+ * an option type. Values read via Calcite are converted to 'NONE' or 'SOME'. *)
+Sys.set ("hybrid", true);
+> val it = () : unit
+from e in scott.emps where e.deptno = 30 yield {e.ename, e.comm};
+> val it =
+>   [{comm=SOME 300,ename="ALLEN"},{comm=SOME 500,ename="WARD"},
+>    {comm=SOME 1400,ename="MARTIN"},{comm=NONE,ename="BLAKE"},
+>    {comm=SOME 0,ename="TURNER"},{comm=NONE,ename="JAMES"}]
+>   : {comm:real option, ename:string} bag
+from e in scott.emps where e.deptno = 10 yield e.mgr;
+> val it = [SOME 7839,NONE,SOME 7782] : int option bag
+from e in scott.emps where e.comm = NONE andalso e.deptno = 30 yield e.ename;
+> val it = ["BLAKE","JAMES"] : string bag
+from e in scott.emps where e.mgr = SOME 7698 yield e.ename;
+> val it = ["ALLEN","WARD","MARTIN","TURNER","JAMES"] : string bag
+Sys.plan ();
+> val it =
+>   {_|
+> globalMarshal(globals [scott, SOME], body calcite(plan LogicalProject(ename=[$3])
+>   LogicalFilter(condition=[IS NOT DISTINCT FROM(CAST($6):INTEGER, morelScalar('SOME 7698', '{
+>   "type": "INTEGER",
+>   "nullable": true
+> }'))])
+>     LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])
+>       JdbcTableScan(table=[[scott, EMP]])
+> ))|_} : string
+from e in scott.emps
+  where Option.isSome e.comm
+  yield (e.ename, valOf e.comm);
+> val it = [("ALLEN",300),("WARD",500),("MARTIN",1400),("TURNER",0)]
+>   : (string * real) bag
+from e in scott.emps
+  group e.deptno compute {c = count over (), s = sum over e.sal};
+> val it =
+>   [{c=5,deptno=20,s=10875},{c=3,deptno=10,s=8750},{c=6,deptno=30,s=9400}]
+>   : {c:int, deptno:int, s:real} bag
 Sys.set ("hybrid", false);
 > val it = () : unit
 

@@ -28,6 +28,7 @@ import static net.hydromatic.morel.Matchers.isLiteral;
 import static net.hydromatic.morel.Matchers.isUnordered;
 import static net.hydromatic.morel.Matchers.list;
 import static net.hydromatic.morel.Matchers.map;
+import static net.hydromatic.morel.Matchers.some;
 import static net.hydromatic.morel.Matchers.throwsA;
 import static net.hydromatic.morel.Matchers.whenAppliedTo;
 import static net.hydromatic.morel.Ml.MatchCoverage.NON_EXHAUSTIVE;
@@ -2758,7 +2759,7 @@ public class MainTest {
     ml(ml)
         .assertType("bool option list")
         .assertCore(-1, hasToString(core))
-        .assertEval(is(list(list("SOME", true))));
+        .assertEval(is(list(some(true))));
   }
 
   @Test

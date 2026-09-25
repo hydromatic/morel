@@ -63,6 +63,7 @@ import net.hydromatic.morel.foreign.CalciteFunctions;
 import net.hydromatic.morel.foreign.Converters;
 import net.hydromatic.morel.foreign.RelList;
 import net.hydromatic.morel.type.Binding;
+import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.Type;
@@ -708,7 +709,7 @@ public class CalciteCompiler extends Compiler {
             }
 
             // Is it a binary operator with a Calcite equivalent? E.g. + => PLUS
-            final SqlOperator binaryOp = BINARY_OPERATORS.get(op);
+            final SqlOperator binaryOp = binaryOperator(op, apply);
             if (binaryOp != null) {
               assert apply.arg.op == Op.TUPLE;
               switch (op) {
@@ -721,6 +722,14 @@ public class CalciteCompiler extends Compiler {
                         RexSubQuery.in(r, ImmutableList.of(e));
                     return maybeNot(cx, in, op == BuiltIn.OP_NOT_ELEM);
                   }
+              }
+              if (binaryOp == SqlStdOperatorTable.IS_NOT_DISTINCT_FROM
+                  || binaryOp == SqlStdOperatorTable.IS_DISTINCT_FROM) {
+                // Unlike '=', these operators do not coerce their operands,
+                // so cast them to a common type (e.g. SMALLINT and INTEGER to
+                // INTEGER).
+                return cx.relBuilder.call(
+                    binaryOp, coerce(cx, translateList(cx, apply.args())));
               }
               return cx.relBuilder.call(
                   binaryOp, translateList(cx, apply.args()));
@@ -773,6 +782,50 @@ public class CalciteCompiler extends Compiler {
 
     // Translate as a call to a scalar function
     return morelScalar(cx, exp);
+  }
+
+  /**
+   * Returns the Calcite equivalent of a call to a binary operator, or null if
+   * there is none.
+   *
+   * <p>If the operands are of an {@code option} type, which Calcite represents
+   * as a nullable value, {@code NONE} is null. Morel's {@code =} and {@code <>}
+   * become {@code IS NOT DISTINCT FROM} and {@code IS DISTINCT FROM}, because
+   * {@code NONE = NONE} is true; other operators, such as {@code <}, are not
+   * translated.
+   */
+  private static @Nullable SqlOperator binaryOperator(
+      BuiltIn op, Core.Apply apply) {
+    if (apply.arg.op == Op.TUPLE
+        && apply.args().get(0).type instanceof DataType
+        && ((DataType) apply.args().get(0).type).name.equals("option")) {
+      switch (op) {
+        case OP_EQ:
+          return SqlStdOperatorTable.IS_NOT_DISTINCT_FROM;
+        case OP_NE:
+          return SqlStdOperatorTable.IS_DISTINCT_FROM;
+        default:
+          return null;
+      }
+    }
+    return BINARY_OPERATORS.get(op);
+  }
+
+  /** Casts expressions, if necessary, to their least restrictive type. */
+  private static List<RexNode> coerce(RelContext cx, List<RexNode> nodes) {
+    final RelDataType type =
+        cx.relBuilder
+            .getTypeFactory()
+            .leastRestrictive(transformEager(nodes, RexNode::getType));
+    if (type == null) {
+      return nodes;
+    }
+    return transformEager(
+        nodes,
+        e ->
+            e.getType().equals(type)
+                ? e
+                : cx.relBuilder.getRexBuilder().makeCast(type, e, true, false));
   }
 
   private RexNode maybeNot(RelContext cx, RexNode e, boolean not) {

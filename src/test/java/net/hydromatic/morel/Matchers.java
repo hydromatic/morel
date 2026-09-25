@@ -166,6 +166,11 @@ public abstract class Matchers {
     return Arrays.asList(values);
   }
 
+  /** Creates the runtime value of {@code SOME value}. */
+  static List<Object> some(Object value) {
+    return list("SOME", value);
+  }
+
   static Map<Object, Object> map(Object... keyValues) {
     final LinkedHashMap<Object, Object> map = new LinkedHashMap<>();
     for (int i = 0; i < keyValues.length / 2; i++) {
