@@ -600,9 +600,13 @@ public class TypeResolver {
   private static final EnumSet<PrimitiveType> WORDINT =
       EnumSet.of(PrimitiveType.INT, PrimitiveType.WORD);
 
+  /** SML overload class {@code real}: types of {@code /}. */
+  private static final EnumSet<PrimitiveType> REAL =
+      EnumSet.of(PrimitiveType.REAL);
+
   /**
-   * Returns the set of types for which an overloaded numeric operator is
-   * defined.
+   * Returns the set of primitive types for which an overloaded numeric operator
+   * is defined.
    */
   private static EnumSet<PrimitiveType> overloadDomain(BuiltIn builtIn) {
     switch (builtIn) {
@@ -611,16 +615,35 @@ public class TypeResolver {
         return WORDINT;
       case ABS:
         return REALINT;
+      case OP_DIVIDE:
+        return REAL;
       default: // OP_PLUS, OP_MINUS, OP_TIMES, OP_NEGATE
         return NUM;
     }
   }
 
   /**
+   * Returns whether an overloaded numeric operator is defined for a type.
+   * Besides the primitive types in its overload class (see {@link
+   * #overloadDomain}), every operator except {@code div} and {@code mod} is
+   * defined for {@code decimal}.
+   */
+  private static boolean isInOverloadDomain(BuiltIn builtIn, Type type) {
+    if (type instanceof PrimitiveType) {
+      return overloadDomain(builtIn).contains(type);
+    }
+    return type instanceof DataType
+        && ((DataType) type).name.equals("decimal")
+        && builtIn != BuiltIn.OP_DIV
+        && builtIn != BuiltIn.OP_MOD;
+  }
+
+  /**
    * Checks that arithmetic operators ({@code +}, {@code -}, {@code *}, {@code
-   * ~}, {@code abs}, {@code div}, {@code mod}) are applied to operands of a
-   * type in their overload class (see {@link #overloadDomain}). Throws a
-   * positioned {@link TypeException} otherwise, e.g. for "true + true".
+   * /}, {@code ~}, {@code abs}, {@code div}, {@code mod}) are applied to
+   * operands of a type for which they are defined (see {@link
+   * #isInOverloadDomain}). Throws a positioned {@link TypeException} otherwise,
+   * e.g. for "true + true".
    */
   private static void checkNumericOperators(Ast.Decl decl, TypeMap typeMap) {
     decl.accept(
@@ -633,7 +656,7 @@ public class TypeResolver {
               if (builtIn != null && builtIn.preferredType != null) {
                 final Type type = typeMap.getType(apply);
                 if (!(type instanceof TypeVar)
-                    && !overloadDomain(builtIn).contains(type)) {
+                    && !isInOverloadDomain(builtIn, type)) {
                   final String opName =
                       name.startsWith("op ") ? name.substring(3) : name;
                   throw new TypeException(

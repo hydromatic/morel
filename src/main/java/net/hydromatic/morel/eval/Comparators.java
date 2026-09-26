@@ -227,8 +227,8 @@ public class Comparators {
                       objectComparator.compare(list2.get(1), list1.get(1));
           }
           if (dataType.typeConstructors.isEmpty()) {
-            // An opaque type, such as 'time' or 'date', whose values are Java
-            // objects with a natural order.
+            // An opaque type, such as 'decimal', 'time' or 'date', whose values
+            // are Java objects with a natural order.
             return (Comparator<Comparable>) Comparable::compareTo;
           }
           final PairList<String, Ord<Comparator>> b = PairList.of();

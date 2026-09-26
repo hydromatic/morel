@@ -97,15 +97,42 @@ class FmtSpec {
     if (r == Float.NEGATIVE_INFINITY) {
       return b.append("~inf");
     }
+    return formatAppend(
+        b,
+        signPrefix(r),
+        r == 0.0f ? BigDecimal.ZERO : toBigDecimal(r),
+        RoundingMode.HALF_DOWN);
+  }
+
+  /**
+   * Formats a decimal {@code d} according to this specification, as a new
+   * string. Rounds half-even.
+   */
+  String format(BigDecimal d) {
+    return formatAppend(
+            new StringBuilder(),
+            d.signum() < 0 ? "~" : "",
+            d.abs(),
+            RoundingMode.HALF_EVEN)
+        .toString();
+  }
+
+  /**
+   * Formats a number, given its sign prefix and absolute value, according to
+   * this specification, appending to {@code b}, and returns {@code b}.
+   */
+  private StringBuilder formatAppend(
+      StringBuilder b, String sign, BigDecimal abs, RoundingMode mode) {
+    b.append(sign);
     switch (kind) {
       case "SCI":
-        return formatSci(b, r, n);
+        return formatSci(b, abs, n, mode);
       case "FIX":
-        return formatFix(b, r, n);
+        return formatFix(b, abs, n, mode);
       case "GEN":
-        return formatGen(b, r, n);
+        return formatGen(b, abs, n, mode);
       case "EXACT":
-        return formatExact(b, r);
+        return formatExact(b, abs);
       default:
         throw new AssertionError();
     }
@@ -121,9 +148,9 @@ class FmtSpec {
     return new BigDecimal(Codes.FLOAT_TO_STRING.apply(Math.abs(r)));
   }
 
-  private static StringBuilder formatFix(StringBuilder sb, float r, int n) {
-    sb.append(signPrefix(r));
-    if (r == 0.0f) {
+  private static StringBuilder formatFix(
+      StringBuilder sb, BigDecimal abs, int n, RoundingMode mode) {
+    if (abs.signum() == 0) {
       sb.append('0');
       if (n > 0) {
         sb.append('.');
@@ -131,14 +158,14 @@ class FmtSpec {
       }
       return sb;
     }
-    final BigDecimal bd = toBigDecimal(r).setScale(n, RoundingMode.HALF_DOWN);
+    final BigDecimal bd = abs.setScale(n, mode);
     return sb.append(bd.toPlainString());
   }
 
-  /** Formats r as {@code D.dddE±exp} with n digits after the decimal. */
-  private static StringBuilder formatSci(StringBuilder sb, float r, int n) {
-    sb.append(signPrefix(r));
-    if (r == 0.0f) {
+  /** Formats abs as {@code D.dddE±exp} with n digits after the decimal. */
+  private static StringBuilder formatSci(
+      StringBuilder sb, BigDecimal abs, int n, RoundingMode mode) {
+    if (abs.signum() == 0) {
       sb.append('0');
       if (n > 0) {
         sb.append('.');
@@ -146,11 +173,9 @@ class FmtSpec {
       }
       return sb.append("E0");
     }
-    // Express |r| as mantissa * 10^exp where mantissa in [1, 10).
-    final BigDecimal bd = toBigDecimal(r);
-    int exp = decimalExp(bd);
-    BigDecimal mantissa =
-        bd.movePointLeft(exp).setScale(n, RoundingMode.HALF_DOWN);
+    // Express abs as mantissa * 10^exp where mantissa in [1, 10).
+    int exp = decimalExp(abs);
+    BigDecimal mantissa = abs.movePointLeft(exp).setScale(n, mode);
     // Rounding may push the mantissa to exactly 10; renormalize.
     if (mantissa.compareTo(BigDecimal.TEN) >= 0) {
       mantissa = mantissa.movePointLeft(1);
@@ -160,14 +185,12 @@ class FmtSpec {
     return appendSmlExp(sb, exp);
   }
 
-  /** Formats r as {@code 0.dddE±exp} with no trailing zeros. */
-  private static StringBuilder formatExact(StringBuilder sb, float r) {
-    sb.append(signPrefix(r));
-    if (r == 0.0f) {
+  /** Formats abs as {@code 0.dddE±exp} with no trailing zeros. */
+  private static StringBuilder formatExact(StringBuilder sb, BigDecimal abs) {
+    if (abs.signum() == 0) {
       return sb.append("0.0");
     }
-    // bd is already non-negative because toBigDecimal uses Math.abs.
-    final BigDecimal bd = toBigDecimal(r).stripTrailingZeros();
+    final BigDecimal bd = abs.stripTrailingZeros();
     // Emit as 0.<digits>; the exponent is one greater than the standard
     // scientific exponent because the implied decimal point moves left by 1.
     sb.append("0.").append(bd.unscaledValue().toString());
@@ -179,21 +202,19 @@ class FmtSpec {
   }
 
   /**
-   * Formats r with at most n significant digits, using fixed-point notation
+   * Formats abs with at most n significant digits, using fixed-point notation
    * when the exponent is in {@code [-2, n)}, scientific notation otherwise.
    * Trailing zeros are dropped.
    */
-  private static StringBuilder formatGen(StringBuilder sb, float r, int n) {
-    sb.append(signPrefix(r));
-    if (r == 0.0f) {
+  private static StringBuilder formatGen(
+      StringBuilder sb, BigDecimal abs, int n, RoundingMode mode) {
+    if (abs.signum() == 0) {
       return sb.append('0');
     }
     // Round to n significant digits, drop trailing zeros, then compute the
     // exponent (rounding 9.99 to 3 s.f. gives 10.0, which is 1E1).
     final BigDecimal bd =
-        toBigDecimal(r)
-            .round(new MathContext(n, RoundingMode.HALF_DOWN))
-            .stripTrailingZeros();
+        abs.round(new MathContext(n, mode)).stripTrailingZeros();
     final int exp = decimalExp(bd);
     // SML/NJ uses scientific form when exp <= -3 or exp >= n (i.e., the
     // value would otherwise need leading zeros or be very large).

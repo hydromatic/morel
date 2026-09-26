@@ -606,9 +606,10 @@ Interact.useSilently;
 (* Standard ML overloads twelve operators. Each is shown with its default
  * signature, then applied to a value of each type for which it is defined.
  * Word arithmetic ("+", "-", "*", "div", "mod", "~") wraps modulo
- * 2^wordSize, and word division and comparison are unsigned. *)
+ * 2^wordSize, and word division and comparison are unsigned. As a Morel
+ * extension, "+", "-", "*", "/", "~" and "abs" also apply to "decimal". *)
 
-(* "op +" : numeric (int, real, word); default "int * int -> int". *)
+(* "op +" : numeric (int, real, word, decimal); default "int * int -> int". *)
 op +;
 > val it = fn : int * int -> int
 1 + 2;
@@ -617,8 +618,10 @@ op +;
 > val it = 3 : real
 0wx8 + 0w9;
 > val it = 0wx11 : word
+decimal "0.1" + decimal "0.2";
+> val it = 0.3 : decimal
 
-(* "op -" : numeric (int, real, word). *)
+(* "op -" : numeric (int, real, word, decimal). *)
 op -;
 > val it = fn : int * int -> int
 3 - 1;
@@ -627,8 +630,10 @@ op -;
 > val it = 2 : real
 0w3 - 0w1;
 > val it = 0wx2 : word
+decimal "3" - decimal "1.5";
+> val it = 1.5 : decimal
 
-(* "op *" : numeric (int, real, word). *)
+(* "op *" : numeric (int, real, word, decimal). *)
 op *;
 > val it = fn : int * int -> int
 2 * 3;
@@ -637,6 +642,8 @@ op *;
 > val it = 6 : real
 0w2 * 0w3;
 > val it = 0wx6 : word
+decimal "2" * decimal "3.5";
+> val it = 7 : decimal
 
 (* "op div" : wordint (int, word). Word division is unsigned. *)
 op div;
@@ -647,6 +654,9 @@ op div;
 > val it = 0wx3 : word
 0wxffffffffffffffff div 0w2;
 > val it = 0wx7FFFFFFFFFFFFFFF : word
+decimal "7" div decimal "2";
+> stdIn:1.1-1.28 Error: operator 'div' is not defined for type 'decimal'
+>   raised at: stdIn:1.1-1.28
 
 (* "op mod" : wordint (int, word). *)
 op mod;
@@ -656,16 +666,20 @@ op mod;
 0w17 mod 0w5;
 > val it = 0wx2 : word
 
-(* "op /" : real only; applying to int is a type error. *)
+(* "op /" : real (and decimal); default "real * real -> real"; applying to
+ * int is a type error. *)
 op /;
 > val it = fn : real * real -> real
 3.0 / 2.0;
 > val it = 1.5 : real
+decimal "1" / decimal "3";
+> val it = 0.3333333333333333333333333333333333 : decimal
 3 / 2;
-> stdIn:1.1-1.6 Error: Cannot deduce type: conflict: int vs real
+> stdIn:1.1-1.6 Error: operator '/' is not defined for type 'int'
 >   raised at: stdIn:1.1-1.6
 
-(* "op ~" : num (int, real, word). For word, '~' is the 2's complement. *)
+(* "op ~" : num (int, real, word, decimal). For word, '~' is the 2's
+ * complement. *)
 op ~;
 > val it = fn : int -> int
 ~ 5;
@@ -674,14 +688,18 @@ op ~;
 > val it = ~5 : real
 ~ 0w1;
 > val it = 0wxFFFFFFFFFFFFFFFF : word
+~ (decimal "1.5");
+> val it = ~1.5 : decimal
 
-(* "abs" : a function (not an operator), numeric (int, real). *)
+(* "abs" : a function (not an operator), numeric (int, real, decimal). *)
 abs;
 > val it = fn : 'a -> 'a
 abs ~5;
 > val it = 5 : int
 abs ~5.0;
 > val it = 5 : real
+abs (decimal "~1.5");
+> val it = 1.5 : decimal
 
 (* "op <" : numtext (int, real, string, char, word). Word is unsigned, so a
  * word with the high bit set is large. *)
@@ -710,7 +728,7 @@ op <;
 0.0 / 0.0 >= 1.0;
 > val it = false : bool
 (* As a Morel extension, the comparison operators also apply to options,
- * tuples, records, lists, datatypes and opaque types such as "time", in the
+ * tuples, records, lists, datatypes and opaque types such as "decimal", in the
  * same order used by "order", "min" and "max". *)
 SOME 1 < SOME 2;
 > val it = true : bool
@@ -728,6 +746,8 @@ LESS < GREATER;
 > val it = true : bool
 EQUAL > GREATER;
 > val it = false : bool
+decimal "1.5" < decimal "2";
+> val it = true : bool
 from x in [SOME 3, NONE, SOME 1] where x > SOME 1;
 > val it = [SOME 3] : int option list
 (* There is no order on functions. *)

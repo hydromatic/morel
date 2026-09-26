@@ -1,0 +1,453 @@
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *
+ * Unit tests for the built-in `Decimal` structure, a Morel extension.
+ *)
+
+Sys.set ("lineWidth", 78);
+> val it = () : unit
+Sys.set ("printLength", NONE);
+> val it = () : unit
+Sys.set ("stringDepth", NONE);
+> val it = () : unit
+
+Decimal;
+> val it =
+>   {*=fn,+=fn,-=fn,/=fn,<=fn,<==fn,>=fn,>==fn,abs=fn,ceil=fn,compare=fn,
+>    decimal=fn,floor=fn,fmt=fn,fromInt=fn,fromReal=fn,fromString=fn,max=fn,
+>    maxFinite=9.999999999999999999999999999999999E6144,min=fn,minPos=1E~6176,
+>    precision=34,radix=10,realCeil=fn,realFloor=fn,realRound=fn,realTrunc=fn,
+>    rem=fn,round=fn,sign=fn,toReal=fn,toString=fn,trunc=fn,~=fn}
+>   : {*:decimal * decimal -> decimal, +:decimal * decimal -> decimal,
+>       -:decimal * decimal -> decimal, /:decimal * decimal -> decimal,
+>       <:decimal * decimal -> bool, <=:decimal * decimal -> bool,
+>       >:decimal * decimal -> bool, >=:decimal * decimal -> bool,
+>       abs:decimal -> decimal, ceil:decimal -> int,
+>       compare:decimal * decimal -> order, decimal:string -> decimal,
+>       floor:decimal -> int, fmt:realfmt -> decimal -> string,
+>       fromInt:int -> decimal, fromReal:real -> decimal,
+>       fromString:string -> decimal option, max:decimal * decimal -> decimal,
+>       maxFinite:decimal, min:decimal * decimal -> decimal, minPos:decimal,
+>       precision:int, radix:int, realCeil:decimal -> decimal,
+>       realFloor:decimal -> decimal, realRound:decimal -> decimal,
+>       realTrunc:decimal -> decimal, rem:decimal * decimal -> decimal,
+>       round:decimal -> int, sign:decimal -> int, toReal:decimal -> real,
+>       toString:decimal -> string, trunc:decimal -> int, ~:decimal -> decimal}
+
+(* "decimal" is a type and, at top level, a function. *)
+decimal;
+> val it = fn : string -> decimal
+Decimal.decimal "1.5";
+> val it = 1.5 : decimal
+type_string (decimal "1");
+> val it = "decimal" : string
+
+(* Construct from a string. Trailing zeros are normalized away. *)
+decimal "12.30";
+> val it = 12.3 : decimal
+decimal "12.300" = decimal "12.3";
+> val it = true : bool
+decimal "0.000";
+> val it = 0 : decimal
+decimal "~0";
+> val it = 0 : decimal
+decimal "-0.0";
+> val it = 0 : decimal
+decimal "~12.3";
+> val it = ~12.3 : decimal
+decimal "-12.3";
+> val it = ~12.3 : decimal
+decimal "+12.3";
+> val it = 12.3 : decimal
+decimal ".5";
+> val it = 0.5 : decimal
+decimal "5.";
+> val it = 5 : decimal
+decimal "1.5e3";
+> val it = 1500 : decimal
+decimal "1.5E~3";
+> val it = 0.0015 : decimal
+decimal "1.5e-3";
+> val it = 0.0015 : decimal
+decimal "1.5E+3";
+> val it = 1500 : decimal
+decimal "1234567890123456789012345678901234";
+> val it = 1234567890123456789012345678901234 : decimal
+decimal "1.000000000000000000000000000000000000000";
+> val it = 1 : decimal
+
+(* An invalid literal is a compile error: malformed, too many significant
+ * digits, or out of range. *)
+decimal "12.x";
+> stdIn:1.1-1.15 Error: invalid decimal literal '12.x'
+>   raised at: stdIn:1.1-1.15
+decimal "";
+> stdIn:1.1-1.11 Error: invalid decimal literal ''
+>   raised at: stdIn:1.1-1.11
+decimal " 1";
+> stdIn:1.1-1.13 Error: invalid decimal literal ' 1'
+>   raised at: stdIn:1.1-1.13
+decimal "1e";
+> stdIn:1.1-1.13 Error: invalid decimal literal '1e'
+>   raised at: stdIn:1.1-1.13
+decimal "12345678901234567890123456789012345";
+> stdIn:1.1-1.46 Error: invalid decimal literal '12345678901234567890123456789012345'
+>   raised at: stdIn:1.1-1.46
+decimal "1E6145";
+> stdIn:1.1-1.17 Error: invalid decimal literal '1E6145'
+>   raised at: stdIn:1.1-1.17
+decimal "1E~6177";
+> stdIn:1.1-1.18 Error: invalid decimal literal '1E~6177'
+>   raised at: stdIn:1.1-1.18
+Decimal.decimal "abc";
+> stdIn:1.1-1.22 Error: invalid decimal literal 'abc'
+>   raised at: stdIn:1.1-1.22
+(* If "decimal" is shadowed, the literal is not checked. *)
+let fun decimal s = size s in decimal "12.x" end;
+> val it = 4 : int
+
+(* A string that is not a literal is checked at run time, and raises
+ * Domain. *)
+let val s = "12.x" in decimal s end;
+> uncaught exception Domain [domain error]
+>   raised at: stdIn:1.23-1.32
+[decimal "1", decimal "2.x"];
+> stdIn:1.15-1.28 Error: invalid decimal literal '2.x'
+>   raised at: stdIn:1.15-1.28
+fun toDec s = decimal s;
+> val toDec = fn : string -> decimal
+toDec "1.25";
+> val it = 1.25 : decimal
+toDec "1.2.5";
+> uncaught exception Domain [domain error]
+>   raised at: stdIn:1.15-1.24
+map decimal ["1", "2.5", "~3"];
+> val it = [1,2.5,~3] : decimal list
+decimal ("1" ^ "E6145");
+> uncaught exception Domain [domain error]
+>   raised at: stdIn:1.1-1.24
+
+(* A literal is converted at compile time; the plan contains the value, not
+ * a call to "decimal". *)
+decimal "12.30";
+> val it = 12.3 : decimal
+Sys.plan ();
+> val it = "constant(12.3)" : string
+Decimal.toString (decimal "1.5");
+> val it = "1.5" : string
+Sys.plan ();
+> val it = "apply(fnValue Decimal.toString, argCode constant(1.5))" : string
+
+(* Constants. *)
+Decimal.radix;
+> val it = 10 : int
+Decimal.precision;
+> val it = 34 : int
+Decimal.maxFinite;
+> val it = 9.999999999999999999999999999999999E6144 : decimal
+Decimal.minPos;
+> val it = 1E~6176 : decimal
+
+(* Arithmetic is exact within 34 digits. *)
+Decimal.`+` (decimal "0.1", decimal "0.2") = decimal "0.3";
+> val it = true : bool
+0.1 + 0.2;
+> val it = 0.3 : real
+Decimal.`+` (decimal "1E30", decimal "1E~5");
+> val it = 1000000000000000000000000000000 : decimal
+Decimal.`+` (decimal "1E34", decimal "1");
+> val it = 1E34 : decimal
+Decimal.`-` (decimal "5", decimal "7.5");
+> val it = ~2.5 : decimal
+Decimal.`-` (decimal "1.1", decimal "1.1");
+> val it = 0 : decimal
+Decimal.`*` (decimal "12", decimal "100");
+> val it = 1200 : decimal
+Decimal.`*` (decimal "1.5", decimal "~2");
+> val it = ~3 : decimal
+Decimal.`*` (Decimal.maxFinite, decimal "10");
+> uncaught exception Overflow [overflow]
+>   raised at: stdIn:1.1-1.46
+Decimal.`+` (Decimal.maxFinite, Decimal.maxFinite);
+> uncaught exception Overflow [overflow]
+>   raised at: stdIn:1.1-1.51
+(* Underflow truncates toward zero. *)
+Decimal.`*` (Decimal.minPos, decimal "0.5");
+> val it = 0 : decimal
+Decimal.`/` (Decimal.minPos, decimal "3");
+> val it = 0 : decimal
+
+(* Division rounds half-even to 34 significant digits. *)
+Decimal.`/` (decimal "1", decimal "3");
+> val it = 0.3333333333333333333333333333333333 : decimal
+Decimal.`/` (decimal "2", decimal "3");
+> val it = 0.6666666666666666666666666666666667 : decimal
+Decimal.`/` (decimal "10", decimal "4");
+> val it = 2.5 : decimal
+Decimal.`/` (decimal "1", decimal "0");
+> uncaught exception Div [divide by zero]
+>   raised at: stdIn:1.1-1.39
+Decimal.`/` (decimal "0", decimal "0");
+> uncaught exception Div [divide by zero]
+>   raised at: stdIn:1.1-1.39
+
+(* "rem" has the sign of the dividend. *)
+Decimal.rem (decimal "10", decimal "3");
+> val it = 1 : decimal
+Decimal.rem (decimal "~10", decimal "3");
+> val it = ~1 : decimal
+Decimal.rem (decimal "10.5", decimal "~3");
+> val it = 1.5 : decimal
+Decimal.rem (decimal "1", decimal "0");
+> uncaught exception Div [divide by zero]
+>   raised at: stdIn:1.1-1.39
+(decimal "7.5").rem (decimal "2");
+> val it = 1.5 : decimal
+
+(* Negation, absolute value, sign. *)
+Decimal.`~` (decimal "12.3");
+> val it = ~12.3 : decimal
+Decimal.`~` (decimal "0");
+> val it = 0 : decimal
+Decimal.abs (decimal "~12.3");
+> val it = 12.3 : decimal
+(decimal "~4").abs ();
+> val it = 4 : decimal
+Decimal.sign (decimal "~0.001");
+> val it = ~1 : int
+Decimal.sign (decimal "0");
+> val it = 0 : int
+Decimal.sign (decimal "1E~100");
+> val it = 1 : int
+(decimal "~2").sign ();
+> val it = ~1 : int
+
+(* Comparison. *)
+Decimal.compare (decimal "1.10", decimal "1.1");
+> val it = EQUAL : order
+Decimal.compare (decimal "~1", decimal "1");
+> val it = LESS : order
+(decimal "2").compare (decimal "1");
+> val it = GREATER : order
+Decimal.`<` (decimal "1", decimal "2");
+> val it = true : bool
+Decimal.`<=` (decimal "2", decimal "2");
+> val it = true : bool
+Decimal.`>` (decimal "1", decimal "2");
+> val it = false : bool
+Decimal.`>=` (decimal "2", decimal "2.0");
+> val it = true : bool
+Decimal.min (decimal "1", decimal "~1");
+> val it = ~1 : decimal
+Decimal.max (decimal "1", decimal "~1");
+> val it = 1 : decimal
+(decimal "3").max (decimal "4");
+> val it = 4 : decimal
+decimal "1" = decimal "1.0";
+> val it = true : bool
+decimal "1" <> decimal "1.01";
+> val it = true : bool
+
+(* Rounding to integral decimals. *)
+map Decimal.realFloor [decimal "2.5", decimal "~2.5", decimal "3"];
+> val it = [2,~3,3] : decimal list
+map Decimal.realCeil [decimal "2.5", decimal "~2.5", decimal "3"];
+> val it = [3,~2,3] : decimal list
+map Decimal.realTrunc [decimal "2.5", decimal "~2.5", decimal "3"];
+> val it = [2,~2,3] : decimal list
+map Decimal.realRound
+  [decimal "2.5", decimal "3.5", decimal "~2.5", decimal "2.51"];
+> val it = [2,4,~2,3] : decimal list
+Decimal.realRound (decimal "1E100");
+> val it = 1E100 : decimal
+(decimal "0.4").realRound ();
+> val it = 0 : decimal
+(* Round to cents: scale, round half-even, unscale. *)
+Decimal.`/`
+  (Decimal.realRound (Decimal.`*` (decimal "2.345", decimal "100")),
+   decimal "100");
+> val it = 2.34 : decimal
+
+(* Rounding to int. *)
+map Decimal.floor [decimal "2.5", decimal "~2.5"];
+> val it = [2,~3] : int list
+map Decimal.ceil [decimal "2.5", decimal "~2.5"];
+> val it = [3,~2] : int list
+map Decimal.trunc [decimal "2.5", decimal "~2.5"];
+> val it = [2,~2] : int list
+map Decimal.round [decimal "2.5", decimal "3.5", decimal "~2.5"];
+> val it = [2,4,~2] : int list
+Decimal.floor (decimal "2147483647.9");
+> val it = 2147483647 : int
+Decimal.ceil (decimal "2147483647.1");
+> uncaught exception Overflow [overflow]
+>   raised at: stdIn:1.1-1.38
+Decimal.floor (decimal "~2147483648.5");
+> uncaught exception Overflow [overflow]
+>   raised at: stdIn:1.1-1.40
+Decimal.round (decimal "1E100");
+> uncaught exception Overflow [overflow]
+>   raised at: stdIn:1.1-1.32
+(decimal "12.5").round ();
+> val it = 12 : int
+(decimal "12.5").floor ();
+> val it = 12 : int
+(decimal "12.5").ceil ();
+> val it = 13 : int
+(decimal "~12.5").trunc ();
+> val it = ~12 : int
+
+(* Conversions. *)
+Decimal.fromInt 42;
+> val it = 42 : decimal
+Decimal.fromInt ~2147483648;
+> val it = ~2147483648 : decimal
+Decimal.fromInt 1200;
+> val it = 1200 : decimal
+(* Conversion from real gives the shortest decimal that converts back. *)
+Decimal.fromReal 0.1;
+> val it = 0.1 : decimal
+Decimal.fromReal 1.5E10;
+> val it = 15000000000 : decimal
+Decimal.fromReal ~0.0;
+> val it = 0 : decimal
+Decimal.fromReal (Real.posInf);
+> uncaught exception Overflow [overflow]
+>   raised at: stdIn:1.1-1.31
+Decimal.fromReal (Real.negInf);
+> uncaught exception Overflow [overflow]
+>   raised at: stdIn:1.1-1.31
+Decimal.fromReal (Real.posInf / Real.posInf);
+> uncaught exception Domain [domain error]
+>   raised at: stdIn:1.1-1.45
+Decimal.toReal (decimal "0.1");
+> val it = 0.1 : real
+Decimal.toReal (decimal "~12.5");
+> val it = ~12.5 : real
+(decimal "2.5").toReal ();
+> val it = 2.5 : real
+Decimal.toReal Decimal.maxFinite;
+> val it = inf : real
+
+(* "toString" uses plain notation if the adjusted exponent is in [~7, 34),
+ * otherwise scientific notation. *)
+Decimal.toString (decimal "12.3");
+> val it = "12.3" : string
+Decimal.toString (decimal "~12.3");
+> val it = "~12.3" : string
+Decimal.toString (decimal "1200");
+> val it = "1200" : string
+Decimal.toString (decimal "0.0000001");
+> val it = "0.0000001" : string
+Decimal.toString (decimal "0.00000001");
+> val it = "1E~8" : string
+Decimal.toString (decimal "~0.000000012");
+> val it = "~1.2E~8" : string
+Decimal.toString (decimal "1234567890123456789012345678901234");
+> val it = "1234567890123456789012345678901234" : string
+Decimal.toString (decimal "1E34");
+> val it = "1E34" : string
+Decimal.toString (decimal "1.5E100");
+> val it = "1.5E100" : string
+(decimal "~1E~100").toString ();
+> val it = "~1E~100" : string
+(* Round trip. *)
+from s in ["12.3", "~1E~8", "1E100", "1200", "0"]
+  yield decimal s = decimal (Decimal.toString (decimal s));
+> val it = [true,true,true,true,true] : bool list
+
+(* "fromString" skips leading whitespace, ignores trailing characters, and
+ * rounds beyond 34 digits. *)
+Decimal.fromString "12.3";
+> val it = SOME 12.3 : decimal option
+Decimal.fromString "  ~12.3xyz";
+> val it = SOME ~12.3 : decimal option
+Decimal.fromString "abc";
+> val it = NONE : decimal option
+Decimal.fromString "";
+> val it = NONE : decimal option
+Decimal.fromString "12345678901234567890123456789012345";
+> val it = SOME 1.234567890123456789012345678901234E34 : decimal option
+Decimal.fromString "0.12345678901234567890123456789012345";
+> val it = SOME 0.1234567890123456789012345678901234 : decimal option
+Decimal.fromString "1E6145";
+> uncaught exception Overflow [overflow]
+>   raised at: stdIn:1.1-1.28
+Decimal.fromString "1E~7000";
+> val it = SOME 0 : decimal option
+Decimal.fromString "1E999999999999";
+> uncaught exception Overflow [overflow]
+>   raised at: stdIn:1.1-1.36
+
+(* "fmt" rounds half-even. *)
+Decimal.fmt (FIX (SOME 2)) (decimal "12.3");
+> val it = "12.30" : string
+Decimal.fmt (FIX (SOME 1)) (decimal "0.25");
+> val it = "0.2" : string
+Decimal.fmt (FIX (SOME 1)) (decimal "0.35");
+> val it = "0.4" : string
+Decimal.fmt (FIX (SOME 0)) (decimal "~2.5");
+> val it = "~2" : string
+Decimal.fmt (FIX NONE) (decimal "1.5");
+> val it = "1.500000" : string
+Decimal.fmt (SCI (SOME 3)) (decimal "12345");
+> val it = "1.234E4" : string
+Decimal.fmt (SCI NONE) (decimal "~0.00012");
+> val it = "~1.200000E~4" : string
+Decimal.fmt (GEN (SOME 3)) (decimal "12345");
+> val it = "1.23E4" : string
+Decimal.fmt (GEN NONE) (decimal "0.1");
+> val it = "0.1" : string
+Decimal.fmt EXACT (decimal "12.3");
+> val it = "0.123E2" : string
+Decimal.fmt (FIX (SOME 34)) (decimal "1");
+> val it = "1.0000000000000000000000000000000000" : string
+Decimal.fmt (FIX (SOME ~1));
+> uncaught exception Size [size]
+>   raised at: stdIn:1.1-1.28
+
+(* "decimal" is an eqtype, so it works in distinct, group, order and joins. *)
+from x in [decimal "1.10", decimal "1.1", decimal "2.0"] distinct;
+> val it = [1.1,2] : decimal list
+from x in [decimal "3", decimal "~1.5", decimal "2"] order x;
+> val it = [~1.5,2,3] : decimal list
+from x in [decimal "3", decimal "~1.5", decimal "2"] order DESC x;
+> val it = [3,2,~1.5] : decimal list
+from p in [{item = "a", price = decimal "1.10"},
+    {item = "b", price = decimal "2"},
+    {item = "c", price = decimal "1.1"}]
+  group p.price compute count over ();
+> val it = [{count=2,price=1.1},{count=1,price=2}]
+>   : {count:int, price:decimal} list
+from a in [decimal "1", decimal "2"], b in [decimal "2.0", decimal "3"]
+  where a = b;
+> val it = [{a=2,b=2}] : {a:decimal, b:decimal} list
+Sys.set ("output", "tabular");
+> val it = () : unit
+from p in [{item = "a", price = decimal "1.10"},
+    {item = "b", price = decimal "~2E~10"}];
+> item price
+> ---- ------
+> a    1.1
+> b    -2E-10
+>
+> val it : {item:string, price:decimal} list
+Sys.unset "output";
+> val it = () : unit
+
+(*) End decimal.smli

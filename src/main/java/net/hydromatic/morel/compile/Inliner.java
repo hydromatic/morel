@@ -26,6 +26,7 @@ import static net.hydromatic.morel.util.Static.allMatch;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +40,7 @@ import net.hydromatic.morel.eval.Applicable1;
 import net.hydromatic.morel.eval.Closure;
 import net.hydromatic.morel.eval.Code;
 import net.hydromatic.morel.eval.Codes;
+import net.hydromatic.morel.eval.Decimals;
 import net.hydromatic.morel.eval.Stack;
 import net.hydromatic.morel.eval.Unit;
 import net.hydromatic.morel.type.Binding;
@@ -191,6 +193,17 @@ public class Inliner extends EnvShuttle {
         }
       }
       return core.valueLiteral(apply2, o);
+    }
+    if (apply2.isCallTo(BuiltIn.DECIMAL_DECIMAL)
+        && apply2.arg.op == Op.STRING_LITERAL) {
+      // Evaluate 'decimal "12.3"' at compile time. If the string is not a
+      // valid decimal, leave the call to raise 'Domain' at run time. (If the
+      // user wrote an invalid literal, Resolver has already reported it.)
+      final BigDecimal d =
+          Decimals.parseExact(((Core.Literal) apply2.arg).unwrap(String.class));
+      if (d != null) {
+        return core.valueLiteral(apply2, d);
+      }
     }
     if (apply2.fn.op == Op.FN) {
       // Beta-reduction:

@@ -1572,7 +1572,7 @@ public class Compiler {
       switch (exp.op) {
         case FN_LITERAL:
           final Core.Literal literal = (Core.Literal) exp;
-          return (Applicable) literal.toBuiltIn(typeSystem, null);
+          return (Applicable) literal.toBuiltIn(typeSystem, pos);
       }
       final Code code = compile(cx, exp);
       return new Applicable() {

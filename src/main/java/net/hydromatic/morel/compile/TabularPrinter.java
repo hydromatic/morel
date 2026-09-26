@@ -22,6 +22,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ImmutableList;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -31,6 +32,7 @@ import java.util.NoSuchElementException;
 import java.util.function.BiFunction;
 import net.hydromatic.morel.ast.Op;
 import net.hydromatic.morel.eval.Codes;
+import net.hydromatic.morel.eval.Decimals;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.RecordLikeType;
@@ -189,11 +191,16 @@ class TabularPrinter {
   }
 
   /**
-   * Returns whether a type prints as a single-token scalar, namely a primitive
-   * or an enum (see {@link #isEnum}).
+   * Returns whether a type prints as a single-token scalar, namely a primitive,
+   * an enum (see {@link #isEnum}), or {@code decimal}.
    */
   private static boolean isScalar(Type type) {
-    return type instanceof PrimitiveType || isEnum(type);
+    return type instanceof PrimitiveType || isEnum(type) || isDecimal(type);
+  }
+
+  /** Returns whether {@code type} is {@code decimal}. */
+  private static boolean isDecimal(Type type) {
+    return type instanceof DataType && ((DataType) type).name.equals("decimal");
   }
 
   /**
@@ -327,6 +334,9 @@ class TabularPrinter {
     if (value instanceof Float) {
       // Tabular output writes negation as '-', not the '~' of Standard ML.
       return Codes.floatToString((Float) value, '-');
+    }
+    if (value instanceof BigDecimal) {
+      return Decimals.toString((BigDecimal) value, '-');
     }
     if (value instanceof Long) {
       // The only Long-backed primitive type is 'word'; print it in hexadecimal,

@@ -60,7 +60,7 @@ import org.jspecify.annotations.Nullable;
 public enum BuiltIn {
   /**
    * Function "abs", of type "&alpha; &rarr; &alpha;" (where &alpha; must be
-   * numeric).
+   * {@code int}, {@code real} or {@code decimal}).
    */
   ABS(
       "Top",
@@ -221,6 +221,18 @@ public enum BuiltIn {
       "Top",
       "op div",
       PrimitiveType.INT,
+      ts ->
+          ts.forallType(
+              1, h -> ts.fnType(ts.tupleType(h.get(0), h.get(0)), h.get(0)))),
+
+  /**
+   * Infix operator "/", of type "&alpha; * &alpha; &rarr; &alpha;" (where
+   * &alpha; must be {@code real} or {@code decimal}).
+   */
+  OP_DIVIDE(
+      "Top",
+      "op /",
+      PrimitiveType.REAL,
       ts ->
           ts.forallType(
               1, h -> ts.fnType(ts.tupleType(h.get(0), h.get(0)), h.get(0)))),
@@ -1260,6 +1272,418 @@ public enum BuiltIn {
   /** Function "Date.yearDay", of type "date &rarr; int". */
   DATE_YEAR_DAY(
       "Date", "yearDay", true, ts -> ts.fnType(ts.lookup(Eqtype.DATE), INT)),
+
+  /**
+   * Function "Decimal.abs", of type "decimal &rarr; decimal".
+   *
+   * <p>Returns the absolute value of {@code d}.
+   */
+  DECIMAL_ABS(
+      "Decimal",
+      "abs",
+      true,
+      ts -> ts.fnType(ts.lookup(Eqtype.DECIMAL), ts.lookup(Eqtype.DECIMAL))),
+
+  /**
+   * Function "Decimal.ceil", of type "decimal &rarr; int".
+   *
+   * <p>Returns the smallest {@code int} not less than {@code d}. Raises {@code
+   * Overflow} if the result is not representable as an {@code int}.
+   */
+  DECIMAL_CEIL(
+      "Decimal", "ceil", true, ts -> ts.fnType(ts.lookup(Eqtype.DECIMAL), INT)),
+
+  /**
+   * Function "Decimal.compare", of type "decimal * decimal &rarr; order".
+   *
+   * <p>Returns {@code LESS}, {@code EQUAL}, or {@code GREATER} according to
+   * whether {@code x} is less than, equal to, or greater than {@code y}.
+   */
+  DECIMAL_COMPARE(
+      "Decimal",
+      "compare",
+      true,
+      ts ->
+          ts.fnType(
+              ts.tupleType(
+                  ts.lookup(Eqtype.DECIMAL), ts.lookup(Eqtype.DECIMAL)),
+              ts.order())),
+
+  /**
+   * Function "Decimal.decimal", of type "string &rarr; decimal".
+   *
+   * <p>"decimal s" converts the string {@code s} to a decimal. Raises {@code
+   * Domain} if {@code s} is not a valid decimal, or if its value cannot be
+   * represented exactly. If {@code s} is a string literal, the conversion
+   * occurs at compile time, and an invalid literal is a compile error.
+   */
+  DECIMAL_DECIMAL(
+      "Decimal", "decimal", ts -> ts.fnType(STRING, ts.lookup(Eqtype.DECIMAL))),
+
+  /**
+   * Operator "Decimal./", of type "decimal * decimal &rarr; decimal".
+   *
+   * <p>"x / y" returns the quotient of {@code x} and {@code y}, rounded
+   * half-even to 34 significant digits. Raises {@code Div} if {@code y} is
+   * zero, {@code Overflow} if the result is too large.
+   */
+  DECIMAL_DIVIDE(
+      "Decimal",
+      "/",
+      ts ->
+          ts.fnType(
+              ts.tupleType(
+                  ts.lookup(Eqtype.DECIMAL), ts.lookup(Eqtype.DECIMAL)),
+              ts.lookup(Eqtype.DECIMAL))),
+
+  /**
+   * Function "Decimal.floor", of type "decimal &rarr; int".
+   *
+   * <p>Returns the largest {@code int} not larger than {@code d}. Raises {@code
+   * Overflow} if the result is not representable as an {@code int}.
+   */
+  DECIMAL_FLOOR(
+      "Decimal",
+      "floor",
+      true,
+      ts -> ts.fnType(ts.lookup(Eqtype.DECIMAL), INT)),
+
+  /**
+   * Function "Decimal.fmt", of type "StringCvt.realfmt &rarr; decimal &rarr;
+   * string".
+   *
+   * <p>"fmt spec d" converts {@code d} to a string according to {@code spec},
+   * as {@code Real.fmt} does, but rounding half-even. Raises {@code Size} if
+   * {@code spec} is an invalid precision.
+   */
+  DECIMAL_FMT(
+      "Decimal",
+      "fmt",
+      ts ->
+          ts.fnType(
+              ts.lookup(Datatype.STRING_CVT_REALFMT),
+              ts.fnType(ts.lookup(Eqtype.DECIMAL), STRING))),
+
+  /**
+   * Function "Decimal.fromInt", of type "int &rarr; decimal".
+   *
+   * <p>Converts an {@code int} to a decimal.
+   */
+  DECIMAL_FROM_INT(
+      "Decimal", "fromInt", ts -> ts.fnType(INT, ts.lookup(Eqtype.DECIMAL))),
+
+  /**
+   * Function "Decimal.fromReal", of type "real &rarr; decimal".
+   *
+   * <p>Converts {@code r} to the decimal with the fewest digits that converts
+   * back to {@code r}. Raises {@code Domain} if {@code r} is NaN, {@code
+   * Overflow} if {@code r} is infinite.
+   */
+  DECIMAL_FROM_REAL(
+      "Decimal", "fromReal", ts -> ts.fnType(REAL, ts.lookup(Eqtype.DECIMAL))),
+
+  /**
+   * Function "Decimal.fromString", of type "string &rarr; decimal option".
+   *
+   * <p>Parses a decimal from a prefix of {@code s}, after skipping initial
+   * whitespace. Returns {@code SOME d} if successful, {@code NONE} otherwise.
+   * Unlike {@link #DECIMAL_DECIMAL decimal}, rounds a value with more than 34
+   * significant digits. Raises {@code Overflow} if the value is too large.
+   */
+  DECIMAL_FROM_STRING(
+      "Decimal",
+      "fromString",
+      ts -> ts.fnType(STRING, ts.option(ts.lookup(Eqtype.DECIMAL)))),
+
+  /**
+   * Function "Decimal.max", of type "decimal * decimal &rarr; decimal".
+   *
+   * <p>Returns the larger of the arguments.
+   */
+  DECIMAL_MAX(
+      "Decimal",
+      "max",
+      true,
+      ts ->
+          ts.fnType(
+              ts.tupleType(
+                  ts.lookup(Eqtype.DECIMAL), ts.lookup(Eqtype.DECIMAL)),
+              ts.lookup(Eqtype.DECIMAL))),
+
+  /**
+   * Constant "Decimal.maxFinite", of type "decimal".
+   *
+   * <p>The largest decimal value, 9.999999999999999999999999999999999E6144.
+   */
+  DECIMAL_MAX_FINITE("Decimal", "maxFinite", ts -> ts.lookup(Eqtype.DECIMAL)),
+
+  /**
+   * Function "Decimal.min", of type "decimal * decimal &rarr; decimal".
+   *
+   * <p>Returns the smaller of the arguments.
+   */
+  DECIMAL_MIN(
+      "Decimal",
+      "min",
+      true,
+      ts ->
+          ts.fnType(
+              ts.tupleType(
+                  ts.lookup(Eqtype.DECIMAL), ts.lookup(Eqtype.DECIMAL)),
+              ts.lookup(Eqtype.DECIMAL))),
+
+  /**
+   * Constant "Decimal.minPos", of type "decimal".
+   *
+   * <p>The smallest positive decimal value, 1E~6176.
+   */
+  DECIMAL_MIN_POS("Decimal", "minPos", ts -> ts.lookup(Eqtype.DECIMAL)),
+
+  /**
+   * Operator "Decimal.&gt;=", of type "decimal * decimal &rarr; bool".
+   *
+   * <p>"x &gt;= y" returns whether {@code x} is greater than or equal to {@code
+   * y}.
+   */
+  DECIMAL_OP_GE(
+      "Decimal",
+      ">=",
+      ts ->
+          ts.fnType(
+              ts.tupleType(
+                  ts.lookup(Eqtype.DECIMAL), ts.lookup(Eqtype.DECIMAL)),
+              BOOL)),
+
+  /**
+   * Operator "Decimal.&gt;", of type "decimal * decimal &rarr; bool".
+   *
+   * <p>"x &gt; y" returns whether {@code x} is greater than {@code y}.
+   */
+  DECIMAL_OP_GT(
+      "Decimal",
+      ">",
+      ts ->
+          ts.fnType(
+              ts.tupleType(
+                  ts.lookup(Eqtype.DECIMAL), ts.lookup(Eqtype.DECIMAL)),
+              BOOL)),
+
+  /**
+   * Operator "Decimal.&lt;=", of type "decimal * decimal &rarr; bool".
+   *
+   * <p>"x &lt;= y" returns whether {@code x} is less than or equal to {@code
+   * y}.
+   */
+  DECIMAL_OP_LE(
+      "Decimal",
+      "<=",
+      ts ->
+          ts.fnType(
+              ts.tupleType(
+                  ts.lookup(Eqtype.DECIMAL), ts.lookup(Eqtype.DECIMAL)),
+              BOOL)),
+
+  /**
+   * Operator "Decimal.&lt;", of type "decimal * decimal &rarr; bool".
+   *
+   * <p>"x &lt; y" returns whether {@code x} is less than {@code y}.
+   */
+  DECIMAL_OP_LT(
+      "Decimal",
+      "<",
+      ts ->
+          ts.fnType(
+              ts.tupleType(
+                  ts.lookup(Eqtype.DECIMAL), ts.lookup(Eqtype.DECIMAL)),
+              BOOL)),
+
+  /**
+   * Operator "Decimal.-", of type "decimal * decimal &rarr; decimal".
+   *
+   * <p>"x - y" returns the difference of {@code x} and {@code y}. Raises {@code
+   * Overflow} if the result is too large.
+   */
+  DECIMAL_OP_MINUS(
+      "Decimal",
+      "-",
+      ts ->
+          ts.fnType(
+              ts.tupleType(
+                  ts.lookup(Eqtype.DECIMAL), ts.lookup(Eqtype.DECIMAL)),
+              ts.lookup(Eqtype.DECIMAL))),
+
+  /**
+   * Operator "Decimal.~", of type "decimal &rarr; decimal".
+   *
+   * <p>"~ x" returns the negation of {@code x}.
+   */
+  DECIMAL_OP_NEGATE(
+      "Decimal",
+      "~",
+      ts -> ts.fnType(ts.lookup(Eqtype.DECIMAL), ts.lookup(Eqtype.DECIMAL))),
+
+  /**
+   * Operator "Decimal.+", of type "decimal * decimal &rarr; decimal".
+   *
+   * <p>"x + y" returns the sum of {@code x} and {@code y}. Raises {@code
+   * Overflow} if the result is too large.
+   */
+  DECIMAL_OP_PLUS(
+      "Decimal",
+      "+",
+      ts ->
+          ts.fnType(
+              ts.tupleType(
+                  ts.lookup(Eqtype.DECIMAL), ts.lookup(Eqtype.DECIMAL)),
+              ts.lookup(Eqtype.DECIMAL))),
+
+  /**
+   * Operator "Decimal.*", of type "decimal * decimal &rarr; decimal".
+   *
+   * <p>"x * y" returns the product of {@code x} and {@code y}. Raises {@code
+   * Overflow} if the result is too large.
+   */
+  DECIMAL_OP_TIMES(
+      "Decimal",
+      "*",
+      ts ->
+          ts.fnType(
+              ts.tupleType(
+                  ts.lookup(Eqtype.DECIMAL), ts.lookup(Eqtype.DECIMAL)),
+              ts.lookup(Eqtype.DECIMAL))),
+
+  /**
+   * Constant "Decimal.precision", of type "int".
+   *
+   * <p>The number of digits in the significand, 34.
+   */
+  DECIMAL_PRECISION("Decimal", "precision", ts -> INT),
+
+  /**
+   * Constant "Decimal.radix", of type "int".
+   *
+   * <p>The base of the representation, 10.
+   */
+  DECIMAL_RADIX("Decimal", "radix", ts -> INT),
+
+  /**
+   * Function "Decimal.realCeil", of type "decimal &rarr; decimal".
+   *
+   * <p>Returns the smallest integer-valued decimal not less than {@code d}.
+   */
+  DECIMAL_REAL_CEIL(
+      "Decimal",
+      "realCeil",
+      true,
+      ts -> ts.fnType(ts.lookup(Eqtype.DECIMAL), ts.lookup(Eqtype.DECIMAL))),
+
+  /**
+   * Function "Decimal.realFloor", of type "decimal &rarr; decimal".
+   *
+   * <p>Returns the largest integer-valued decimal not larger than {@code d}.
+   */
+  DECIMAL_REAL_FLOOR(
+      "Decimal",
+      "realFloor",
+      true,
+      ts -> ts.fnType(ts.lookup(Eqtype.DECIMAL), ts.lookup(Eqtype.DECIMAL))),
+
+  /**
+   * Function "Decimal.realRound", of type "decimal &rarr; decimal".
+   *
+   * <p>Returns the integer-valued decimal nearest to {@code d}. In the case of
+   * a tie, returns the even one.
+   */
+  DECIMAL_REAL_ROUND(
+      "Decimal",
+      "realRound",
+      true,
+      ts -> ts.fnType(ts.lookup(Eqtype.DECIMAL), ts.lookup(Eqtype.DECIMAL))),
+
+  /**
+   * Function "Decimal.realTrunc", of type "decimal &rarr; decimal".
+   *
+   * <p>Returns {@code d} rounded toward zero to an integer-valued decimal.
+   */
+  DECIMAL_REAL_TRUNC(
+      "Decimal",
+      "realTrunc",
+      true,
+      ts -> ts.fnType(ts.lookup(Eqtype.DECIMAL), ts.lookup(Eqtype.DECIMAL))),
+
+  /**
+   * Function "Decimal.rem", of type "decimal * decimal &rarr; decimal".
+   *
+   * <p>"rem (x, y)" returns the remainder {@code x - n * y}, where {@code n} is
+   * the quotient {@code x / y} truncated toward zero. The result has the same
+   * sign as {@code x}. Raises {@code Div} if {@code y} is zero.
+   */
+  DECIMAL_REM(
+      "Decimal",
+      "rem",
+      true,
+      ts ->
+          ts.fnType(
+              ts.tupleType(
+                  ts.lookup(Eqtype.DECIMAL), ts.lookup(Eqtype.DECIMAL)),
+              ts.lookup(Eqtype.DECIMAL))),
+
+  /**
+   * Function "Decimal.round", of type "decimal &rarr; int".
+   *
+   * <p>Returns the {@code int} nearest to {@code d}. In the case of a tie,
+   * returns the even one. Raises {@code Overflow} if the result is not
+   * representable as an {@code int}.
+   */
+  DECIMAL_ROUND(
+      "Decimal",
+      "round",
+      true,
+      ts -> ts.fnType(ts.lookup(Eqtype.DECIMAL), INT)),
+
+  /**
+   * Function "Decimal.sign", of type "decimal &rarr; int".
+   *
+   * <p>Returns ~1, 0, or 1, according to whether {@code d} is negative, zero,
+   * or positive.
+   */
+  DECIMAL_SIGN(
+      "Decimal", "sign", true, ts -> ts.fnType(ts.lookup(Eqtype.DECIMAL), INT)),
+
+  /**
+   * Function "Decimal.toReal", of type "decimal &rarr; real".
+   *
+   * <p>Converts {@code d} to the nearest real.
+   */
+  DECIMAL_TO_REAL(
+      "Decimal",
+      "toReal",
+      true,
+      ts -> ts.fnType(ts.lookup(Eqtype.DECIMAL), REAL)),
+
+  /**
+   * Function "Decimal.toString", of type "decimal &rarr; string".
+   *
+   * <p>Converts {@code d} to a string, using plain notation if the adjusted
+   * exponent is at least ~7 and less than 34, otherwise scientific notation.
+   */
+  DECIMAL_TO_STRING(
+      "Decimal",
+      "toString",
+      true,
+      ts -> ts.fnType(ts.lookup(Eqtype.DECIMAL), STRING)),
+
+  /**
+   * Function "Decimal.trunc", of type "decimal &rarr; int".
+   *
+   * <p>Returns {@code d} rounded toward zero to an {@code int}. Raises {@code
+   * Overflow} if the result is not representable as an {@code int}.
+   */
+  DECIMAL_TRUNC(
+      "Decimal",
+      "trunc",
+      true,
+      ts -> ts.fnType(ts.lookup(Eqtype.DECIMAL), INT)),
 
   /**
    * Function "Either.app", of type "(&alpha; &rarr; unit) * (&beta; &rarr;
@@ -5371,6 +5795,19 @@ public enum BuiltIn {
    */
   Z_REQUIRE("$", "$require", ts -> UNIT),
 
+  /**
+   * Internal relational sum operator "sum", of type "decimal * decimal &rarr;
+   * decimal".
+   */
+  Z_SUM_DECIMAL(
+      "$",
+      "sum:decimal",
+      ts ->
+          ts.fnType(
+              ts.tupleType(
+                  ts.lookup(Eqtype.DECIMAL), ts.lookup(Eqtype.DECIMAL)),
+              ts.lookup(Eqtype.DECIMAL))),
+
   /** Internal relational sum operator "sum", of type "int * int &rarr; int". */
   Z_SUM_INT("$", "sum:int", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
 
@@ -5550,6 +5987,7 @@ public enum BuiltIn {
     consumer.accept("not", BOOL_NOT);
     consumer.accept("chr", CHAR_CHR);
     consumer.accept("ord", CHAR_ORD);
+    consumer.accept("decimal", DECIMAL_DECIMAL);
     consumer.accept("before", GENERAL_BEFORE);
     consumer.accept("exnMessage", GENERAL_EXN_MESSAGE);
     consumer.accept("exnName", GENERAL_EXN_NAME);
@@ -5579,7 +6017,6 @@ public enum BuiltIn {
     consumer.accept("$dsContains", RANGE_DISCRETE_SET_CONTAINS);
     consumer.accept("$dsRanges", RANGE_DISCRETE_SET_RANGES);
     consumer.accept("ceil", REAL_CEIL);
-    consumer.accept("op /", REAL_DIVIDE);
     consumer.accept("floor", REAL_FLOOR);
     consumer.accept("real", REAL_FROM_INT);
     consumer.accept("round", REAL_ROUND);
@@ -6091,6 +6528,7 @@ public enum BuiltIn {
      */
     COLLECTION("$collection", 1),
     DATE("date", 0),
+    DECIMAL("decimal", 0),
     LIST("list", 1),
     TIME("time", 0),
     VECTOR("vector", 1);

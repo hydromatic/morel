@@ -1116,6 +1116,7 @@ public class CalciteCompiler extends Compiler {
     if (aggregate instanceof Core.Literal) {
       switch (((Core.Literal) aggregate).unwrap(BuiltIn.class)) {
         case RELATIONAL_SUM:
+        case Z_SUM_DECIMAL:
         case Z_SUM_INT:
         case Z_SUM_REAL:
           return SqlStdOperatorTable.SUM;

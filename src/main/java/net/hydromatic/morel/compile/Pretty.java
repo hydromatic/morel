@@ -34,12 +34,14 @@ import static net.hydromatic.morel.util.Lindig.text;
 import static net.hydromatic.morel.util.Lindig.union;
 import static net.hydromatic.morel.util.Pair.forEachIndexed;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import net.hydromatic.morel.ast.Op;
 import net.hydromatic.morel.eval.Codes;
+import net.hydromatic.morel.eval.Decimals;
 import net.hydromatic.morel.eval.Prop;
 import net.hydromatic.morel.eval.Variant;
 import net.hydromatic.morel.foreign.RelList;
@@ -352,9 +354,17 @@ class Pretty {
   private Doc dataTypeDoc(DataType dataType, Object value, int depth) {
     if (!(value instanceof List)) {
       // A "doc" (pretty-printer document) is abstract; print it as "-", as
-      // Standard ML prints a value of an abstract type. Other opaque values
-      // (e.g. "time" backed by Long) print directly.
-      return text(dataType.name.equals("doc") ? "-" : String.valueOf(value));
+      // Standard ML prints a value of an abstract type. A "decimal" prints in
+      // Morel notation, e.g. "~1.5E~8". Other opaque values (e.g. "time"
+      // backed by Long) print directly.
+      switch (dataType.name) {
+        case "doc":
+          return text("-");
+        case "decimal":
+          return text(Decimals.toString((BigDecimal) value));
+        default:
+          return text(String.valueOf(value));
+      }
     }
     final List<Object> list = toList(value);
     if (dataType.name.equals("vector")) {

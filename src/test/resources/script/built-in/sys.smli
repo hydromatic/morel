@@ -109,6 +109,7 @@ from (name, t) in Sys.env ()
 > Datalog        {execute:string -> variant, translate:string -> string option, validate:string -> string}
 > Date           {compare:date * date -> order, date:{day:int, hour:int, minute:int, month:month, offset:time option, second:int, year:int} -> date, day:date -> int, fmt:string -> date -> string, fromString:string -> date option, fromTimeLocal:time -> date, fromTimeUniv:time -> date, hour:date -> int, isDst:date -> bool option, localOffset:unit -> time, minute:date -> int, month:date -> month, scan:forall 'a. ('a -> (char * 'a) option) -> 'a -> (date * 'a) option, second:date -> int, toString:date -> string, toTime:date -> time, weekDay:date -> weekday, year:date -> int, yearDay:date -> int}
 > Dec            month
+> Decimal        {*:decimal * decimal -> decimal, +:decimal * decimal -> decimal, -:decimal * decimal -> decimal, /:decimal * decimal -> decimal, <:decimal * decimal -> bool, <=:decimal * decimal -> bool, >:decimal * decimal -> bool, >=:decimal * decimal -> bool, abs:decimal -> decimal, ceil:decimal -> int, compare:decimal * decimal -> order, decimal:string -> decimal, floor:decimal -> int, fmt:realfmt -> decimal -> string, fromInt:int -> decimal, fromReal:real -> decimal, fromString:string -> decimal option, max:decimal * decimal -> decimal, maxFinite:decimal, min:decimal * decimal -> decimal, minPos:decimal, precision:int, radix:int, realCeil:decimal -> decimal, realFloor:decimal -> decimal, realRound:decimal -> decimal, realTrunc:decimal -> decimal, rem:decimal * decimal -> decimal, round:decimal -> int, sign:decimal -> int, toReal:decimal -> real, toString:decimal -> string, trunc:decimal -> int, ~:decimal -> decimal}
 > Div            exn
 > Domain         exn
 > EQUAL          order
@@ -193,6 +194,7 @@ from (name, t) in Sys.env ()
 > compare        forall 'a. 'a * 'a -> order
 > concat         string list -> string
 > count          forall 'a. 'a bag -> int
+> decimal        string -> decimal
 > empty          forall 'a. 'a bag -> bool
 > env            unit -> (string * string) list
 > exnMessage     exn -> string
@@ -226,7 +228,7 @@ from (name, t) in Sys.env ()
 > op *           forall 'a. 'a * 'a -> 'a
 > op +           forall 'a. 'a * 'a -> 'a
 > op -           forall 'a. 'a * 'a -> 'a
-> op /           real * real -> real
+> op /           forall 'a. 'a * 'a -> 'a
 > op ::          forall 'a. 'a * 'a list -> 'a list
 > op <           forall 'a. 'a * 'a -> bool
 > op <=          forall 'a. 'a * 'a -> bool

@@ -141,6 +141,17 @@ Sys.plan ();
 > val it =
 >   "apply(fnValue Relational.sum$real, argCode apply(fnValue Bag.fromList, argCode tuple(constant(1.0), constant(2.5), constant(3.5))))"
 >   : string
+Relational.sum (bag [decimal "0.1", decimal "0.2", decimal "12.30"]);
+> val it = 12.6 : decimal
+Sys.plan ();
+> val it =
+>   "apply(fnValue Relational.sum$decimal, argCode apply(fnValue Bag.fromList, argCode tuple(constant(0.1), constant(0.2), constant(12.3))))"
+>   : string
+Relational.sum (bag [Decimal.maxFinite, Decimal.maxFinite]);
+> uncaught exception Overflow [overflow]
+>   raised at: stdIn:1.1-1.60
+from d in [decimal "1.5", decimal "2.25"] compute sum over d;
+> val it = 3.75 : decimal
 
 Relational.max (bag [1, 2, 3]);
 > val it = 3 : int

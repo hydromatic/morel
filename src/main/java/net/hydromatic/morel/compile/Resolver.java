@@ -64,6 +64,9 @@ import net.hydromatic.morel.ast.FromBuilder;
 import net.hydromatic.morel.ast.Op;
 import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.ast.Visitor;
+import net.hydromatic.morel.eval.Applicable;
+import net.hydromatic.morel.eval.Codes;
+import net.hydromatic.morel.eval.Decimals;
 import net.hydromatic.morel.eval.Session;
 import net.hydromatic.morel.eval.Unit;
 import net.hydromatic.morel.type.AliasType;
@@ -1248,7 +1251,31 @@ public class Resolver {
       }
       coreFn = fn;
     }
+    checkDecimalLiteral(apply, type, coreFn);
     return core.apply(apply.pos, type, coreFn, coreArg);
+  }
+
+  /**
+   * Checks that, if {@code apply} is a call to the {@code decimal} function
+   * with a string literal argument, as in {@code decimal "12.3"}, the literal
+   * is a valid decimal. An invalid literal is a compile error, whereas an
+   * invalid string computed at run time raises {@code Domain}.
+   */
+  private void checkDecimalLiteral(
+      Ast.Apply apply, Type type, Core.Exp coreFn) {
+    if (apply.arg.op == Op.STRING_LITERAL
+        && type instanceof DataType
+        && ((DataType) type).name.equals("decimal")) {
+      final Object o = valueOf(env, coreFn);
+      if (o instanceof Applicable
+          && Codes.BUILT_IN_MAP.get(o) == BuiltIn.DECIMAL_DECIMAL) {
+        final String s = (String) ((Ast.Literal) apply.arg).value;
+        if (Decimals.parseExact(s) == null) {
+          throw new CompileException(
+              format("invalid decimal literal '%s'", s), false, apply.pos);
+        }
+      }
+    }
   }
 
   /**
