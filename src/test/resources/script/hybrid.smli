@@ -422,6 +422,26 @@ Sys.plan ();
 >     LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])
 >       JdbcTableScan(table=[[scott, EMP]])
 > ))|_} : string
+(* 'NONE' is less than any 'SOME', so KING (who has no manager) is included. *)
+from e in scott.emps where e.mgr < SOME 7700 yield e.ename;
+> val it = ["ALLEN","WARD","MARTIN","SCOTT","KING","TURNER","JAMES","FORD"]
+>   : string bag
+Sys.plan ();
+> val it =
+>   {_|
+> globalMarshal(globals [scott, SOME], body calcite(plan LogicalProject(ename=[$3])
+>   LogicalFilter(condition=[morelScalar('int option * int option', morelScalar('(op < : int option * int option -> bool)', '{
+>   "type": "ANY",
+>   "nullable": false,
+>   "precision": -1,
+>   "scale": -2147483648
+> }'), ROW($6, morelScalar('SOME 7700', '{
+>   "type": "INTEGER",
+>   "nullable": true
+> }')))])
+>     LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])
+>       JdbcTableScan(table=[[scott, EMP]])
+> ))|_} : string
 from e in scott.emps
   where Option.isSome e.comm
   yield (e.ename, valOf e.comm);

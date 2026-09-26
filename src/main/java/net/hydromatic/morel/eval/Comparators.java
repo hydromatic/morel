@@ -36,6 +36,7 @@ import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.RecordLikeType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
+import net.hydromatic.morel.type.TypeVar;
 import net.hydromatic.morel.util.Ord;
 import net.hydromatic.morel.util.PairList;
 
@@ -50,7 +51,58 @@ public class Comparators {
    */
   public static Comparator comparatorFor(
       TypeSystem typeSystem, Type type, Pos pos) {
-    return new ComparatorBuilder(typeSystem, pos).comparatorFor(type);
+    return new ComparatorBuilder(typeSystem, pos, false).comparatorFor(type);
+  }
+
+  /**
+   * Returns a comparator for a given type that compares {@code real} values
+   * according to IEEE 754, as the operators {@code <}, {@code <=}, {@code >},
+   * {@code >=} do.
+   *
+   * <p>It is the same as {@link #comparatorFor}, except that it compares {@code
+   * real} values using {@link #compareReals}, and values whose type is a type
+   * variable using {@link #comparePartial}. When it reaches values that are
+   * unordered, it returns {@link #UNORDERED}. For example, it returns {@code
+   * UNORDERED} for {@code ((1.0, 2), (NaN, 3))}, but -1 for {@code ((1.0, NaN),
+   * (2.0, 3.0))} because the first fields decide the order.
+   */
+  public static Comparator partialComparatorFor(
+      TypeSystem typeSystem, Type type, Pos pos) {
+    return new ComparatorBuilder(typeSystem, pos, true).comparatorFor(type);
+  }
+
+  /**
+   * Value returned by {@link #compareReals}, {@link #comparePartial} and the
+   * comparators created by {@link #partialComparatorFor} if their arguments are
+   * unordered.
+   */
+  public static final int UNORDERED = Integer.MIN_VALUE;
+
+  /**
+   * Compares two {@code real} values according to IEEE 754, as the operators
+   * {@code <}, {@code <=}, {@code >}, {@code >=} do.
+   *
+   * <p>IEEE 754 comparison is a partial order: {@code ~0.0} equals {@code 0.0},
+   * and {@code NaN} is unordered with respect to every value, including itself,
+   * so this method returns {@link #UNORDERED} if either argument is {@code
+   * NaN}. By contrast, the comparator returned by {@link #comparatorFor}, which
+   * is used by {@code order}, {@code min} and {@code max}, is a total order: it
+   * puts {@code NaN} last and {@code ~0.0} before {@code 0.0}.
+   */
+  static int compareReals(Object o1, Object o2) {
+    final float f1 = (Float) o1;
+    final float f2 = (Float) o2;
+    return f1 < f2 ? -1 : f1 > f2 ? 1 : f1 == f2 ? 0 : UNORDERED;
+  }
+
+  /**
+   * Compares two values whose type is not known at compile time, as the
+   * operators {@code <}, {@code <=}, {@code >}, {@code >=} do. A Java {@link
+   * Float} is a {@code real}, and is compared by {@link #compareReals}; other
+   * values are compared using their natural order.
+   */
+  static int comparePartial(Object o1, Object o2) {
+    return o1 instanceof Float ? compareReals(o1, o2) : compare(o1, o2);
   }
 
   /** Compares two objects using their natural order. */
@@ -78,11 +130,15 @@ public class Comparators {
   static class ComparatorBuilder {
     private final TypeSystem typeSystem;
     private final Pos pos;
+    /** Whether to compare {@code real} values according to IEEE 754. */
+    private final boolean partial;
+
     private final Map<Type.Key, Comparator> cache = new HashMap<>();
 
-    ComparatorBuilder(TypeSystem typeSystem, Pos pos) {
+    ComparatorBuilder(TypeSystem typeSystem, Pos pos, boolean partial) {
       this.typeSystem = requireNonNull(typeSystem);
       this.pos = requireNonNull(pos);
+      this.partial = partial;
     }
 
     Comparator comparatorFor(Type t2) {
@@ -126,6 +182,14 @@ public class Comparators {
           if (type == PrimitiveType.WORD) {
             return Comparators::compareUnsigned;
           }
+          if (partial) {
+            if (type == PrimitiveType.REAL) {
+              return Comparators::compareReals;
+            }
+            if (type instanceof TypeVar) {
+              return Comparators::comparePartial;
+            }
+          }
           return Comparators::compare;
 
         case TUPLE_TYPE:
@@ -161,6 +225,11 @@ public class Comparators {
               return (Comparator<List>)
                   (list1, list2) ->
                       objectComparator.compare(list2.get(1), list1.get(1));
+          }
+          if (dataType.typeConstructors.isEmpty()) {
+            // An opaque type, such as 'time' or 'date', whose values are Java
+            // objects with a natural order.
+            return (Comparator<Comparable>) Comparable::compareTo;
           }
           final PairList<String, Ord<Comparator>> b = PairList.of();
           dataType

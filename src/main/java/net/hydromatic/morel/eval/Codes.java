@@ -81,13 +81,13 @@ import net.hydromatic.morel.parse.MorelParserImpl;
 import net.hydromatic.morel.parse.Parsers;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.FnType;
-import net.hydromatic.morel.type.ForallType;
 import net.hydromatic.morel.type.ListType;
 import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.RangeExtent;
 import net.hydromatic.morel.type.TupleType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
+import net.hydromatic.morel.type.TypeVar;
 import net.hydromatic.morel.util.Characters;
 import net.hydromatic.morel.util.ColorScheme;
 import net.hydromatic.morel.util.ImmutablePairList;
@@ -3433,56 +3433,81 @@ public abstract class Codes {
       };
 
   /** @see BuiltIn#OP_GE */
-  private static final Applicable2 OP_GE =
-      new BaseApplicable2<Boolean, Comparable, Comparable>(BuiltIn.OP_GE) {
-        @Override
-        public Boolean apply(Comparable a0, Comparable a1) {
-          if (a0 instanceof Float && Float.isNaN((Float) a0)
-              || a1 instanceof Float && Float.isNaN((Float) a1)) {
-            return false;
-          }
-          return a0.compareTo(a1) >= 0;
-        }
-      };
+  private static final Applicable OP_GE =
+      new OpCompare(BuiltIn.OP_GE, Comparators::comparePartial);
 
   /** @see BuiltIn#OP_GT */
-  private static final Applicable2 OP_GT =
-      new BaseApplicable2<Boolean, Comparable, Comparable>(BuiltIn.OP_GT) {
-        @Override
-        public Boolean apply(Comparable a0, Comparable a1) {
-          if (a0 instanceof Float && Float.isNaN((Float) a0)
-              || a1 instanceof Float && Float.isNaN((Float) a1)) {
-            return false;
-          }
-          return a0.compareTo(a1) > 0;
-        }
-      };
+  private static final Applicable OP_GT =
+      new OpCompare(BuiltIn.OP_GT, Comparators::comparePartial);
 
   /** @see BuiltIn#OP_LE */
-  private static final Applicable2 OP_LE =
-      new BaseApplicable2<Boolean, Comparable, Comparable>(BuiltIn.OP_LE) {
-        @Override
-        public Boolean apply(Comparable a0, Comparable a1) {
-          if (a0 instanceof Float && Float.isNaN((Float) a0)
-              || a1 instanceof Float && Float.isNaN((Float) a1)) {
-            return false;
-          }
-          return a0.compareTo(a1) <= 0;
-        }
-      };
+  private static final Applicable OP_LE =
+      new OpCompare(BuiltIn.OP_LE, Comparators::comparePartial);
 
   /** @see BuiltIn#OP_LT */
-  private static final Applicable2 OP_LT =
-      new BaseApplicable2<Boolean, Comparable, Comparable>(BuiltIn.OP_LT) {
-        @Override
-        public Boolean apply(Comparable a0, Comparable a1) {
-          if (a0 instanceof Float && Float.isNaN((Float) a0)
-              || a1 instanceof Float && Float.isNaN((Float) a1)) {
-            return false;
-          }
-          return a0.compareTo(a1) < 0;
-        }
-      };
+  private static final Applicable OP_LT =
+      new OpCompare(BuiltIn.OP_LT, Comparators::comparePartial);
+
+  /**
+   * Implements {@link #OP_GE}, {@link #OP_GT}, {@link #OP_LE} and {@link
+   * #OP_LT}.
+   *
+   * <p>If the type of the operands is known at compile time, {@link #withType}
+   * creates a copy whose comparator, created by {@link
+   * Comparators#partialComparatorFor}, is specialized to that type. Values are
+   * compared in the same order used by {@code order}, {@code min} and {@code
+   * max}, except that {@code real} values, including those inside composite
+   * values such as tuples and options, are compared according to IEEE 754.
+   *
+   * <p>If the type is not known at compile time (for example, in a polymorphic
+   * function), the comparator is {@link Comparators#comparePartial}.
+   */
+  private static class OpCompare
+      extends BaseApplicable2<Boolean, Object, Object> implements Typed {
+    private final Comparator comparator;
+
+    OpCompare(BuiltIn builtIn, Comparator comparator) {
+      super(builtIn);
+      this.comparator = requireNonNull(comparator);
+    }
+
+    @Override
+    public Applicable withType(TypeSystem typeSystem, Type type, Pos pos) {
+      // 'type' is 'argType * argType -> bool' (perhaps wrapped in a
+      // ForallType if the operator is used as a value).
+      final Type paramType = FnType.of(type).paramType;
+      if (!(paramType instanceof TupleType)) {
+        return this;
+      }
+      final Type argType = ((TupleType) paramType).argTypes.get(0);
+      if (argType instanceof TypeVar) {
+        return this;
+      }
+      return new OpCompare(
+          builtIn, Comparators.partialComparatorFor(typeSystem, argType, pos));
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public Boolean apply(Object a0, Object a1) {
+      final int c = comparator.compare(a0, a1);
+      if (c == Comparators.UNORDERED) {
+        return false;
+      }
+      switch (builtIn) {
+        case OP_GE:
+          return c >= 0;
+        case OP_GT:
+          return c > 0;
+        case OP_LE:
+          return c <= 0;
+        case OP_LT:
+          return c < 0;
+        default:
+          throw new AssertionError(builtIn);
+      }
+    }
+  }
 
   /** @see BuiltIn#OP_MINUS */
   private static final Macro OP_MINUS =
@@ -4890,9 +4915,8 @@ public abstract class Codes {
       // 'type' is 'elementType bag -> elementType' (perhaps wrapped in a
       // ForallType if the function is used as a value); its result type is the
       // element type.
-      final Type fnType =
-          type instanceof ForallType ? ((ForallType) type).type : type;
-      final Type elementType = ((FnType) fnType).resultType;
+      final FnType fnType = FnType.of(type);
+      final Type elementType = fnType.resultType;
       final Comparator comparator =
           Comparators.comparatorFor(typeSystem, elementType, pos);
       return new RelationalMinMax(builtIn, pos, comparator);
@@ -4946,9 +4970,9 @@ public abstract class Codes {
       // 'type' is '(elementType -> keyType) -> elementType bag -> elementType'
       // (perhaps wrapped in a ForallType if the function is used as a value);
       // the key type is the result type of its first argument.
-      final Type fnType =
-          type instanceof ForallType ? ((ForallType) type).type : type;
-      final Type keyType = ((FnType) ((FnType) fnType).paramType).resultType;
+      final FnType fnType = FnType.of(type);
+      final FnType fnType1 = (FnType) fnType.paramType;
+      final Type keyType = fnType1.resultType;
       final Comparator comparator =
           Comparators.comparatorFor(typeSystem, keyType, pos);
       return new RelationalMinMaxBy(builtIn, pos, comparator);

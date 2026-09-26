@@ -699,6 +699,63 @@ op <;
 > val it = true : bool
 0wxffffffffffffffff < 0w1;
 > val it = false : bool
+(* Real comparison follows IEEE 754: ~0.0 equals 0.0, and any comparison
+ * involving NaN is false. *)
+~0.0 < 0.0;
+> val it = false : bool
+~0.0 >= 0.0;
+> val it = true : bool
+0.0 / 0.0 < 1.0;
+> val it = false : bool
+0.0 / 0.0 >= 1.0;
+> val it = false : bool
+(* As a Morel extension, the comparison operators also apply to options,
+ * tuples, records, lists, datatypes and opaque types such as "time", in the
+ * same order used by "order", "min" and "max". *)
+SOME 1 < SOME 2;
+> val it = true : bool
+NONE < SOME 2;
+> val it = true : bool
+SOME 3 >= SOME 3;
+> val it = true : bool
+(1, 2) < (1, 3);
+> val it = true : bool
+{a = 1, b = "z"} <= {a = 1, b = "y"};
+> val it = false : bool
+[1, 2] < [1, 2, 0];
+> val it = true : bool
+LESS < GREATER;
+> val it = true : bool
+EQUAL > GREATER;
+> val it = false : bool
+from x in [SOME 3, NONE, SOME 1] where x > SOME 1;
+> val it = [SOME 3] : int option list
+(* There is no order on functions. *)
+(fn x => x + 1) < (fn x => x + 2);
+> stdIn:1.1-1.34 Error: comparison not defined for type 'int -> int'
+>   raised at: stdIn:1.1-1.34
+(* A real inside a composite value is also compared according to IEEE 754.
+ * ~0.0 equals 0.0, so the second fields decide; a NaN makes every
+ * comparison false, unless an earlier field decides; "order" is unaffected,
+ * and puts NaN last. *)
+(~0.0, 1) < (0.0, 0);
+> val it = false : bool
+(~0.0, 1) > (0.0, 0);
+> val it = true : bool
+(1.0, 2) < (0.0 / 0.0, 3);
+> val it = false : bool
+(1.0, 2) >= (0.0 / 0.0, 3);
+> val it = false : bool
+(1.0, 0.0 / 0.0) < (2.0, 3.0);
+> val it = true : bool
+{a = 0.0 / 0.0} < {a = 1.0};
+> val it = false : bool
+SOME (0.0 / 0.0) <= SOME 1.0;
+> val it = false : bool
+[~0.0] <= [0.0];
+> val it = true : bool
+from x in [(0.0 / 0.0, 1), (~0.0, 2), (0.0, 3)] order x;
+> val it = [(~0,2),(0,3),(nan,1)] : (real * int) list
 
 (* "op >" : numtext (int, real, string, char, word). *)
 op >;

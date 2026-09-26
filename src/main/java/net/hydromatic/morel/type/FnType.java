@@ -21,7 +21,7 @@ package net.hydromatic.morel.type;
 import java.util.function.UnaryOperator;
 import net.hydromatic.morel.ast.Op;
 
-/** The type of a function value. */
+/** A function value's type. */
 public class FnType extends BaseType {
   public final Type paramType;
   public final Type resultType;
@@ -30,6 +30,17 @@ public class FnType extends BaseType {
     super(Op.FUNCTION_TYPE);
     this.paramType = paramType;
     this.resultType = resultType;
+  }
+
+  /**
+   * Converts a type to a function type, removing a {@link ForallType} wrapper
+   * if present. For example, converts both "int &rarr; bool" and "forall 'a. 'a
+   * list &rarr; int" to function types. Throws {@link ClassCastException} if
+   * the type is not a function type.
+   */
+  public static FnType of(Type type) {
+    return (FnType)
+        (type instanceof ForallType ? ((ForallType) type).type : type);
   }
 
   public Key key() {

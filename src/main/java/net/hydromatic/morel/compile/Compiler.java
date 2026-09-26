@@ -1326,14 +1326,10 @@ public class Compiler {
         // stack so that StackCode nodes resolve correctly at result() time.
         argumentCode = compile(cx, aggregate.argument);
       }
-      Type aggType = aggregate.aggregate.type;
-      if (aggType instanceof ForallType) {
-        aggType = ((ForallType) aggType).type;
-      }
-      final Type aggParamType = ((FnType) aggType).paramType;
+      final FnType fnType = FnType.of(aggregate.aggregate.type);
       final Applicable aggregateApplicable =
           compileApplicable(
-              cx, aggregate.aggregate, aggParamType, aggregate.pos);
+              cx, aggregate.aggregate, fnType.paramType, aggregate.pos);
       final Code aggregateCode;
       if (aggregateApplicable == null) {
         // Compile with cxFrom so scan variables use GetCode (read from

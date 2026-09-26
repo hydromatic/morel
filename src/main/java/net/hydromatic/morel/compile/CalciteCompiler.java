@@ -64,6 +64,7 @@ import net.hydromatic.morel.foreign.Converters;
 import net.hydromatic.morel.foreign.RelList;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.DataType;
+import net.hydromatic.morel.type.ForallType;
 import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.Type;
@@ -855,7 +856,14 @@ public class CalciteCompiler extends Compiler {
     final RelJson relJson = RelJson.create().withJsonBuilder(jsonBuilder);
     final Object json = requireNonNull(relJson.toJson(calciteType));
     final String jsonType = jsonBuilder.toJsonString(json);
-    final String morelCode = exp.toString();
+    // If the expression is a built-in function, annotate it with its type.
+    // Some polymorphic built-ins, such as '<', behave differently for
+    // different types, and when the code is recompiled the type would
+    // otherwise be lost.
+    final String morelCode =
+        exp.op == Op.FN_LITERAL && !(exp.type instanceof ForallType)
+            ? "(" + exp + " : " + exp.type.moniker() + ")"
+            : exp.toString();
     return cx.relBuilder
         .getRexBuilder()
         .makeCall(
