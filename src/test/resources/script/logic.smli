@@ -21,8 +21,8 @@
 
 val emps = scott.emps;
 > val emps = <relation>
->   : {comm:real option, deptno:int, empno:int, ename:string, hiredate:string,
->       job:string, mgr:int option, sal:real} bag
+>   : {comm:decimal option, deptno:int, empno:int, ename:string,
+>       hiredate:string, job:string, mgr:int option, sal:decimal} bag
 val depts = scott.depts;
 > val depts = <relation> : {deptno:int, dname:string, loc:string} bag
 
@@ -30,71 +30,71 @@ val depts = scott.depts;
 
 (* Q1. Do any employees have a salary under 900? *)
 exists e in emps
-  where e.sal < 900.0;
+  where e.sal < decimal "900";
 > val it = true : bool
 
 (* Answer to Q1 using 'from' and 'Bag.null'. *)
-not (Bag.null (from e in emps where e.sal < 900.0));
+not (Bag.null (from e in emps where e.sal < decimal "900"));
 > val it = true : bool
 
 (* Answer to Q1 using 'from' and 'compute'. *)
 (from e in emps
-  where e.sal < 900.0
+  where e.sal < decimal "900"
   compute count over ()) > 0;
 > val it = true : bool
 
 (* Q2. Do all employees have a salary greater than 1,000? *)
 forall e in emps
-  require e.sal > 1000.0;
+  require e.sal > decimal "1000";
 > val it = false : bool
 
 (* Answer to Q2 using 'exists'. *)
 not (exists e in emps
-  where not (e.sal > 1000.0));
+  where not (e.sal > decimal "1000"));
 > val it = false : bool
 
 (* Answer to Q2 using 'from' and 'Bag.null'. *)
-Bag.null (from e in emps where not (e.sal > 1000.0));
+Bag.null (from e in emps where not (e.sal > decimal "1000"));
 > val it = false : bool
 
 (* Q3. Do all employees in department 10 earn over 1,000? *)
 forall e in emps
   where e.deptno = 10
-  require e.sal > 1000.0;
+  require e.sal > decimal "1000";
 > val it = true : bool
 
 (* Not equivalent to Q3. Syntax is valid, but query
  * does not return the result the user wanted. *)
 forall e in emps
-  require e.deptno = 10 andalso e.sal > 1000.0;
+  require e.deptno = 10 andalso e.sal > decimal "1000";
 > val it = false : bool
 
 (* Answer to Q3 using 'implies'. *)
 forall e in emps
-  require e.deptno = 10 implies e.sal > 1000.0;
+  require e.deptno = 10 implies e.sal > decimal "1000";
 > val it = true : bool
 
 (* Answer to Q3 using 'if'. *)
 forall e in emps
-  require if e.deptno = 10 then e.sal > 1000.0 else true;
+  require if e.deptno = 10 then e.sal > decimal "1000" else true;
 > val it = true : bool
 
 (* Answer to Q3 using 'not ... orelse'. *)
 forall e in emps
-  require not (e.deptno = 10) orelse e.sal > 1000.0;
+  require not (e.deptno = 10) orelse e.sal > decimal "1000";
 > val it = true : bool
 
 (* Answer to Q3 using 'where'. *)
 forall e in emps
   where e.deptno = 10
-  require e.sal > 1000.0;
+  require e.sal > decimal "1000";
 > val it = true : bool
 
 (* Answer to Q3 using unconstrained variables. *)
 (* TODO
 forall e
   require e elem emps andalso e.deptno = 10
-    implies e.sal > 1000.0;
+    implies e.sal > decimal "1000";
 > val it = true : bool
 *)
 
@@ -121,7 +121,7 @@ from d in depts
 from d in depts
   where (forall e in emps
     require e.deptno = d.deptno
-    implies e.sal > 1000.0);
+    implies e.sal > decimal "1000");
 > val it =
 >   [{deptno=10,dname="ACCOUNTING",loc="NEW YORK"},
 >    {deptno=40,dname="OPERATIONS",loc="BOSTON"}]

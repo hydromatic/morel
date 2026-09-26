@@ -552,7 +552,8 @@ class TabularPrinter {
     private static boolean isNumeric(Type type) {
       return type == PrimitiveType.INT
           || type == PrimitiveType.REAL
-          || type == PrimitiveType.WORD;
+          || type == PrimitiveType.WORD
+          || isDecimal(type);
     }
 
     /**

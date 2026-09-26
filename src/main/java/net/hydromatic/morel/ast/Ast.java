@@ -44,6 +44,7 @@ import java.util.function.Consumer;
 import java.util.function.ObjIntConsumer;
 import net.hydromatic.morel.compile.CompileException;
 import net.hydromatic.morel.compile.TypeResolver;
+import net.hydromatic.morel.parse.Parsers;
 import net.hydromatic.morel.util.ImmutablePairList;
 import net.hydromatic.morel.util.Ord;
 import net.hydromatic.morel.util.PairList;
@@ -1594,7 +1595,8 @@ public class Ast {
     }
 
     AstWriter unparse(AstWriter w, int left, int right) {
-      return w.append("#").append(name);
+      return w.append(
+          Parsers.appendSelector(new StringBuilder(), name).toString());
     }
   }
 

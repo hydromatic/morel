@@ -58,7 +58,7 @@ from e in scott.emps;
 >          20  7902 FORD   1981-12-03 ANALYST   7566 3000
 >          10  7934 MILLER 1982-01-23 CLERK     7782 1300
 >
-> val it : {comm:real option, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int option, sal:real} bag
+> val it : {comm:decimal option, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int option, sal:decimal} bag
 
 from e in scott.emps yield e.deptno;
 > val it = [20,30,30,20,30,30,10,20,10,30,20,30,20,10] : int bag
@@ -144,7 +144,7 @@ from e in scott.emps yield e;
 >          20  7902 FORD   1981-12-03 ANALYST   7566 3000
 >          10  7934 MILLER 1982-01-23 CLERK     7782 1300
 >
-> val it : {comm:real option, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int option, sal:real} bag
+> val it : {comm:decimal option, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int option, sal:decimal} bag
 
 from e in scott.emps where e.job = "CLERK" yield e;
 > comm deptno empno ename  hiredate   job   mgr  sal
@@ -154,7 +154,7 @@ from e in scott.emps where e.job = "CLERK" yield e;
 >          30  7900 JAMES  1981-12-03 CLERK 7698  950
 >          10  7934 MILLER 1982-01-23 CLERK 7782 1300
 >
-> val it : {comm:real option, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int option, sal:real} bag
+> val it : {comm:decimal option, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int option, sal:decimal} bag
 
 from n in [1,2,3] yield n;
 > val it = [1,2,3] : int list
@@ -267,7 +267,7 @@ order e.ename;
 >    0     30  7844 TURNER 1981-09-08 SALESMAN  7698 1500
 >  500     30  7521 WARD   1981-02-22 SALESMAN  7698 1250
 >
-> val it : {comm:real option, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int option, sal:real} list
+> val it : {comm:decimal option, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int option, sal:decimal} list
 
 from e in scott.emps
 order DESC e.ename
@@ -278,7 +278,7 @@ take 3;
 >    0     30  7844 TURNER 1981-09-08 SALESMAN 7698 1500
 >          20  7369 SMITH  1980-12-17 CLERK    7902  800
 >
-> val it : {comm:real option, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int option, sal:real} list
+> val it : {comm:decimal option, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int option, sal:decimal} list
 
 from e in scott.emps,
   d in scott.depts
@@ -324,7 +324,7 @@ where e.deptno = d.deptno;
 >     20 RESEARCH   DALLAS            20  7902 FORD   1981-12-03 ANALYST   7566 3000
 >     10 ACCOUNTING NEW YORK          10  7934 MILLER 1982-01-23 CLERK     7782 1300
 >
-> val it : {d:{deptno:int, dname:string, loc:string}, e:{comm:real option, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int option, sal:real}} bag
+> val it : {d:{deptno:int, dname:string, loc:string}, e:{comm:decimal option, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int option, sal:decimal}} bag
 
 from e in scott.emps,
   d in scott.depts
@@ -347,7 +347,7 @@ yield e;
 >          20  7902 FORD   1981-12-03 ANALYST   7566 3000
 >          10  7934 MILLER 1982-01-23 CLERK     7782 1300
 >
-> val it : {comm:real option, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int option, sal:real} bag
+> val it : {comm:decimal option, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int option, sal:decimal} bag
 
 from e in scott.emps,
   d in scott.depts
@@ -390,7 +390,7 @@ where e.sal >= g.losal
 >          30  7900 JAMES  1981-12-03 CLERK     7698  950     1  1200   700
 >          10  7934 MILLER 1982-01-23 CLERK     7782 1300     2  1400  1201
 >
-> val it : {e:{comm:real option, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int option, sal:real}, g:{grade:int, hisal:real, losal:real}} bag
+> val it : {e:{comm:decimal option, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int option, sal:decimal}, g:{grade:int, hisal:decimal, losal:decimal}} bag
 
 from e in scott.emps,
   d in scott.depts,
@@ -414,7 +414,7 @@ where e.sal >= g.losal
 >     30 SALES      CHICAGO           30  7900 JAMES  1981-12-03 CLERK     7698  950     1  1200   700
 >     10 ACCOUNTING NEW YORK          10  7934 MILLER 1982-01-23 CLERK     7782 1300     2  1400  1201
 >
-> val it : {d:{deptno:int, dname:string, loc:string}, e:{comm:real option, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int option, sal:real}, g:{grade:int, hisal:real, losal:real}} bag
+> val it : {d:{deptno:int, dname:string, loc:string}, e:{comm:decimal option, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int option, sal:decimal}, g:{grade:int, hisal:decimal, losal:decimal}} bag
 
 from e in scott.emps,
   d in scott.depts,

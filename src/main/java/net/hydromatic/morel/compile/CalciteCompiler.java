@@ -32,6 +32,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -80,6 +81,7 @@ import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.externalize.RelJson;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.rex.RexCorrelVariable;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexSubQuery;
@@ -655,6 +657,19 @@ public class CalciteCompiler extends Compiler {
             return cx.relBuilder.literal(literal.value);
         }
 
+      case VALUE_LITERAL:
+        // A 'decimal' value, e.g. from 'decimal "12.30"', becomes a SQL
+        // DECIMAL literal. (Other value literals, such as 'SOME 1', are
+        // evaluated as Morel code, below.)
+        final Object value = ((Core.Literal) exp).unwrap(Object.class);
+        if (value instanceof BigDecimal) {
+          final RexNode decimalLiteral = decimalLiteral(cx, (BigDecimal) value);
+          if (decimalLiteral != null) {
+            return decimalLiteral;
+          }
+        }
+        break;
+
       case ID:
         // In 'from e in emps yield e', 'e' expands to a record,
         // '{e.deptno, e.ename}'
@@ -709,6 +724,12 @@ public class CalciteCompiler extends Compiler {
               return cx.relBuilder.call(unaryOp, translate(cx, apply.arg));
             }
 
+            // Comparing an option with NONE is "IS NULL" or "IS NOT NULL".
+            final RexNode noneComparison = noneComparison(cx, op, apply);
+            if (noneComparison != null) {
+              return noneComparison;
+            }
+
             // Is it a binary operator with a Calcite equivalent? E.g. + => PLUS
             final SqlOperator binaryOp = binaryOperator(op, apply);
             if (binaryOp != null) {
@@ -726,11 +747,18 @@ public class CalciteCompiler extends Compiler {
               }
               if (binaryOp == SqlStdOperatorTable.IS_NOT_DISTINCT_FROM
                   || binaryOp == SqlStdOperatorTable.IS_DISTINCT_FROM) {
-                // Unlike '=', these operators do not coerce their operands,
-                // so cast them to a common type (e.g. SMALLINT and INTEGER to
+                // Expand to "x = y OR (x IS NULL AND y IS NULL)" (or its
+                // negation) rather than calling the operator directly;
+                // Calcite implements IS [NOT] DISTINCT FROM using
+                // Object.equals, which for a BigDecimal is sensitive to
+                // scale. The expansion does not coerce its operands, so cast
+                // them to a common type (e.g. SMALLINT and INTEGER to
                 // INTEGER).
-                return cx.relBuilder.call(
-                    binaryOp, coerce(cx, translateList(cx, apply.args())));
+                final List<RexNode> args =
+                    coerce(cx, translateList(cx, apply.args()));
+                return binaryOp == SqlStdOperatorTable.IS_NOT_DISTINCT_FROM
+                    ? cx.relBuilder.isNotDistinctFrom(args.get(0), args.get(1))
+                    : cx.relBuilder.isDistinctFrom(args.get(0), args.get(1));
               }
               return cx.relBuilder.call(
                   binaryOp, translateList(cx, apply.args()));
@@ -784,6 +812,65 @@ public class CalciteCompiler extends Compiler {
     // Translate as a call to a scalar function
     return morelScalar(cx, exp);
   }
+
+  /**
+   * If {@code apply} compares an option with {@code NONE}, as in {@code x =
+   * NONE} or {@code x <> NONE}, translates it to {@code x IS NULL} or {@code x
+   * IS NOT NULL}; otherwise returns null.
+   */
+  private @Nullable RexNode noneComparison(
+      RelContext cx, BuiltIn op, Core.Apply apply) {
+    if (op != BuiltIn.OP_EQ && op != BuiltIn.OP_NE
+        || apply.arg.op != Op.TUPLE) {
+      return null;
+    }
+    final Core.Exp arg0 = apply.args().get(0);
+    final Core.Exp arg1 = apply.args().get(1);
+    final BuiltIn.Constructor none = BuiltIn.Constructor.OPTION_NONE;
+    final Core.Exp other =
+        arg1.isConstructor(none)
+            ? arg0
+            : arg0.isConstructor(none) ? arg1 : null;
+    if (other == null) {
+      return null;
+    }
+    final RexNode rex = translate(cx, other);
+    return op == BuiltIn.OP_EQ
+        ? cx.relBuilder.isNull(rex)
+        : cx.relBuilder.isNotNull(rex);
+  }
+
+  /**
+   * Converts a {@code decimal} value to a Calcite literal, or returns null if
+   * Calcite cannot represent it.
+   *
+   * <p>Calcite requires a non-negative scale, but a canonical decimal may have
+   * a negative scale (for example, 2900 is 2.9E+3), so we rescale it. Calcite
+   * gives a literal with scale 0 the type {@code INTEGER} or {@code BIGINT}, so
+   * it must fit in a {@code long}; a literal with a fractional part must fit in
+   * the maximum precision and scale of {@code DECIMAL}.
+   */
+  private static @Nullable RexNode decimalLiteral(RelContext cx, BigDecimal d) {
+    if (d.scale() < 0) {
+      d = d.setScale(0);
+    }
+    if (d.scale() == 0) {
+      if (d.compareTo(LONG_MIN) < 0 || d.compareTo(LONG_MAX) > 0) {
+        return null;
+      }
+    } else {
+      final RelDataTypeSystem typeSystem =
+          cx.relBuilder.getTypeFactory().getTypeSystem();
+      if (d.precision() > typeSystem.getMaxNumericPrecision()
+          || d.scale() > typeSystem.getMaxNumericScale()) {
+        return null;
+      }
+    }
+    return cx.relBuilder.literal(d);
+  }
+
+  private static final BigDecimal LONG_MIN = BigDecimal.valueOf(Long.MIN_VALUE);
+  private static final BigDecimal LONG_MAX = BigDecimal.valueOf(Long.MAX_VALUE);
 
   /**
    * Returns the Calcite equivalent of a call to a binary operator, or null if
@@ -1136,8 +1223,9 @@ public class CalciteCompiler extends Compiler {
    * functions order values of {@code type} the same way Morel does.
    *
    * <p>True for the scalar types {@code bool}, {@code char}, {@code int},
-   * {@code real} and {@code string}. False for {@code word} (Calcite compares
-   * it as a signed {@code BIGINT}) and for composite types -- tuples, records,
+   * {@code real} and {@code string}, and for {@code decimal} (which Calcite
+   * represents as {@code DECIMAL}). False for {@code word} (Calcite compares it
+   * as a signed {@code BIGINT}) and for composite types -- tuples, records,
    * lists, and datatypes such as {@code option} -- which Calcite cannot order
    * the way Morel does, or at all. For those types {@code max} and {@code min}
    * fall back to local evaluation.
@@ -1154,6 +1242,9 @@ public class CalciteCompiler extends Compiler {
         default:
           break;
       }
+    }
+    if (type instanceof DataType && ((DataType) type).name.equals("decimal")) {
+      return true;
     }
     return false;
   }

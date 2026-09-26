@@ -302,9 +302,11 @@ public class AstWriter {
         append("not");
       } else if (!builtIn.structure.equals("Top")
           && !builtIn.structure.equals("$")) {
-        // E.g. "#find List" for the List.find function
-        append("#")
-            .append(builtIn.mlName)
+        // E.g. "#find List" for the List.find function, "#`*` Word" for the
+        // Word.* operator.
+        append(
+                Parsers.appendSelector(new StringBuilder(), builtIn.mlName)
+                    .toString())
             .append(" ")
             .append(builtIn.structure);
       } else {

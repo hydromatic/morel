@@ -355,7 +355,7 @@ from t, f
 > val it : {f:int, t:int} list
 Sys.planEx "3";
 > val it =
->   "val it = from t in #flatten Range ([CLOSED (0, 10)]) join f in #flatten Range ([CLOSED (0, 6)]) where #* Int (3, t) + #* Int (5, f) = 30"
+>   "val it = from t in #flatten Range ([CLOSED (0, 10)]) join f in #flatten Range ([CLOSED (0, 6)]) where #`*` Int (3, t) + #`*` Int (5, f) = 30"
 >   : string
 
 (* A linear Diophantine equation with no solutions. FBBT bounds
@@ -741,7 +741,7 @@ from x in [3, 5, 7], y where x > y andalso x < y + 5 yield y;
 > val it = [~1,0,1,2,1,2,3,4,3,4,5,6] : int list
 Sys.planEx "3";
 > val it =
->   "val it = from x in [3, 5, 7] join y in #flatten Range ([OPEN (#- Int (x, 5), x)]) where y > ~2 andalso y < 7 yield y"
+>   "val it = from x in [3, 5, 7] join y in #flatten Range ([OPEN (#`-` Int (x, 5), x)]) where y > ~2 andalso y < 7 yield y"
 >   : string
 
 from x in [3, 5, 7], y

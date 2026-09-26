@@ -433,7 +433,7 @@ public class InlineTest {
             hasToString(
                 "val it = "
                     + "let val v = (13, 5) "
-                    + "in case v of (x, y) => #- Int (x, y) "
+                    + "in case v of (x, y) => #`-` Int (x, y) "
                     + "end"))
         .assertEval(is(8));
   }

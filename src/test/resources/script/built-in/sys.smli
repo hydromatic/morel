@@ -331,7 +331,7 @@ Sys.planEx "-1";
 val warthog = 0wxAB + 0w1;
 > val warthog = 0wxAC : word
 Sys.planEx "0";
-> val it = "val warthog = #+ Word (0wxAB, 0wx1)" : string
+> val it = "val warthog = #`+` Word (0wxAB, 0wx1)" : string
 
 (*) val set : string * 'a -> unit
 Sys.set;

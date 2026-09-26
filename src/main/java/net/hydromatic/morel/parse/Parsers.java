@@ -306,6 +306,38 @@ public final class Parsers {
     }
   }
 
+  /**
+   * Appends a record selector, such as {@code #deptno} or {@code #1}. If the
+   * label is not composed of letters, digits, underscores and primes (for
+   * example, if it is an operator such as {@code *}), encloses it in
+   * back-ticks, as in {@code #`*`}.
+   */
+  public static StringBuilder appendSelector(StringBuilder buf, String label) {
+    buf.append('#');
+    if (isPlainLabel(label)) {
+      return buf.append(label);
+    }
+    return buf.append('`').append(label.replace("`", "``")).append('`');
+  }
+
+  /**
+   * Returns whether a label can follow {@code #} without quoting; that is,
+   * whether it is non-empty and composed of letters, digits, underscores and
+   * primes.
+   */
+  private static boolean isPlainLabel(String label) {
+    if (label.isEmpty()) {
+      return false;
+    }
+    for (int i = 0; i < label.length(); i++) {
+      final char c = label.charAt(i);
+      if (!Character.isLetterOrDigit(c) && c != '_' && c != '\'') {
+        return false;
+      }
+    }
+    return true;
+  }
+
   static class StringParser {
     final String s;
     int i = 0;

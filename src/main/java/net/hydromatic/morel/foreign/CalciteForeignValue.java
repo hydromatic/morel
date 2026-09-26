@@ -138,7 +138,7 @@ public class CalciteForeignValue implements ForeignValue {
     final PairList<String, Type> fields = PairList.of();
     fieldList.forEach(
         field -> {
-          final Type type = Converters.fieldType(field);
+          final Type type = Converters.fieldType(field, typeSystem);
           fields.add(
               nameConverter.convert(tablePath, field.getName()),
               nullabilityPolicy.isNullable(tablePath, field)

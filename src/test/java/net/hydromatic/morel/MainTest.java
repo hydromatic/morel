@@ -772,6 +772,10 @@ public class MainTest {
     ml("a (#e (#d (#c b)))").assertParseEquivalent("a b.c.d.e");
     ml("a (#d (#c b)) (#f e)").assertParseEquivalent("a b.c.d e.f");
     ml("SOME (#b (#a r))").assertParseEquivalent("SOME r.a.b");
+    // A label that is not alphanumeric, such as an operator, is quoted.
+    ml("#`*` Word").assertParseSame();
+    ml("#`*` Word").assertParseEquivalent("Word.`*`");
+    ml("#`a b` r").assertParseEquivalent("r.`a b`");
     ml("#b a (#d c) (#f e)").assertParseEquivalent("a.b c.d e.f");
     ml("#b a (#d c) (#f e)").assertParseEquivalent("(a.b) (c.d) (e.f)");
     mlE("(a.$($b (c.d) (e.f))")

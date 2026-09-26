@@ -433,7 +433,10 @@ RecordSelector recordSelector() : {}
 {
   <LABEL> {
     assert token.image.startsWith("#");
-    return ast.recordSelector(pos(), token.image.substring(1));
+    // A label may be quoted, e.g. "#`*`".
+    final String label = token.image.substring(1);
+    return ast.recordSelector(pos(),
+        label.startsWith("`") ? unquoteIdentifier(label) : label);
   }
 }
 
@@ -2943,7 +2946,8 @@ MORE :
     |
     < TY_VAR: "'" <LETTER> (<LETTER>|<DIGIT>|"_"|"'")* >
     |
-    < LABEL: "#" (<LETTER>|<DIGIT>|"_"|"'")+ >
+    < LABEL: "#" (<LETTER>|<DIGIT>|"_"|"'")+
+      | "#" "`" ( (~["`"]) | ("`" "`") )+ "`" >
     |
     < #LETTER:
     [

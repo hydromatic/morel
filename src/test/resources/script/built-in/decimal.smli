@@ -443,7 +443,7 @@ from p in [{item = "a", price = decimal "1.10"},
     {item = "b", price = decimal "~2E~10"}];
 > item price
 > ---- ------
-> a    1.1
+> a       1.1
 > b    -2E-10
 >
 > val it : {item:string, price:decimal} list

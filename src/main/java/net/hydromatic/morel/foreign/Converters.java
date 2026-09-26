@@ -34,7 +34,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
+import net.hydromatic.morel.compile.BuiltIn;
 import net.hydromatic.morel.eval.Codes;
+import net.hydromatic.morel.eval.Decimals;
 import net.hydromatic.morel.eval.Unit;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.PrimitiveType;
@@ -42,6 +44,7 @@ import net.hydromatic.morel.type.RecordLikeType;
 import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.TupleType;
 import net.hydromatic.morel.type.Type;
+import net.hydromatic.morel.type.TypeSystem;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.EnumerableDefaults;
 import org.apache.calcite.linq4j.Enumerator;
@@ -118,6 +121,22 @@ public class Converters {
     return values -> fieldConverter.convertFrom(values[ordinal]);
   }
 
+  /**
+   * Converts a numeric value from Calcite (usually a {@link BigDecimal}) to a
+   * Morel {@code decimal}, which has at most 34 significant digits and no
+   * trailing zeros.
+   */
+  static BigDecimal toDecimal(Object o) {
+    final BigDecimal d =
+        o instanceof BigDecimal ? (BigDecimal) o : new BigDecimal(o.toString());
+    return requireNonNull(Decimals.canonical(d), "decimal out of range");
+  }
+
+  /** Returns whether a type is {@code decimal}. */
+  private static boolean isDecimal(Type type) {
+    return type instanceof DataType && ((DataType) type).name.equals("decimal");
+  }
+
   /** Returns whether a type is {@code option}. */
   private static boolean isOption(Type type) {
     return type instanceof DataType && ((DataType) type).name.equals("option");
@@ -188,6 +207,10 @@ public class Converters {
     if (type instanceof RecordLikeType) {
       return (Converter<E>) ofRow2(fromType, (RecordLikeType) type);
     }
+    if (isDecimal(type) && fromType.isStruct()) {
+      RelDataTypeField field = only(fromType.getFieldList());
+      return (Converter<E>) ofField(field.getType(), 0, false);
+    }
     if (isOption(type) && fromType.isStruct()) {
       RelDataTypeField field = only(fromType.getFieldList());
       return (Converter<E>) ofField(field.getType(), 0, true);
@@ -204,8 +227,8 @@ public class Converters {
     return o -> o;
   }
 
-  public static Type fieldType(RelDataTypeField field) {
-    return FieldConverter.toType(field.getType()).mlType;
+  public static Type fieldType(RelDataTypeField field, TypeSystem typeSystem) {
+    return FieldConverter.toType(field.getType()).mlType(typeSystem);
   }
 
   public static RelDataType toCalciteType(
@@ -254,6 +277,16 @@ public class Converters {
         return o == null ? 0f : ((Number) o).floatValue();
       }
     },
+    FROM_DECIMAL(null) {
+      @Override
+      Type mlType(TypeSystem typeSystem) {
+        return typeSystem.lookup(BuiltIn.Eqtype.DECIMAL);
+      }
+
+      public BigDecimal convertFrom(Object o) {
+        return o == null ? BigDecimal.ZERO : toDecimal(o);
+      }
+    },
     FROM_DATE(PrimitiveType.STRING) {
       public String convertFrom(Object o) {
         return o == null ? "" : unixDateToString((Integer) o);
@@ -275,10 +308,15 @@ public class Converters {
       }
     };
 
-    final Type mlType;
+    private final @Nullable Type mlType;
 
-    FieldConverter(Type mlType) {
+    FieldConverter(@Nullable Type mlType) {
       this.mlType = mlType;
+    }
+
+    /** Returns the Morel type of values of this field. */
+    Type mlType(TypeSystem typeSystem) {
+      return requireNonNull(mlType);
     }
 
     /** Given a Calcite row, returns the value of this field in SML format. */
@@ -298,8 +336,10 @@ public class Converters {
         case FLOAT:
         case REAL:
         case DOUBLE:
-        case DECIMAL:
           return FROM_FLOAT;
+
+        case DECIMAL:
+          return FROM_DECIMAL;
 
         case DATE:
           return FROM_DATE;
@@ -355,6 +395,12 @@ public class Converters {
           final DataType dataType = (DataType) type;
           if (dataType.isCollection()) {
             return forMorelCollection(type, typeFactory, nullable, recordList);
+          }
+          if (dataType.name.equals("decimal")) {
+            return new C2m(
+                typeFactory.createTypeWithNullability(
+                    typeFactory.createSqlType(SqlTypeName.DECIMAL), nullable),
+                type);
           }
           if (dataType.name.equals("option")) {
             return new OptionC2m(
@@ -523,6 +569,9 @@ public class Converters {
           }
 
         default:
+          if (isDecimal(morelType)) {
+            return Converters::toDecimal;
+          }
           if (morelType.isCollection()) {
             // The value of a collection-typed column is already a Morel
             // collection (a List); no conversion is required.

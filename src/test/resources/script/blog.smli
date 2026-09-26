@@ -682,8 +682,8 @@ from p in wordCount lines order p.word;
 
 val emps = scott.emps;
 > val emps = <relation>
->   : {comm:real option, deptno:int, empno:int, ename:string, hiredate:string,
->       job:string, mgr:int option, sal:real} bag
+>   : {comm:decimal option, deptno:int, empno:int, ename:string,
+>       hiredate:string, job:string, mgr:int option, sal:decimal} bag
 val depts = scott.depts;
 > val depts = <relation> : {deptno:int, dname:string, loc:string} bag
 
@@ -692,14 +692,14 @@ from e in emps
   order deptno;
 > val it =
 >   [{deptno=10,sumSal=8750},{deptno=20,sumSal=10875},{deptno=30,sumSal=9400}]
->   : {deptno:int, sumSal:real} list
+>   : {deptno:int, sumSal:decimal} list
 
 from e in emps,
     d in depts
   where e.deptno = d.deptno
   group {e.deptno, d.dname, e.job}
     compute {sumSal = sum over e.sal,
-      minRemuneration = min over e.sal + getOpt (e.comm, 0.0)}
+      minRemuneration = min over e.sal + getOpt (e.comm, decimal "0")}
   order (deptno, job);
 > val it =
 >   [{deptno=10,dname="ACCOUNTING",job="CLERK",minRemuneration=1300,
@@ -716,8 +716,8 @@ from e in emps,
 >    {deptno=30,dname="SALES",job="CLERK",minRemuneration=950,sumSal=950},
 >    {deptno=30,dname="SALES",job="MANAGER",minRemuneration=2850,sumSal=2850},
 >    {deptno=30,dname="SALES",job="SALESMAN",minRemuneration=1500,sumSal=5600}]
->   : {deptno:int, dname:string, job:string, minRemuneration:real, sumSal:real}
->     list
+>   : {deptno:int, dname:string, job:string, minRemuneration:decimal,
+>       sumSal:decimal} list
 
 (*) In this example, we define our own version of the `sum` function:
 let
@@ -1008,58 +1008,61 @@ foodmart;
 >                account_type:string, custom_members:string option} bag,
 >       agg_c_10_sales_fact_1997:{customer_count:int, fact_count:int,
 >                                  month_of_year:int, quarter:string,
->                                  store_cost:real, store_sales:real,
->                                  the_year:int, unit_sales:real} bag,
+>                                  store_cost:decimal, store_sales:decimal,
+>                                  the_year:int, unit_sales:decimal} bag,
 >       agg_c_14_sales_fact_1997:{customer_id:int, fact_count:int,
 >                                  month_of_year:int, product_id:int,
 >                                  promotion_id:int, quarter:string,
->                                  store_cost:real, store_id:int,
->                                  store_sales:real, the_year:int,
->                                  unit_sales:real} bag,
+>                                  store_cost:decimal, store_id:int,
+>                                  store_sales:decimal, the_year:int,
+>                                  unit_sales:decimal} bag,
 >       agg_c_special_sales_fact_1997:{customer_id:int, fact_count:int,
 >                                       product_id:int, promotion_id:int,
->                                       store_cost_sum:real, store_id:int,
->                                       store_sales_sum:real, time_month:int,
->                                       time_quarter:string, time_year:int,
->                                       unit_sales_sum:real} bag,
+>                                       store_cost_sum:decimal, store_id:int,
+>                                       store_sales_sum:decimal,
+>                                       time_month:int, time_quarter:string,
+>                                       time_year:int, unit_sales_sum:decimal}
+>                                     bag,
 >       agg_g_ms_pcat_sales_fact_1997:{customer_count:int, fact_count:int,
 >                                       gender:string, marital_status:string,
 >                                       month_of_year:int,
 >                                       product_category:string,
 >                                       product_department:string,
 >                                       product_family:string, quarter:string,
->                                       store_cost:real, store_sales:real,
->                                       the_year:int, unit_sales:real} bag,
+>                                       store_cost:decimal,
+>                                       store_sales:decimal, the_year:int,
+>                                       unit_sales:decimal} bag,
 >       agg_l_03_sales_fact_1997:{customer_id:int, fact_count:int,
->                                  store_cost:real, store_sales:real,
->                                  time_id:int, unit_sales:real} bag,
+>                                  store_cost:decimal, store_sales:decimal,
+>                                  time_id:int, unit_sales:decimal} bag,
 >       agg_l_04_sales_fact_1997:{customer_count:int, fact_count:int,
->                                  store_cost:real, store_sales:real,
->                                  time_id:int, unit_sales:real} bag,
+>                                  store_cost:decimal, store_sales:decimal,
+>                                  time_id:int, unit_sales:decimal} bag,
 >       agg_l_05_sales_fact_1997:{customer_id:int, fact_count:int,
 >                                  product_id:int, promotion_id:int,
->                                  store_cost:real, store_id:int,
->                                  store_sales:real, unit_sales:real} bag,
+>                                  store_cost:decimal, store_id:int,
+>                                  store_sales:decimal, unit_sales:decimal}
+>                                bag,
 >       agg_lc_06_sales_fact_1997:{city:string, country:string, fact_count:int,
->                                   state_province:string, store_cost:real,
->                                   store_sales:real, time_id:int,
->                                   unit_sales:real} bag,
+>                                   state_province:string, store_cost:decimal,
+>                                   store_sales:decimal, time_id:int,
+>                                   unit_sales:decimal} bag,
 >       agg_lc_100_sales_fact_1997:{customer_id:int, fact_count:int,
 >                                    product_id:int, quarter:string,
->                                    store_cost:real, store_sales:real,
->                                    the_year:int, unit_sales:real} bag,
+>                                    store_cost:decimal, store_sales:decimal,
+>                                    the_year:int, unit_sales:decimal} bag,
 >       agg_ll_01_sales_fact_1997:{customer_id:int, fact_count:int,
->                                   product_id:int, store_cost:real,
->                                   store_sales:real, time_id:int,
->                                   unit_sales:real} bag,
+>                                   product_id:int, store_cost:decimal,
+>                                   store_sales:decimal, time_id:int,
+>                                   unit_sales:decimal} bag,
 >       agg_pl_01_sales_fact_1997:{customer_id:int, fact_count:int,
->                                   product_id:int, store_cost_sum:real,
->                                   store_sales_sum:real, time_id:int,
->                                   unit_sales_sum:real} bag,
+>                                   product_id:int, store_cost_sum:decimal,
+>                                   store_sales_sum:decimal, time_id:int,
+>                                   unit_sales_sum:decimal} bag,
 >       category:{category_description:string, category_id:string,
 >                  category_parent:string option,
 >                  category_rollup:string option} bag,
->       currency:{conversion_ratio:real, currency:string, currency_id:int,
+>       currency:{conversion_ratio:decimal, currency:string, currency_id:int,
 >                  date:string} bag,
 >       customer:{account_num:int, address1:string, address2:string option,
 >                  address3:string option, address4:string option,
@@ -1079,33 +1082,35 @@ foodmart;
 >                  full_name:string, gender:string, hire_date:string,
 >                  last_name:string, management_role:string,
 >                  marital_status:string, position_id:int,
->                  position_title:string, salary:real, store_id:int,
+>                  position_title:string, salary:decimal, store_id:int,
 >                  supervisor_id:int} bag,
 >       employee_closure:{distance:int, employee_id:int, supervisor_id:int}
 >                        bag,
->       expense_fact:{account_id:int, amount:real, category_id:string,
+>       expense_fact:{account_id:int, amount:decimal, category_id:string,
 >                      currency_id:int, exp_date:string, store_id:int,
 >                      time_id:int} bag,
->       inventory_fact_1997:{product_id:int, store_id:int, store_invoice:real,
->                             supply_time:int, time_id:int, units_ordered:int,
->                             units_shipped:int, warehouse_cost:real,
->                             warehouse_id:int, warehouse_sales:real} bag,
->       inventory_fact_1998:{product_id:int, store_id:int, store_invoice:real,
->                             supply_time:int, time_id:int, units_ordered:int,
->                             units_shipped:int, warehouse_cost:real,
->                             warehouse_id:int, warehouse_sales:real} bag,
->       position:{management_role:string, max_scale:real, min_scale:real,
+>       inventory_fact_1997:{product_id:int, store_id:int,
+>                             store_invoice:decimal, supply_time:int,
+>                             time_id:int, units_ordered:int,
+>                             units_shipped:int, warehouse_cost:decimal,
+>                             warehouse_id:int, warehouse_sales:decimal} bag,
+>       inventory_fact_1998:{product_id:int, store_id:int,
+>                             store_invoice:decimal, supply_time:int,
+>                             time_id:int, units_ordered:int,
+>                             units_shipped:int, warehouse_cost:decimal,
+>                             warehouse_id:int, warehouse_sales:decimal} bag,
+>       position:{management_role:string, max_scale:decimal, min_scale:decimal,
 >                  pay_type:string, position_id:int, position_title:string}
 >                bag,
 >       product:{brand_name:string, cases_per_pallet:int, gross_weight:real,
 >                 low_fat:bool, net_weight:real, product_class_id:int,
 >                 product_id:int, product_name:string, recyclable_package:bool,
 >                 shelf_depth:real, shelf_height:real, shelf_width:real,
->                 sku:int, srp:real, units_per_case:int} bag,
+>                 sku:int, srp:decimal, units_per_case:int} bag,
 >       product_class:{product_category:string, product_class_id:int,
 >                       product_department:string, product_family:string,
 >                       product_subcategory:string} bag,
->       promotion:{cost:real, end_date:string option, media_type:string,
+>       promotion:{cost:decimal, end_date:string option, media_type:string,
 >                   promotion_district_id:int, promotion_id:int,
 >                   promotion_name:string, start_date:string option} bag,
 >       region:{region_id:int, sales_city:string, sales_country:string,
@@ -1117,20 +1122,23 @@ foodmart;
 >                          full_name:string, gender:string,
 >                          hire_date:string option, last_name:string,
 >                          marital_status:string, position_id:int option,
->                          position_title:string option, salary:real,
+>                          position_title:string option, salary:decimal,
 >                          store_id:int, supervisor_id:int} bag,
 >       salary:{currency_id:int, department_id:int, employee_id:int,
->                overtime_paid:real, pay_date:string, salary_paid:real,
+>                overtime_paid:decimal, pay_date:string, salary_paid:decimal,
 >                vacation_accrued:real, vacation_used:real} bag,
 >       sales_fact_1997:{customer_id:int, product_id:int, promotion_id:int,
->                         store_cost:real, store_id:int, store_sales:real,
->                         time_id:int, unit_sales:real} bag,
+>                         store_cost:decimal, store_id:int,
+>                         store_sales:decimal, time_id:int, unit_sales:decimal}
+>                       bag,
 >       sales_fact_1998:{customer_id:int, product_id:int, promotion_id:int,
->                         store_cost:real, store_id:int, store_sales:real,
->                         time_id:int, unit_sales:real} bag,
+>                         store_cost:decimal, store_id:int,
+>                         store_sales:decimal, time_id:int, unit_sales:decimal}
+>                       bag,
 >       sales_fact_dec_1998:{customer_id:int, product_id:int, promotion_id:int,
->                             store_cost:real, store_id:int, store_sales:real,
->                             time_id:int, unit_sales:real} bag,
+>                             store_cost:decimal, store_id:int,
+>                             store_sales:decimal, time_id:int,
+>                             unit_sales:decimal} bag,
 >       store:{coffee_bar:bool, first_opened_date:string option, florist:bool,
 >               frozen_sqft:int option, grocery_sqft:int option,
 >               last_remodel_date:string option, meat_sqft:int option,
@@ -1171,11 +1179,11 @@ foodmart;
 scott;
 > val it =
 >   {bonuses=<relation>,depts=<relation>,emps=<relation>,salgrades=<relation>}
->   : {bonuses:{comm:real, ename:string, job:string, sal:real} bag,
+>   : {bonuses:{comm:decimal, ename:string, job:string, sal:decimal} bag,
 >       depts:{deptno:int, dname:string, loc:string} bag,
->       emps:{comm:real option, deptno:int, empno:int, ename:string,
->              hiredate:string, job:string, mgr:int option, sal:real} bag,
->       salgrades:{grade:int, hisal:real, losal:real} bag}
+>       emps:{comm:decimal option, deptno:int, empno:int, ename:string,
+>              hiredate:string, job:string, mgr:int option, sal:decimal} bag,
+>       salgrades:{grade:int, hisal:decimal, losal:decimal} bag}
 scott.depts;
 > val it = <relation> : {deptno:int, dname:string, loc:string} bag
 from d in scott.depts
@@ -1435,18 +1443,18 @@ from dept in [10, 30],
 (* Delete employees who earn more than 1,000. *)
 val emps2 =
   from e in scott.emps
-    where not (e.sal > 1000.0);
+    where not (e.sal > decimal "1000");
 > val emps2 =
 >   [{comm=NONE,deptno=20,empno=7369,ename="SMITH",hiredate="1980-12-17",
 >     job="CLERK",mgr=SOME 7902,sal=800},
 >    {comm=NONE,deptno=30,empno=7900,ename="JAMES",hiredate="1981-12-03",
 >     job="CLERK",mgr=SOME 7698,sal=950}]
->   : {comm:real option, deptno:int, empno:int, ename:string, hiredate:string,
->       job:string, mgr:int option, sal:real} bag
+>   : {comm:decimal option, deptno:int, empno:int, ename:string,
+>       hiredate:string, job:string, mgr:int option, sal:decimal} bag
 (* Add one employee. *)
 val emps3 = from e in emps2 union
   [{empno = 100, deptno = 20, ename = "HYDE", job = "ANALYST",
-    sal = 1150.0, hiredate = "2023-10-01", mgr = SOME 7902, comm = NONE}];
+    sal = decimal "1150", hiredate = "2023-10-01", mgr = SOME 7902, comm = NONE}];
 > val emps3 =
 >   [{comm=NONE,deptno=20,empno=7369,ename="SMITH",hiredate="1980-12-17",
 >     job="CLERK",mgr=SOME 7902,sal=800},
@@ -1454,13 +1462,13 @@ val emps3 = from e in emps2 union
 >     job="CLERK",mgr=SOME 7698,sal=950},
 >    {comm=NONE,deptno=20,empno=100,ename="HYDE",hiredate="2023-10-01",
 >     job="ANALYST",mgr=SOME 7902,sal=1150}]
->   : {comm:real option, deptno:int, empno:int, ename:string, hiredate:string,
->       job:string, mgr:int option, sal:real} bag
+>   : {comm:decimal option, deptno:int, empno:int, ename:string,
+>       hiredate:string, job:string, mgr:int option, sal:decimal} bag
 (* Double the salary of all managers. *)
 val emps4 =
   from e in emps3
     yield if e.job = "MANAGER"
-      then {e replace sal = e.sal * 2.0}
+      then {e replace sal = e.sal * decimal "2"}
       else e;
 > val emps4 =
 >   [{comm=NONE,deptno=20,empno=7369,ename="SMITH",hiredate="1980-12-17",
@@ -1469,8 +1477,8 @@ val emps4 =
 >     job="CLERK",mgr=SOME 7698,sal=950},
 >    {comm=NONE,deptno=20,empno=100,ename="HYDE",hiredate="2023-10-01",
 >     job="ANALYST",mgr=SOME 7902,sal=1150}]
->   : {comm:real option, deptno:int, empno:int, ename:string, hiredate:string,
->       job:string, mgr:int option, sal:real} bag
+>   : {comm:decimal option, deptno:int, empno:int, ename:string,
+>       hiredate:string, job:string, mgr:int option, sal:decimal} bag
 (* Commit. *)
 (*) TODO commit {scott with emps = emps4};
 
@@ -1479,8 +1487,8 @@ val empsAdded = from e in emps4 except scott.emps;
 > val empsAdded =
 >   [{comm=NONE,deptno=20,empno=100,ename="HYDE",hiredate="2023-10-01",
 >     job="ANALYST",mgr=SOME 7902,sal=1150}]
->   : {comm:real option, deptno:int, empno:int, ename:string, hiredate:string,
->       job:string, mgr:int option, sal:real} bag
+>   : {comm:decimal option, deptno:int, empno:int, ename:string,
+>       hiredate:string, job:string, mgr:int option, sal:decimal} bag
 val empsRemoved = from e in scott.emps except emps4;
 > val empsRemoved =
 >   [{comm=SOME 300,deptno=30,empno=7499,ename="ALLEN",hiredate="1981-02-20",
@@ -1507,12 +1515,12 @@ val empsRemoved = from e in scott.emps except emps4;
 >     job="ANALYST",mgr=SOME 7566,sal=3000},
 >    {comm=NONE,deptno=10,empno=7934,ename="MILLER",hiredate="1982-01-23",
 >     job="CLERK",mgr=SOME 7782,sal=1300}]
->   : {comm:real option, deptno:int, empno:int, ename:string, hiredate:string,
->       job:string, mgr:int option, sal:real} bag
+>   : {comm:decimal option, deptno:int, empno:int, ename:string,
+>       hiredate:string, job:string, mgr:int option, sal:decimal} bag
 
 (*) Empty summary table.
-val summary = [] : {c:int, deptno:int, sum_sal:real} list;
-> val summary = [] : {c:int, deptno:int, sum_sal:real} list
+val summary = [] : {c:int, deptno:int, sum_sal:decimal} list;
+> val summary = [] : {c:int, deptno:int, sum_sal:decimal} list
 
 (* Compute the updated summary table. *)
 val summary2 =
@@ -1522,13 +1530,14 @@ val summary2 =
         yield {e.deptno, c = 1, sum_sal = e.sal})
     union
       (from e in empsRemoved
-        yield {e.deptno, c = ~1, sum_sal = ~e.sal})
+        yield {e.deptno, c = ~1, sum_sal = ~ e.sal})
     group s.deptno compute {c = sum over s.c, sum_sal = sum over s.sum_sal}
     order deptno
     where c <> 0;
 > val summary2 =
 >   [{c=~3,deptno=10,sum_sal=~8750},{c=~3,deptno=20,sum_sal=~8925},
->    {c=~5,deptno=30,sum_sal=~8450}] : {c:int, deptno:int, sum_sal:real} list
+>    {c=~5,deptno=30,sum_sal=~8450}]
+>   : {c:int, deptno:int, sum_sal:decimal} list
 
 (* Commit. *)
 (*) TODO commit {scott with summary = summary2};
@@ -1566,8 +1575,8 @@ fun clerks () =
     where e.job = "CLERK";
 > val clerks = fn
 >   : unit
->      -> {comm:real option, deptno:int, empno:int, ename:string,
->           hiredate:string, job:string, mgr:int option, sal:real} bag
+>      -> {comm:decimal option, deptno:int, empno:int, ename:string,
+>           hiredate:string, job:string, mgr:int option, sal:decimal} bag
 (* Query uses regular iteration. *)
 from e in clerks (),
     d in scott.depts
@@ -1861,7 +1870,7 @@ from deptno in [10, 20],
 >     20          20  7876 ADAMS  1987-05-23 CLERK     7788 1100
 >     20          20  7902 FORD   1981-12-03 ANALYST   7566 3000
 >
-> val it : {deptno:int, emp:{comm:real option, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int option, sal:real}} bag
+> val it : {deptno:int, emp:{comm:decimal option, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int option, sal:decimal}} bag
 
 from deptno in [10, 20],
     emp in scott.emps on emp.deptno = deptno
@@ -1938,7 +1947,7 @@ from e in scott.emps
 >     20 1900
 >     30  950
 >
-> val it : {deptno:int, s:real} list
+> val it : {deptno:int, s:decimal} list
 
 (* Gather the departments in each region. *)
 let
@@ -1994,7 +2003,7 @@ from e in scott.emps
 > JONES    4 2975
 > BLAKE    5 2850
 >
-> val it : {ename:string, rank:int, sal:real} list
+> val it : {ename:string, rank:int, sal:decimal} list
 
 from e in scott.emps
   yield {e.ename, e.sal, rank = ordinal + 1};
@@ -2046,7 +2055,7 @@ from e in scott.emps
 >     5     20  10875
 >     6     30   9400
 >
-> val it : {count:int, deptno:int, sumSal:real} bag
+> val it : {count:int, deptno:int, sumSal:decimal} bag
 
 (* One group key and no compute expressions gives an
  * atomic result. *)
@@ -2059,8 +2068,8 @@ from e in scott.emps
 (* Empty group key and one compute expression gives an
  * atomic result. *)
 from e in scott.emps
-  group {} compute min over e.sal + getOpt (e.comm, 0.0);
-> val it = [800] : real bag
+  group {} compute min over e.sal + getOpt (e.comm, decimal "0");
+> val it = [800] : decimal bag
 
 (* Which job titles exist in department 10 and also in
  * departments 20 and 30? *)
@@ -2135,7 +2144,7 @@ from e in scott.emps
 > JAMES  CLERK      950
 > SMITH  CLERK      800
 >
-> val it : {ename:string, job:string, sal:real} list
+> val it : {ename:string, job:string, sal:decimal} list
 
 (* Record expressions are sorted lexicographically on field
  * name, that is, by job then by salary. Morel gives a
@@ -2163,7 +2172,7 @@ from e in scott.emps
 > TURNER SALESMAN  1500
 > ALLEN  SALESMAN  1600
 >
-> val it : {ename:string, job:string, sal:real} list
+> val it : {ename:string, job:string, sal:decimal} list
 
 (* Skip the first 3 rows of a collection. *)
 from i in [1, 2, 3, 4, 5, 6, 7]
@@ -2234,7 +2243,7 @@ from e in scott.emps
 > SCOTT ANALYST   3000
 > FORD  ANALYST   3000
 >
-> val it : {ename:string, job:string, sal:real} bag
+> val it : {ename:string, job:string, sal:decimal} bag
 
 (* Find employees who work in department 20. *)
 from e in scott.emps
@@ -2255,7 +2264,7 @@ from e in scott.emps
 from e in scott.emps
   yield {name = String.map Char.toUpper e.ename,
       position = String.map Char.toLower e.job,
-      annualSalary = e.sal * 12.0};
+      annualSalary = e.sal * decimal "12"};
 > annualSalary name   position
 > ------------ ------ ---------
 >         9600 SMITH  clerk
@@ -2273,7 +2282,7 @@ from e in scott.emps
 >        36000 FORD   analyst
 >        15600 MILLER clerk
 >
-> val it : {annualSalary:real, name:string, position:string} bag
+> val it : {annualSalary:decimal, name:string, position:string} bag
 
 (* Return a list of strings describing each employee in
  * department 20. *)
@@ -2291,7 +2300,7 @@ from e in scott.emps
            minSal = min over e.sal,
            maxSal = max over e.sal};
 > val it = {maxSal=5000,minSal=800,sumSal=29025,total=14}
->   : {maxSal:real, minSal:real, sumSal:real, total:int}
+>   : {maxSal:decimal, minSal:decimal, sumSal:decimal, total:int}
 
 (* Compute total number of employees. *)
 from e in scott.emps
@@ -2299,20 +2308,20 @@ from e in scott.emps
 > val it = 14 : int
 
 (* Apply a custom function to the query results. *)
-fun analyzeResults (emps: {deptno: int, sal: real} bag) =
+fun analyzeResults (emps: {deptno: int, sal: decimal} bag) =
   let
     val {count, sumSal} =
       from e in emps
         compute {count over (), sumSal = sum over e.sal}
-    val avgSal = sumSal / real count
+    val avgSal = sumSal / Decimal.fromInt count
   in
     {employeeCount = count,
       averageSalary = avgSal,
-      classification = if avgSal > 2000.0 then "High" else "Low"}
+      classification = if avgSal > decimal "2000" then "High" else "Low"}
   end;
 > val analyzeResults = fn
->   : {deptno:int, sal:real} bag
->      -> {averageSalary:real, classification:string,
+>   : {deptno:int, sal:decimal} bag
+>      -> {averageSalary:decimal, classification:string,
 >           employeeCount:int}
 
 (* Use the custom function to analyze employees in department 10. *)
@@ -2321,25 +2330,25 @@ from e in scott.emps
   yield {e.deptno, e.sal}
   into analyzeResults;
 > val it =
->   {averageSalary=2916.6667,classification="High",
->    employeeCount=3}
->   : {averageSalary:real, classification:string,
+>   {averageSalary=2916.666666666666666666666666666667,
+>    classification="High",employeeCount=3}
+>   : {averageSalary:decimal, classification:string,
 >       employeeCount:int}
 
 (* Check whether all employees earn more than $2000. *)
 forall e in scott.emps
-  require e.sal > 2000.0;
+  require e.sal > decimal "2000";
 > val it = false : bool
 
 (* Check whether all managers earn more than $2000. *)
 forall e in scott.emps
   where e.job = "MANAGER"
-  require e.sal > 2000.0;
+  require e.sal > decimal "2000";
 > val it = true : bool
 
 (* Do any employees earn more than $3,000? *)
 exists e in scott.emps
-  where e.sal > 3000.0;
+  where e.sal > decimal "3000";
 > val it = true : bool
 
 (* Do all employees have a job title of clerk, manager or
