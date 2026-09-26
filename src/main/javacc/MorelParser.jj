@@ -945,18 +945,23 @@ Exp expression9() :
   Id id;
   String fieldName;
   boolean safe = false;
+  final boolean idReceiver;
   final List<Attribute> attrs = new ArrayList<Attribute>();
 }
 {
-  e = atom()
+  e = atom() { idReceiver = isId(e); }
   (
     // When parsing a function argument (inArg=true), skip the
     // DOT chain for non-identifier receivers such as tuple literals. For
     // example, in "CLOSED (3,7).contains 5", the "(3,7)" is a non-Id atom
     // being passed as an argument; suppressing the DOT here lets expression8
     // attach ".contains 5" to the full "CLOSED (3,7)" application instead.
+    //
+    // The test is on the atom that starts the chain, not on the receiver so
+    // far, so that a chain starting with an identifier stays in the
+    // argument: "f r.a.b" is "f (r.a.b)", not "(f r.a).b".
     LOOKAHEAD({ (getToken(1).kind == DOT || getToken(1).kind == QDOT)
-                && !(inArg && !isId(e)) })
+                && !(inArg && !idReceiver) })
     // ".f" is a plain field projection or postfix method call; "?.f" is a
     // safe-navigation projection through the receiver's functor.
     ( <DOT> { safe = false; } | <QDOT> { safe = true; } )

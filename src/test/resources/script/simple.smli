@@ -898,6 +898,15 @@ r.a;
 r.b;
 > val it = "two" : string
 
+(* A chain of field accesses binds more tightly than function application;
+ * "SOME r2.a.b" means "SOME (r2.a.b)". *)
+val r2 = {a = {b = 1}};
+> val r2 = {a={b=1}} : {a:{b:int}}
+SOME r2.a.b;
+> val it = SOME 1 : int option
+Option.valOf (SOME r2.a).b;
+> val it = 1 : int
+
 (*) Tuple field access using accessor
 val t = (42, "hello", 3.14);
 > val t = (42,"hello",3.14) : int * string * real

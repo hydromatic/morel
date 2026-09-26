@@ -766,6 +766,11 @@ public class MainTest {
         .assertParseEquivalent("(a.b+c.d*e.f.g).h");
     ml("a b").assertParseEquivalent("a(b)");
     ml("a (#c b)").assertParseEquivalent("a b.c");
+    // A chain of selectors in an argument stays in the argument.
+    ml("a (#d (#c b))").assertParseEquivalent("a b.c.d");
+    ml("a (#e (#d (#c b)))").assertParseEquivalent("a b.c.d.e");
+    ml("a (#d (#c b)) (#f e)").assertParseEquivalent("a b.c.d e.f");
+    ml("SOME (#b (#a r))").assertParseEquivalent("SOME r.a.b");
     ml("#b a (#d c) (#f e)").assertParseEquivalent("a.b c.d e.f");
     ml("#b a (#d c) (#f e)").assertParseEquivalent("(a.b) (c.d) (e.f)");
     mlE("(a.$($b (c.d) (e.f))")
