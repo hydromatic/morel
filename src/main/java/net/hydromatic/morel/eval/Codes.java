@@ -39,7 +39,10 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Chars;
 import java.io.StringReader;
+import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.math.MathContext;
+import java.math.RoundingMode;
 import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -8033,28 +8036,52 @@ public abstract class Codes {
     return s;
   }
 
+  /**
+   * Converts a {@code float} to a string, emulating JDK 19 and later on older
+   * JDKs.
+   *
+   * <p>Before JDK 19, {@link Float#toString(float)} sometimes returns more
+   * digits than necessary (e.g. "1.50000005E10" rather than "1.5E10"), or a
+   * decimal that round-trips but is not the closest (JDK-4511638). We return
+   * the decimal with the fewest digits (at least 2) that converts back to
+   * {@code f}, and among those, the one closest to {@code f}.
+   */
   private static String floatToString0(float f) {
-    String s = Float.toString(f);
-    int lastDigit = s.indexOf("E");
-    if (lastDigit < 0) {
-      lastDigit = s.length();
+    final String s = Float.toString(f);
+    if (Float.isNaN(f) || Float.isInfinite(f) || f == 0f) {
+      return s;
     }
-    if (s.equals("1.17549435E-38")) {
-      return "1.1754944E-38";
-    }
-    if (s.equals("1.23456795E12")) {
-      return "1.234568E12";
-    }
-    if (s.equals("1.23456791E11")) {
-      return "1.2345679E11";
-    }
-    if (s.equals("1.23456788E10")) {
-      return "1.2345679E10";
-    }
-    if (s.equals("1.23456792E8")) {
-      return "1.2345679E8";
+    final int n =
+        Math.max(2, new BigDecimal(s).stripTrailingZeros().precision());
+    final BigDecimal exact = new BigDecimal(f);
+    for (int p = 2; p <= n; p++) {
+      final BigDecimal d =
+          exact.round(new MathContext(p, RoundingMode.HALF_EVEN));
+      if (Float.parseFloat(d.toString()) == f) {
+        return formatFloat(d.stripTrailingZeros());
+      }
     }
     return s;
+  }
+
+  /**
+   * Formats a decimal in the style of {@link Float#toString(float)}: plain
+   * notation if its magnitude is in [10<sup>-3</sup>, 10<sup>7</sup>),
+   * otherwise scientific notation; always at least one digit after the point.
+   */
+  private static String formatFloat(BigDecimal d) {
+    final String digits = d.unscaledValue().abs().toString();
+    final int exp = digits.length() - 1 - d.scale();
+    if (exp >= -3 && exp < 7) {
+      final String plain = d.toPlainString();
+      return plain.indexOf('.') < 0 ? plain + ".0" : plain;
+    }
+    return (d.signum() < 0 ? "-" : "")
+        + digits.charAt(0)
+        + "."
+        + (digits.length() > 1 ? digits.substring(1) : "0")
+        + "E"
+        + exp;
   }
 
   /**
