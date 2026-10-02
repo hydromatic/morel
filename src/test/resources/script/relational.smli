@@ -1404,6 +1404,23 @@ from e in emps
   order current;
 > val it = [10,20,30] : int list
 
+(*) 'order current' after 'group'.
+from e in emps
+  group e.deptno
+  order current;
+> val it = [10,20,30] : int list
+
+from e in emps
+  group e.deptno compute {c = count over ()}
+  order current.deptno;
+> val it = [{c=1,deptno=10},{c=1,deptno=20},{c=2,deptno=30}]
+>   : {c:int, deptno:int} list
+
+from e in emps
+  group e.deptno
+  order DESC current;
+> val it = [30,20,10] : int list
+
 (*) anonymous 'yield' followed by 'distinct'
 from i in [1, 2, 3],
     j in [1, 2, 3]
