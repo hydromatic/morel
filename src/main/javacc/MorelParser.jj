@@ -648,18 +648,18 @@ void fromFirstScan(List<FromStep> steps) :
   pat = pat()
   (
     <IN> exp = expression() {
-      steps.add(ast.scan(pat.pos.plus(pos()), pat, exp, null));
+      steps.add(ast.scan(pat.pos().plus(pos()), pat, exp, null));
     }
   |
     <EQ> exp = expression() {
-      steps.add(ast.scan(pat.pos.plus(pos()), pat, ast.fromEq(exp), null));
+      steps.add(ast.scan(pat.pos().plus(pos()), pat, ast.fromEq(exp), null));
     }
   |
     // An unbounded scan, such as "from a" or "from (a: int, b)": neither "in"
     // nor "=" follows, and the extent is deduced from the pattern's type.
     // TypeResolver checks that the pattern can be enumerated.
     {
-      steps.add(ast.scan(pat.pos.plus(pos()), pat, null, null));
+      steps.add(ast.scan(pat.pos().plus(pos()), pat, null, null));
     }
   )
 }
@@ -681,17 +681,17 @@ void fromScan(Op op, List<FromStep> steps) :
       { condition = null; }
     )
     {
-      steps.add(ast.scan(pat.pos.plus(pos()), op, pat, exp, condition));
+      steps.add(ast.scan(pat.pos().plus(pos()), op, pat, exp, condition));
     }
   |
     <EQ> exp = expression() {
       steps.add(
-          ast.scan(pat.pos.plus(pos()), op, pat, ast.fromEq(exp), null));
+          ast.scan(pat.pos().plus(pos()), op, pat, ast.fromEq(exp), null));
     }
   |
     // An unbounded scan; see fromFirstScan.
     {
-      steps.add(ast.scan(pat.pos.plus(pos()), op, pat, null, null));
+      steps.add(ast.scan(pat.pos().plus(pos()), op, pat, null, null));
     }
   )
 }
@@ -877,7 +877,7 @@ Match match() :
 }
 {
   pat = pat() <RARROW> e = expressionNoCheck() {
-    return ast.match(pat.pos.plus(e.pos), pat, e);
+    return ast.match(pat.pos().plus(e.pos()), pat, e);
   }
 }
 
@@ -1017,7 +1017,7 @@ Exp expression9() :
   ( expAttribute(attrs) )*
   {
     if (!attrs.isEmpty()) {
-      e = ast.attributedExp(e.pos.plus(pos()), e, attrs);
+      e = ast.attributedExp(e.pos().plus(pos()), e, attrs);
     }
     return e;
   }
@@ -1129,7 +1129,7 @@ Exp expression7b() :
   e = expression8()
   [
     <OVER> e2 = expression5() {
-      return ast.aggregate(e.pos.plus(e2.pos), e, e2);
+      return ast.aggregate(e.pos().plus(e2.pos()), e, e2);
     }
   ]
   { return e; }
@@ -1344,7 +1344,7 @@ Exp expression() :
     // only the last would be seen.
     return checks.isEmpty() ? e
         : ast.checkExp(
-            e.pos.plus(checks.get(checks.size() - 1).pos), e, checks);
+            e.pos().plus(checks.get(checks.size() - 1).pos()), e, checks);
   }
 }
 
@@ -1366,15 +1366,15 @@ Exp expressionNoCheck() :
   e = expression0()
   (
     <COLON> t = type() {
-      e = ast.annotatedExp(e.pos.plus(t.pos), e, t);
+      e = ast.annotatedExp(e.pos().plus(t.pos()), e, t);
     }
   |
     <AS> t = type() {
-      e = ast.as(e.pos.plus(t.pos), e, t);
+      e = ast.as(e.pos().plus(t.pos()), e, t);
     }
   |
     <AS_OPT> t = type() {
-      e = ast.asOpt(e.pos.plus(t.pos), e, t);
+      e = ast.asOpt(e.pos().plus(t.pos()), e, t);
     }
   )*
   { return e; }
@@ -1799,7 +1799,7 @@ void valBind(List<Ast.ValBind> valBinds) :
 }
 {
   pat = pat() <EQ> e = expression() {
-    valBinds.add(ast.valBind(pat.pos.plus(e.pos), pat, e));
+    valBinds.add(ast.valBind(pat.pos().plus(e.pos()), pat, e));
   }
 }
 
@@ -1843,7 +1843,7 @@ Ast.OverDecl overDecl() :
   id = identifier()
   {
     return ast.overDecl(span.end(this),
-        (Ast.IdPat) ast.idPat(id.pos, id.name));
+        (Ast.IdPat) ast.idPat(id.pos(), id.name));
   }
 }
 
@@ -1855,7 +1855,7 @@ Pair<Pos, List<Ast.TyVar>> tyVars() :
   TyVar tyVar;
 }
 {
-  tyVar = tyVar() { return Pair.of(tyVar.pos, ImmutableList.of(tyVar)); }
+  tyVar = tyVar() { return Pair.of(tyVar.pos(), ImmutableList.of(tyVar)); }
 |
   <LPAREN> { pos = pos(); final List<TyVar> tyVars = new ArrayList<>(); }
     tyVar = tyVar() { tyVars.add(tyVar); }
@@ -1908,7 +1908,7 @@ void typeBind(List<Ast.TypeBind> typeBinds) :
       checks.addAll(checkedType.checks);
       type = checkedType.type;
     }
-    final Pos pos = tyVars.left.plus(type.pos);
+    final Pos pos = tyVars.left.plus(type.pos());
     typeBinds.add(ast.typeBind(pos, id, tyVars.right, type, checks));
   }
 }
@@ -1974,7 +1974,7 @@ Ast.TyCon typeConstructor() :
     { type = null; }
   )
   {
-    final Pos pos = type == null ? tag.pos : tag.pos.plus(type.pos);
+    final Pos pos = type == null ? tag.pos() : tag.pos().plus(type.pos());
     return ast.typeConstructor(pos, tag, type);
   }
 }
@@ -2031,7 +2031,7 @@ void funMatch(List<FunMatch> list) :
   ( <COLON> returnType = type() | { returnType = null; } )
   <EQ> expression = expression() {
     list.add(
-        ast.funMatch(id.pos.plus(expression.pos), id.name, patList, returnType,
+        ast.funMatch(id.pos().plus(expression.pos()), id.name, patList, returnType,
             expression));
   }
 }
@@ -2067,14 +2067,14 @@ void signatureBind(List<SignatureBind> list) :
   (
     LOOKAHEAD(<LBRACKET_AT_AT_AT>)
     attr = floatingAttribute() {
-      specs.add(ast.floatingAttrSpec(attr.pos, attr));
+      specs.add(ast.floatingAttrSpec(attr.pos(), attr));
     }
   |
     spec = attributedSpec() { specs.add(spec); }
   )*
   <END>
   {
-    list.add(ast.signatureBind(name.pos, name, specs));
+    list.add(ast.signatureBind(name.pos(), name, specs));
   }
 }
 
@@ -2095,7 +2095,7 @@ Ast.Spec attributedSpec() :
     if (attrs.isEmpty()) {
       return spec;
     }
-    return ast.attributedSpec(spec.pos.plus(pos()), spec, attrs);
+    return ast.attributedSpec(spec.pos().plus(pos()), spec, attrs);
   }
 }
 
@@ -2211,7 +2211,7 @@ Pat pat() :
   pat = pat5()
   (
     <COLON> type = type() {
-      pat = ast.annotatedPat(pat.pos.plus(type.pos), pat, type);
+      pat = ast.annotatedPat(pat.pos().plus(type.pos()), pat, type);
     }
   )*
   { return pat; }
@@ -2250,14 +2250,14 @@ Pat pat4() :
   (
     // layered pattern
     <AS> pat = pat() {
-      return ast.asPat(id.pos.plus(pat.pos),
-          (Ast.IdPat) ast.idPat(id.pos, id.name), pat);
+      return ast.asPat(id.pos().plus(pat.pos()),
+          (Ast.IdPat) ast.idPat(id.pos(), id.name), pat);
     }
   |
-    pat = pat() { return ast.conPat(id.pos.plus(pat.pos), id, pat); }
+    pat = pat() { return ast.conPat(id.pos().plus(pat.pos()), id, pat); }
   |
     // id was not followed by pattern: it must be pattern
-    { return ast.idPat(id.pos, id.name); }
+    { return ast.idPat(id.pos(), id.name); }
   )
 |
   pat = atomPat() { return pat; }
@@ -2273,10 +2273,10 @@ Pat atomPat() :
   final List<Pat> list = new ArrayList<>();
 }
 {
-  id = identifier() { return ast.idPat(id.pos, id.name); }
+  id = identifier() { return ast.idPat(id.pos(), id.name); }
 |
   literal = literal() {
-    return ast.literalPat(literal.pos, literal.op.toPat(), literal.value);
+    return ast.literalPat(literal.pos(), literal.op.toPat(), literal.value);
   }
 |
   "_" {
@@ -2355,7 +2355,7 @@ void recordPat(Map<String, Pat> map) :
   |
     <COLON> type = type() {
       map.put(id,
-          ast.annotatedPat(idPos.plus(type.pos), ast.idPat(idPos, id), type));
+          ast.annotatedPat(idPos.plus(type.pos()), ast.idPat(idPos, id), type));
     }
   |
     { map.put(id, ast.idPat(idPos, id)); }
@@ -2411,13 +2411,13 @@ Ast.Type type7() :
         t instanceof Ast.CompositeType
           ? ((Ast.CompositeType) t).types
           : ImmutableList.of(t);
-      t = ast.namedType(t.pos.plus(pos()), types, token.image);
+      t = ast.namedType(t.pos().plus(pos()), types, token.image);
     }
   )*
   ( expAttribute(attrs) )*
   {
     if (!attrs.isEmpty()) {
-      t = ast.attributedType(t.pos.plus(pos()), t, attrs);
+      t = ast.attributedType(t.pos().plus(pos()), t, attrs);
     }
     return t;
   }
@@ -2458,7 +2458,7 @@ Ast.Type type() :
   )*
   {
     return checks.isEmpty() ? t
-        : ast.checkedType(t.pos.plus(pos()), t, checks);
+        : ast.checkedType(t.pos().plus(pos()), t, checks);
   }
 }
 
@@ -2489,7 +2489,7 @@ AstNode statement() :
 {
   // Floating attribute, e.g. [@@@id payload?]. Treat as top-level statement.
   attr = floatingAttribute() {
-    return ast.floatingAttrDecl(attr.pos, attr);
+    return ast.floatingAttrDecl(attr.pos(), attr);
   }
 |
   // A declaration can be preceded by a doc-comment (which is desugared to
@@ -2501,7 +2501,7 @@ AstNode statement() :
   ( declAttribute(declAttrs) )*
   {
     if (!declAttrs.isEmpty()) {
-      return ast.attributedDecl(d.pos.plus(pos()), d, declAttrs);
+      return ast.attributedDecl(d.pos().plus(pos()), d, declAttrs);
     }
     return d;
   }

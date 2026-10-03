@@ -97,7 +97,7 @@ class Conditions {
               match.pat,
               rewriteSelectors(typeSystem, match.exp, name, fields)));
     }
-    return ast.fn(check.pos, matches);
+    return ast.fn(check.pos(), matches);
   }
 
   /**
@@ -128,7 +128,7 @@ class Conditions {
     if (recordPat.ellipsis) {
       return null;
     }
-    final Pos pos = match.pat.pos;
+    final Pos pos = match.pat.pos();
     final PairList<Ast.Pat, Ast.Exp> binds = PairList.of();
     for (Map.Entry<String, Ast.Pat> arg : recordPat.args.entrySet()) {
       final String field = fields.get(arg.getKey());
@@ -143,7 +143,7 @@ class Conditions {
       // The pattern binds nothing, so the condition does not depend on any
       // field and holds of any record.
       return ast.fn(
-          match.pos, ast.match(pos, ast.idPat(pos, RECORD), match.exp));
+          match.pos(), ast.match(pos, ast.idPat(pos, RECORD), match.exp));
     }
     final List<Ast.ValBind> valBinds =
         binds.transform((pat, exp) -> ast.valBind(pos, pat, exp));
@@ -152,7 +152,7 @@ class Conditions {
             pos,
             ImmutableList.of(ast.valDecl(pos, false, false, valBinds)),
             match.exp);
-    return ast.fn(match.pos, ast.match(pos, ast.idPat(pos, RECORD), let));
+    return ast.fn(match.pos(), ast.match(pos, ast.idPat(pos, RECORD), let));
   }
 
   /** Returns whether a pattern matches every value, and so cannot decide. */
@@ -221,7 +221,7 @@ class Conditions {
               final String field = fields.get(selector.name);
               if (field != null && !field.equals(selector.name)) {
                 return ast.apply(
-                    ast.recordSelector(selector.pos, field), apply2.arg);
+                    ast.recordSelector(selector.pos(), field), apply2.arg);
               }
             }
             return apply2;

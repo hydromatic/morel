@@ -395,7 +395,7 @@ public class Compiler {
       case FN:
         final Core.Fn fn = (Core.Fn) expression;
         return compileMatchListTail(
-            cx, ImmutableList.of(core.match(fn.pos, fn.idPat, fn.exp)));
+            cx, ImmutableList.of(core.match(fn.pos(), fn.idPat, fn.exp)));
 
       case CASE:
         final Core.Case case_ = (Core.Case) expression;
@@ -405,7 +405,7 @@ public class Compiler {
 
       case RAISE:
         final Core.Raise raise = (Core.Raise) expression;
-        return Codes.raise(compile(cx, raise.exp), raise.pos);
+        return Codes.raise(compile(cx, raise.exp), raise.pos());
 
       case RECORD_SELECTOR:
         final Core.RecordSelector recordSelector =
@@ -598,13 +598,13 @@ public class Compiler {
                 ((Core.Literal) checkArgs.get(2)).unwrap(String.class),
                 ((Core.Literal) checkArgs.get(3)).unwrap(String.class),
                 builtIn,
-                apply.pos);
+                apply.pos());
           default:
             if (true) {
               break;
             }
             final Object o =
-                ((Core.Literal) apply.fn).toBuiltIn(typeSystem, apply.pos);
+                ((Core.Literal) apply.fn).toBuiltIn(typeSystem, apply.pos());
             if (o instanceof Applicable) {
               final Code argCode = compile(cx, apply.arg);
               if (argCode instanceof Codes.TupleCode) {
@@ -641,14 +641,16 @@ public class Compiler {
       switch (gather.args.size()) {
         case 1:
           if (gather.argIsTuple(0, 2)) {
-            applicable2 = gather.fnLiteral.toApplicable2(typeSystem, apply.pos);
+            applicable2 =
+                gather.fnLiteral.toApplicable2(typeSystem, apply.pos());
             if (applicable2 != null) {
               final List<Code> argCodes = compileArgs(cx, gather.args);
               return Codes.apply2Tuple(applicable2, argCodes.get(0));
             }
           }
           if (gather.argIsTuple(0, 3)) {
-            applicable3 = gather.fnLiteral.toApplicable3(typeSystem, apply.pos);
+            applicable3 =
+                gather.fnLiteral.toApplicable3(typeSystem, apply.pos());
             if (applicable3 != null) {
               final List<Code> argCodes = compileArgs(cx, gather.args);
               return Codes.apply3Tuple(applicable3, argCodes.get(0));
@@ -657,14 +659,14 @@ public class Compiler {
           // Compile for partial evaluation, e.g. applying "String.isPrefix:
           // string -> string -> bool", a curried function with two arguments,
           // to just one argument.
-          applicable1 = gather.fnLiteral.toApplicable1(typeSystem, apply.pos);
+          applicable1 = gather.fnLiteral.toApplicable1(typeSystem, apply.pos());
           if (applicable1 != null) {
             final List<Code> argCodes = compileArgs(cx, gather.args);
             return Codes.apply1(applicable1, argCodes.get(0));
           }
           break;
         case 2:
-          applicable2 = gather.fnLiteral.toApplicable2(typeSystem, apply.pos);
+          applicable2 = gather.fnLiteral.toApplicable2(typeSystem, apply.pos());
           if (applicable2 != null) {
             final PairList<Code, Type> argCodes =
                 compileArgTypes(cx, gather.args);
@@ -672,7 +674,7 @@ public class Compiler {
           }
           break;
         case 3:
-          applicable3 = gather.fnLiteral.toApplicable3(typeSystem, apply.pos);
+          applicable3 = gather.fnLiteral.toApplicable3(typeSystem, apply.pos());
           if (applicable3 != null) {
             final List<Code> argCodes = compileArgs(cx, gather.args);
             return Codes.apply3(
@@ -680,7 +682,7 @@ public class Compiler {
           }
           break;
         case 4:
-          applicable4 = gather.fnLiteral.toApplicable4(typeSystem, apply.pos);
+          applicable4 = gather.fnLiteral.toApplicable4(typeSystem, apply.pos());
           if (applicable4 != null) {
             final List<Code> argCodes = compileArgs(cx, gather.args);
             return Codes.apply4(
@@ -700,7 +702,7 @@ public class Compiler {
     final Code argCode = compileArg(cx, apply.arg);
     final Type argType = apply.arg.type;
     final Applicable fnValue =
-        compileApplicable(cx, apply.fn, argType, apply.pos);
+        compileApplicable(cx, apply.fn, argType, apply.pos());
     if (fnValue != null) {
       return tailPos
           ? Codes.tailApply(fnValue, argCode)
@@ -1008,7 +1010,8 @@ public class Compiler {
     final Code processedBody =
         postProcessLetBody(cx2, bodyCode, match.exp.type);
     final int varCount = depth - cx.localDepth;
-    return Codes.stackLetPat(pat, varCount, expCode, processedBody, match.pos);
+    return Codes.stackLetPat(
+        pat, varCount, expCode, processedBody, match.pos());
   }
 
   /** Hook for subclasses to post-process a compiled let body. */
@@ -1309,7 +1312,7 @@ public class Compiler {
         cx.recPeers.size(),
         patCodes.immutable(),
         capacity,
-        last(matchList).pos);
+        last(matchList).pos());
   }
 
   /**

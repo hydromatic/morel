@@ -336,7 +336,7 @@ public abstract class Compiles {
                       ? "pattern is not grounded"
                       : Expander.notGrounded(pat),
                   false,
-                  rel.pos);
+                  rel.pos());
             }
           }
 
@@ -348,7 +348,7 @@ public abstract class Compiles {
                   format(
                       "cannot enumerate all values of type '%s'",
                       apply.getRangeExtent().type);
-              throw new CompileException(message, false, apply.pos);
+              throw new CompileException(message, false, apply.pos());
             }
           }
         });
@@ -495,16 +495,17 @@ public abstract class Compiles {
       final String message =
           exhaustive ? "match redundant" : "match redundant and nonexhaustive";
       errorConsumer.accept(
-          new CompileException(message, false, redundantMatchList.get(0).pos));
+          new CompileException(
+              message, false, redundantMatchList.get(0).pos()));
     } else if (!exhaustive) {
       warningConsumer.accept(
-          new CompileException("match nonexhaustive", true, kase.pos));
+          new CompileException("match nonexhaustive", true, kase.pos()));
     }
   }
 
   /** Converts {@code e} to {@code val = e}. */
   public static Ast.ValDecl toValDecl(Ast.Exp statement) {
-    final Pos pos = statement.pos;
+    final Pos pos = statement.pos();
     Ast.ValBind valBind = ast.valBind(pos, ast.idPat(pos, "it"), statement);
     return ast.valDecl(pos, false, false, ImmutableList.of(valBind));
   }

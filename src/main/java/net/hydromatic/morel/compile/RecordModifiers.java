@@ -146,7 +146,8 @@ class RecordModifiers {
     final Map<String, Ast.Exp> assigned = new LinkedHashMap<>();
     modifier.args.forEach(
         (id, exp) -> {
-          checkLabel(modifier.verb, fields.contains(id.name), id.name, id.pos);
+          checkLabel(
+              modifier.verb, fields.contains(id.name), id.name, id.pos());
           assigned.put(id.name, exp);
         });
 
@@ -189,7 +190,7 @@ class RecordModifiers {
                 modifier.verb,
                 fields.contains(field),
                 field,
-                modifier.exp.pos));
+                modifier.exp.pos()));
 
     fields.forEach(
         field -> {
@@ -224,10 +225,10 @@ class RecordModifiers {
     modifier.args.forEach(
         (target, source) -> {
           if (!fields.contains(source.name)) {
-            throw fieldNotFound(source.name, source.pos);
+            throw fieldNotFound(source.name, source.pos());
           }
           if (!renamed.add(source.name)) {
-            throw duplicateField(source.name, source.pos);
+            throw duplicateField(source.name, source.pos());
           }
         });
     fields.forEach(
@@ -239,7 +240,7 @@ class RecordModifiers {
     modifier.args.forEach(
         (target, source) -> {
           if (sources.leftList().contains(target.name)) {
-            throw fieldExists(target.name, target.pos);
+            throw fieldExists(target.name, target.pos());
           }
           sources.add(target.name, new Kept(source.name));
         });
@@ -255,10 +256,10 @@ class RecordModifiers {
         id -> {
           if (!fields.contains(id.name)
               && modifier.verb.absent == ModifierVerb.Absent.ERROR) {
-            throw fieldNotFound(id.name, id.pos);
+            throw fieldNotFound(id.name, id.pos());
           }
           if (!removed.add(id.name)) {
-            throw duplicateField(id.name, id.pos);
+            throw duplicateField(id.name, id.pos());
           }
         });
     fields.forEach(

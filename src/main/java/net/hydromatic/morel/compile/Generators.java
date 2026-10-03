@@ -2586,7 +2586,7 @@ class Generators {
         // Create constraint for this arm
         final Core.Exp armConstraint =
             createArmConstraint(
-                cache.typeSystem, cache.env, caseExp.exp, match, caseExp.pos);
+                cache.typeSystem, cache.env, caseExp.exp, match, caseExp.pos());
         if (armConstraint == null) {
           continue;
         }
@@ -3296,7 +3296,7 @@ class Generators {
                 cache,
                 component,
                 core.extent(
-                    exp.pos,
+                    exp.pos(),
                     cache.typeSystem,
                     component.type,
                     ImmutableRangeSet.of(Range.all()))));

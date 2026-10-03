@@ -92,7 +92,7 @@ public abstract class Folder<E> {
     return new Folder<Ast.Exp>(exp) {
       Ast.Exp combine(List<Folder<Ast.Exp>> list) {
         final Ast.Exp rest = combineAll(list);
-        return ast.infixCall(e.pos.plus(rest.pos), at, e, rest);
+        return ast.infixCall(e.pos().plus(rest.pos()), at, e, rest);
       }
     };
   }

@@ -169,7 +169,7 @@ class CanonicalRows {
             aggregates2.put(
                 name,
                 core.aggregate(
-                    agg.pos,
+                    agg.pos(),
                     agg.type,
                     real(agg.aggregate, id, null, null),
                     agg.argument == null

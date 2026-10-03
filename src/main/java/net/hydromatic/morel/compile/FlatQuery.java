@@ -147,7 +147,7 @@ class FlatQuery {
           new Shuttle(typeSystem) {
             @Override
             protected Core.Exp visit(Core.Id id) {
-              return id.idPat.equals(pat) ? core.at(replacement, id.pos) : id;
+              return id.idPat.equals(pat) ? core.at(replacement, id.pos()) : id;
             }
 
             @Override

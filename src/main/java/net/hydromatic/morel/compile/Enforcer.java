@@ -213,7 +213,7 @@ class Enforcer {
             et -> requireNonNull(typeMap.displayedKey(et.exp)));
     // Reject before the test below: a checked function type constrains
     // nothing that can be checked, so the test would pass it over in silence.
-    rejectCheckedFunction(t, t, type.pos);
+    rejectCheckedFunction(t, t, type.pos());
     return hasCheck(t) ? t : null;
   }
 
@@ -235,7 +235,7 @@ class Enforcer {
                     checkedType,
                     typeMap.typeSystem,
                     et -> requireNonNull(typeMap.displayedKey(et.exp)));
-            compileChecks(t, checkedType.checks, checkedType.pos);
+            compileChecks(t, checkedType.checks, checkedType.pos());
           }
         });
   }
@@ -873,7 +873,7 @@ class Enforcer {
    * i => lessThanDozen i} is not, and must be written out.
    */
   void checkClosed(Ast.TypeBind bind, Core.Exp predicate) {
-    checkClosed(bind.name.name, bind.pos, predicate);
+    checkClosed(bind.name.name, bind.pos(), predicate);
   }
 
   /**
@@ -954,13 +954,13 @@ class Enforcer {
     final List<Core.Match> matchList = new ArrayList<>(case_.matchList);
     matchList.add(
         core.match(
-            case_.pos,
+            case_.pos(),
             core.wildcardPat(case_.exp.type),
             core.boolLiteral(false)));
     return core.fn(
         (FnType) fn.type,
         fn.idPat,
-        core.caseOf(case_.pos, case_.type, case_.exp, matchList));
+        core.caseOf(case_.pos(), case_.type, case_.exp, matchList));
   }
 
   /**
@@ -981,7 +981,7 @@ class Enforcer {
       return coreArg;
     }
     final Type argType = tyCon.argTypeKey.toType(typeMap.typeSystem);
-    return checked(coreArg, argType, "argument of " + name, fn.pos);
+    return checked(coreArg, argType, "argument of " + name, fn.pos());
   }
 
   /**

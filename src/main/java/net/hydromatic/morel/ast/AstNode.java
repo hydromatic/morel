@@ -18,7 +18,6 @@
  */
 package net.hydromatic.morel.ast;
 
-import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
@@ -37,7 +36,17 @@ import net.hydromatic.morel.util.Comparators;
 
 /** Abstract syntax tree node. */
 public abstract class AstNode {
-  public final Pos pos;
+  /**
+   * This node's position in the source.
+   *
+   * <p>Not final, because parentheses are not known until after the node inside
+   * them has been created, and the node's position must then cover them; {@link
+   * #withPos} is how the parser says so. Protected, so that code elsewhere
+   * reads it through {@link #pos()} and nothing but the parser is in a position
+   * to write it.
+   */
+  protected Pos pos;
+
   public final Op op;
 
   public AstNode(Pos pos, Op op) {
@@ -45,19 +54,26 @@ public abstract class AstNode {
     this.op = requireNonNull(op);
   }
 
+  /** Returns this node's position. */
+  public Pos pos() {
+    return pos;
+  }
+
   /**
-   * Returns a copy of this node with a given position.
+   * Sets this node's position, and returns this node.
    *
-   * <p>Only implemented for certain node types. Intended to be called only by
-   * the parser, right after node creation. Returns this node if the position is
-   * already correct, and in any case returns a node of the same type.
+   * <p>Intended to be called only by the parser, right after the node is
+   * created, on finding that parentheses enclose it.
+   *
+   * <p>It mutates rather than copying because copying needed one override per
+   * node class, each calling that class's own constructor, and a class whose
+   * override was missing threw rather than reparenthesizing. Fifteen were
+   * missing. A node's position is the one part of it that is not settled when
+   * it is built, so this is the part that gives.
    */
   public AstNode withPos(Pos pos) {
-    if (pos.equals(this.pos)) {
-      return this;
-    }
-    throw new IllegalArgumentException(
-        format("cannot change position: %s %s", op, getClass()));
+    this.pos = requireNonNull(pos);
+    return this;
   }
 
   /**

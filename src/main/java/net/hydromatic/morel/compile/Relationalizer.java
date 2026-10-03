@@ -63,12 +63,12 @@ public class Relationalizer extends EnvShuttle {
               final Core.Exp list = collection(apply.arg);
               final Core.IdPat id = elementPat(list);
               return core.project(
-                  apply.pos,
+                  apply.pos(),
                   typeSystem,
                   id,
                   null,
                   list,
-                  core.apply(apply.pos, fnType.resultType, f, core.id(id)));
+                  core.apply(apply.pos(), fnType.resultType, f, core.id(id)));
             }
             if (literal.value == BuiltIn.LIST_FILTER
                 || literal.value == BuiltIn.BAG_FILTER) {
@@ -80,11 +80,11 @@ public class Relationalizer extends EnvShuttle {
               final Core.Exp list = collection(apply.arg);
               final Core.IdPat id = elementPat(list);
               return core.filter(
-                  apply.pos,
+                  apply.pos(),
                   id,
                   null,
                   list,
-                  core.apply(apply.pos, fnType.resultType, f, core.id(id)));
+                  core.apply(apply.pos(), fnType.resultType, f, core.id(id)));
             }
         }
     }

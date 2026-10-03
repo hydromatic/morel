@@ -924,7 +924,7 @@ public class RelExpander {
           // What the generator reads is not bound on the left -- it is a leaf
           // further away, which would need the join reordered.
           throw new CompileException(
-              "pattern is not grounded", false, right.pos);
+              "pattern is not grounded", false, right.pos());
         }
         paths.put(name, path);
       }
@@ -932,7 +932,8 @@ public class RelExpander {
         // A dependent join has a condition, so the node could carry this one.
         // Lifting the restriction is a change to what compiles, and belongs
         // with the others of its kind rather than smuggled in here.
-        throw new CompileException("pattern is not grounded", false, right.pos);
+        throw new CompileException(
+            "pattern is not grounded", false, right.pos());
       }
       paths.putAll(bound);
       final Core.Exp collection = replace(rightGenerator.exp, paths);
@@ -1322,9 +1323,9 @@ public class RelExpander {
         // path below asks the same question; without it here the generator's
         // free name reached the plan as a reference to nothing.
         throw new CompileException(
-            Expander.notGrounded(names.get(0)), false, leaf.pos);
+            Expander.notGrounded(names.get(0)), false, leaf.pos());
       }
-      return project(generator, names.get(0), leaf.pos, bound);
+      return project(generator, names.get(0), leaf.pos(), bound);
     }
     Core.@Nullable Exp product = null;
     for (Core.NamedPat name : names) {
@@ -1334,9 +1335,10 @@ public class RelExpander {
         // component binds does, which would need the product to be a
         // dependent join. The component is the one to name: the leaf's other
         // components may be bounded, and it is this one that is not.
-        throw new CompileException(Expander.notGrounded(name), false, leaf.pos);
+        throw new CompileException(
+            Expander.notGrounded(name), false, leaf.pos());
       }
-      final Core.Exp component = project(generator, name, leaf.pos, bound);
+      final Core.Exp component = project(generator, name, leaf.pos(), bound);
       if (product == null) {
         product = component;
         continue;
@@ -2067,10 +2069,10 @@ public class RelExpander {
               @Override
               protected Core.Exp visit(Core.Id id) {
                 if (id.idPat.equals(CanonicalRows.ID)) {
-                  return core.at(e0, id.pos);
+                  return core.at(e0, id.pos());
                 }
                 if (e1 != null && id.idPat.equals(CanonicalRows.RIGHT_ID)) {
-                  return core.at(e1, id.pos);
+                  return core.at(e1, id.pos());
                 }
                 return id;
               }
@@ -2134,7 +2136,7 @@ public class RelExpander {
           @Override
           protected Core.Exp visit(Core.Id id) {
             final Core.@Nullable Exp value = values.get(id.idPat);
-            return value == null ? id : core.at(value, id.pos);
+            return value == null ? id : core.at(value, id.pos());
           }
         });
   }

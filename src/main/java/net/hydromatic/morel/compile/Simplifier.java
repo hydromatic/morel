@@ -118,7 +118,7 @@ class Simplifier {
           if (simplifiedMatchExp != match.exp) {
             changed = true;
             simplifiedMatches.add(
-                core.match(match.pos, match.pat, simplifiedMatchExp));
+                core.match(match.pos(), match.pat, simplifiedMatchExp));
           } else {
             simplifiedMatches.add(match);
           }
@@ -127,7 +127,7 @@ class Simplifier {
           return caseExp;
         }
         return core.caseOf(
-            caseExp.pos, caseExp.type, simplifiedExp, simplifiedMatches);
+            caseExp.pos(), caseExp.type, simplifiedExp, simplifiedMatches);
       case APPLY:
         final Core.Apply apply = (Core.Apply) exp;
 

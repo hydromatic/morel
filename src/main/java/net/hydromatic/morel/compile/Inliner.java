@@ -132,7 +132,7 @@ public class Inliner extends EnvShuttle {
         final Type paramType = ((FnType) id.type).paramType;
         if (!(paramType instanceof TypeVar)) {
           final Macro macro = (Macro) binding.value;
-          final Core.Exp x = macro.expand(typeSystem, env, paramType, id.pos);
+          final Core.Exp x = macro.expand(typeSystem, env, paramType, id.pos());
           if (x instanceof Core.Literal) {
             return x;
           }
@@ -214,7 +214,7 @@ public class Inliner extends EnvShuttle {
       //   let x = A in E end
       final Core.Fn fn = (Core.Fn) apply2.fn;
       return core.let(
-          core.nonRecValDecl(apply2.pos, fn.idPat, null, apply2.arg), fn.exp);
+          core.nonRecValDecl(apply2.pos(), fn.idPat, null, apply2.arg), fn.exp);
     }
     return apply2;
   }
@@ -257,7 +257,7 @@ public class Inliner extends EnvShuttle {
                   final Core.Exp e = valueToExp(typeSystem, pat.type, v);
                   r.set(
                       core.let(
-                          core.nonRecValDecl(caseOf.pos, pat, null, e),
+                          core.nonRecValDecl(caseOf.pos(), pat, null, e),
                           requireNonNull(r.get())));
                 });
             return requireNonNull(r.get());
@@ -281,7 +281,7 @@ public class Inliner extends EnvShuttle {
       final Type type =
           caseOf.type.substitute(
               typeSystem, ImmutableList.copyOf(sub.values()));
-      return core.caseOf(caseOf.pos, type, exp, matchList);
+      return core.caseOf(caseOf.pos(), type, exp, matchList);
     }
     return caseOf.copy(exp, matchList);
   }

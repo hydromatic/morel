@@ -216,7 +216,7 @@ class RelCompiler {
                   final Code key = row.code(sort.exp);
                   final Comparator comparator =
                       Comparators.comparatorFor(
-                          typeSystem, sort.exp.type, sort.exp.pos);
+                          typeSystem, sort.exp.type, sort.exp.pos());
                   // The sink pushes every slot back before it emits an
                   // element, so the downstream sees the layout it sees here.
                   final ImmutablePairList<String, Code> inSlots = row.inSlots();
@@ -257,7 +257,7 @@ class RelCompiler {
       final Core.Exp aggregateExp = row.resolve(aggregate.aggregate);
       final @Nullable Applicable applicable =
           compiler.compileApplicable(
-              row.cx, aggregateExp, fnType.paramType, aggregate.pos);
+              row.cx, aggregateExp, fnType.paramType, aggregate.pos());
       // An aggregate function runs when the elements have been read and the
       // stack is back at the base, so it is compiled there.
       final Code aggregateCode =

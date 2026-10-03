@@ -82,7 +82,7 @@ public final class Span {
 
   /** Adds a node's position to the list, and returns this Span. */
   public Span add(AstNode n) {
-    return add(n.pos);
+    return add(n.pos());
   }
 
   /**

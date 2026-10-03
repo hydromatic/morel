@@ -292,7 +292,7 @@ public class TypeResolver {
   /** Throws; the resolver for a caller that cannot resolve {@code typeof}. */
   private static Type.Key rejectTypeof(Ast.ExpressionType expressionType) {
     throw new CompileException(
-        "'typeof' is not supported here", false, expressionType.pos);
+        "'typeof' is not supported here", false, expressionType.pos());
   }
 
   private TypeResolver(
@@ -329,10 +329,10 @@ public class TypeResolver {
     }
     final Ast.ValDecl valDecl =
         ast.valDecl(
-            exp.pos,
+            exp.pos(),
             false,
             false,
-            ast.valBind(exp.pos, ast.idPat(exp.pos, "it"), exp));
+            ast.valBind(exp.pos(), ast.idPat(exp.pos(), "it"), exp));
     final Resolved resolved =
         deduceType(env, valDecl, typeSystem, warningConsumer);
     // Deduction may rewrite the expression -- an 'order' step is copied, for
@@ -445,7 +445,7 @@ public class TypeResolver {
                 + join("\n", transform(terms, Object::toString));
         final Failure failure = (Failure) result;
         throw new TypeException(
-            "Cannot deduce type: " + failure.reason(), decl.pos);
+            "Cannot deduce type: " + failure.reason(), decl.pos());
       }
 
       final TypeMap typeMap0 =
@@ -665,7 +665,7 @@ public class TypeResolver {
                           + "' is not defined for type '"
                           + type
                           + "'",
-                      apply.pos);
+                      apply.pos());
                 }
               }
             }
@@ -692,7 +692,7 @@ public class TypeResolver {
                           .map(label -> "#" + label)
                           .collect(Collectors.joining(", ")))
               + ")",
-          requireNonNull(record.base).pos);
+          requireNonNull(record.base).pos());
     }
   }
 
@@ -711,7 +711,7 @@ public class TypeResolver {
                   + "what fields there are besides "
                   + apply.fn
                   + ")",
-              apply.arg.pos);
+              apply.arg.pos());
         },
         apply -> {
           throw new TypeException(
@@ -719,7 +719,7 @@ public class TypeResolver {
                   + ((Ast.RecordSelector) apply.fn).name
                   + " of non-record type "
                   + typeMap.getType(apply.arg),
-              apply.arg.pos);
+              apply.arg.pos());
         },
         apply -> {
           throw new TypeException(
@@ -728,7 +728,7 @@ public class TypeResolver {
                   + "' in type '"
                   + typeMap.getType(apply.arg)
                   + "'",
-              apply.fn.pos);
+              apply.fn.pos());
         });
   }
 
@@ -787,7 +787,7 @@ public class TypeResolver {
           "'?.' applied to non-functor type "
               + argType
               + " (expected option or list)",
-          apply.arg.pos);
+          apply.arg.pos());
     }
     if (type.op() != Op.RECORD_TYPE && type.op() != Op.TUPLE_TYPE) {
       throw new TypeException(
@@ -795,13 +795,13 @@ public class TypeResolver {
               + recordSelector.name
               + " of non-record type "
               + type,
-          apply.arg.pos);
+          apply.arg.pos());
     }
     final RecordLikeType recordType = (RecordLikeType) type;
     if (!recordType.argNameTypes().containsKey(recordSelector.name)) {
       throw new TypeException(
           "no field '" + recordSelector.name + "' in type '" + type + "'",
-          apply.fn.pos);
+          apply.fn.pos());
     }
   }
 
@@ -1312,7 +1312,7 @@ public class TypeResolver {
                 throw new CompileException(
                     "unbound type constructor: " + namedType.name,
                     false,
-                    namedType.pos);
+                    namedType.pos());
               }
               checkTypeConstructorArity(namedType, resolved);
             }
@@ -1349,7 +1349,7 @@ public class TypeResolver {
               actualArity == 1 ? "" : "s",
               expectedArity),
           false,
-          namedType.pos);
+          namedType.pos());
     }
   }
 
@@ -1366,7 +1366,9 @@ public class TypeResolver {
       Ast.NamedType namedType, @Nullable Type type) {
     if (type == null) {
       throw new CompileException(
-          "unbound type constructor: " + namedType.name, false, namedType.pos);
+          "unbound type constructor: " + namedType.name,
+          false,
+          namedType.pos());
     }
   }
 
@@ -1476,7 +1478,7 @@ public class TypeResolver {
             ? ((Ast.Literal) node).value
             : ((Ast.LiteralPat) node).value;
     if (!(value instanceof Character)) {
-      throw new TypeException("character constant not length one", node.pos);
+      throw new TypeException("character constant not length one", node.pos());
     }
   }
 
@@ -1496,11 +1498,11 @@ public class TypeResolver {
       case INT:
         // 'int' is signed 32-bit; negatives are allowed and bitLength excludes
         // the sign bit.
-        validateLiteralRange(type, i, true, 31, "" + i, node.pos);
+        validateLiteralRange(type, i, true, 31, "" + i, node.pos());
         return;
       case WORD:
         // 'word' is unsigned 64-bit; negatives are not allowed.
-        validateLiteralRange(type, i, false, 64, "0w" + i, node.pos);
+        validateLiteralRange(type, i, false, 64, "0w" + i, node.pos());
     }
   }
 
@@ -1612,7 +1614,7 @@ public class TypeResolver {
                 "unresolved flex record (can't tell what fields there are "
                     + "besides #%s)",
                 recordSelector.name),
-            recordSelector.pos);
+            recordSelector.pos());
 
       case IF:
         return deduceIfType(e, (Ast.If) node, v);
@@ -1683,11 +1685,11 @@ public class TypeResolver {
         final AggFrame aggFrame = aggregateTripleStack.peek();
         if (aggFrame == null) {
           throw new CompileException(
-              "'over' is only valid in 'compute'", false, node.pos);
+              "'over' is only valid in 'compute'", false, node.pos());
         }
         if (aggFrame.activeCount > 0) {
           throw new CompileException(
-              "'over' is not valid in 'over'", false, node.pos);
+              "'over' is not valid in 'over'", false, node.pos());
         }
         return deduceAggregateType(aggFrame, (Ast.Aggregate) node, v);
 
@@ -1795,7 +1797,7 @@ public class TypeResolver {
     final Term term = requireNonNull(map.get(exp));
     final List<Ast.Fn> checks =
         deduceChecks(e, unaliasTerm(term), checkExp.checks);
-    return reg(ast.checkExp(checkExp.pos, exp, checks), v);
+    return reg(ast.checkExp(checkExp.pos(), exp, checks), v);
   }
 
   private Ast.Exp deduceAnnotatedExpType(
@@ -1825,7 +1827,7 @@ public class TypeResolver {
         resolved -> {
           if (resolved.typeMap.termToType(c).op() != Op.LIST) {
             throw new TypeException(
-                "cannot use 'ordinal' in unordered query", ordinal.pos);
+                "cannot use 'ordinal' in unordered query", ordinal.pos());
           }
         });
     return reg(ordinal, v, toTerm(PrimitiveType.INT));
@@ -1887,7 +1889,7 @@ public class TypeResolver {
                 format(
                     "'%s' step must not occur in '%s'",
                     step.e.op.lowerName, query.op.lowerName);
-            throw new CompileException(message, false, step.e.pos);
+            throw new CompileException(message, false, step.e.pos());
           }
           if (!lastStep) {
             String message =
@@ -1895,7 +1897,7 @@ public class TypeResolver {
                     "'%s' step must be last in '%s'",
                     step.e.op.lowerName, query.op.lowerName);
             throw new CompileException(
-                message, false, query.steps.get(step.i + 1).pos);
+                message, false, query.steps.get(step.i + 1).pos());
           }
           break;
       }
@@ -1904,7 +1906,7 @@ public class TypeResolver {
       AstNode step = query.steps.isEmpty() ? query : last(query.steps);
       if (step.op != Op.REQUIRE) {
         throw new CompileException(
-            "last step of 'forall' must be 'require'", false, step.pos);
+            "last step of 'forall' must be 'require'", false, step.pos());
       }
     }
 
@@ -2304,21 +2306,21 @@ public class TypeResolver {
             if (queryDepth == 0
                 && inputNames.contains(id.name)
                 && !shadowed.contains(id.name)) {
-              throw referenceError(id.name, id.pos);
+              throw referenceError(id.name, id.pos());
             }
           }
 
           @Override
           protected void visit(Ast.Current current) {
             if (queryDepth == 0) {
-              throw referenceError("current", current.pos);
+              throw referenceError("current", current.pos());
             }
           }
 
           @Override
           protected void visit(Ast.Ordinal ordinal) {
             if (queryDepth == 0) {
-              throw referenceError("ordinal", ordinal.pos);
+              throw referenceError("ordinal", ordinal.pos());
             }
           }
 
@@ -2665,7 +2667,7 @@ public class TypeResolver {
    */
   private Ast.Exp deduceRangeListType(
       TypeEnv e, Ast.RangeList rangeList, Variable v) {
-    final Pos pos = rangeList.pos;
+    final Pos pos = rangeList.pos();
     final List<Ast.Exp> rangeExps = new ArrayList<>(rangeList.items.size());
     for (Ast.RangeListItem item : rangeList.items) {
       rangeExps.add(rangeItemToExp(pos, item));
@@ -3203,7 +3205,7 @@ public class TypeResolver {
         @Nullable String label = ast.implicitLabelOpt(group.group);
         if (label == null) {
           throw new TypeException(
-              "cannot derive label for group expression", group.group.pos);
+              "cannot derive label for group expression", group.group.pos());
         }
       }
       if (group.aggregate != null && !(group.aggregate instanceof Ast.Record)) {
@@ -3211,7 +3213,7 @@ public class TypeResolver {
         if (label == null) {
           throw new TypeException(
               "cannot derive label for compute expression",
-              group.aggregate.pos);
+              group.aggregate.pos());
         }
       }
 
@@ -3232,7 +3234,7 @@ public class TypeResolver {
           // because AstBuilder.implicitLabel synthesizes the id with the
           // expression's position.
           throw new TypeException(
-              "duplicate field name '" + id.name + "' in group", id.pos);
+              "duplicate field name '" + id.name + "' in group", id.pos());
         }
       }
     }
@@ -3252,14 +3254,14 @@ public class TypeResolver {
                 final List<Pos> positions =
                     transformEager(
                         record.args.toImmutableSortedMap().values(),
-                        e -> e.pos);
+                        e -> e.pos());
                 if (!Ordering.from(Pos::compare).isOrdered(positions)) {
                   String message =
                       "Sorting on a record whose fields are not in "
                           + "alphabetical order. Sort order may not be what "
                           + "you expect.";
                   warningConsumer.accept(
-                      new CompileException(message, true, record.pos));
+                      new CompileException(message, true, record.pos()));
                 }
                 return super.visit(record);
               }
@@ -3315,7 +3317,7 @@ public class TypeResolver {
             && (!BuiltIn.BY_METHOD_NAME.get(name).isEmpty()
                 || methodNames.contains(name) && e.has(name))) {
           return deducePostfixAppType(
-              e, ast.postfixApp(apply.pos, receiverId, name, apply.arg), v);
+              e, ast.postfixApp(apply.pos(), receiverId, name, apply.arg), v);
         }
       }
     }
@@ -3381,7 +3383,7 @@ public class TypeResolver {
   private Ast.Exp deducePostfixAppType(
       TypeEnv e, Ast.PostfixApp postfixApp, Variable v) {
     final String name = postfixApp.methodName;
-    final Pos pos = postfixApp.pos;
+    final Pos pos = postfixApp.pos();
 
     // If the receiver is an identifier that names a record/structure containing
     // field 'name', treat this as a field projection + application rather than
@@ -3457,7 +3459,7 @@ public class TypeResolver {
    */
   private Ast.Exp deduceFieldProjectionApp(
       TypeEnv e, Ast.PostfixApp postfixApp, Variable v) {
-    final Pos pos = postfixApp.pos;
+    final Pos pos = postfixApp.pos();
     final Ast.Exp selector = ast.recordSelector(pos, postfixApp.methodName);
     final Ast.Exp projected = ast.apply(selector, postfixApp.receiver);
     return deduceExpType(e, ast.apply(projected, postfixApp.arg), v);
@@ -4864,7 +4866,7 @@ public class TypeResolver {
         final Ast.CheckedType checkedType = (Ast.CheckedType) type;
         final Ast.Type body = checkTypes(e, checkedType.type);
         return ast.checkedType(
-            checkedType.pos,
+            checkedType.pos(),
             body,
             deduceChecks(e, toType(body, typeSystem), checkedType.checks));
 
@@ -4875,7 +4877,7 @@ public class TypeResolver {
             (name, t) -> fieldTypes.put(name, checkTypes(e, t)));
         return fieldTypes.equals(recordType.fieldTypes)
             ? type
-            : ast.recordType(type.pos, fieldTypes);
+            : ast.recordType(type.pos(), fieldTypes);
 
       case TUPLE_TYPE:
         if (!(type instanceof Ast.TupleType)) {
@@ -4887,7 +4889,7 @@ public class TypeResolver {
             transformEager(tupleType.types, t -> checkTypes(e, t));
         return types.equals(tupleType.types)
             ? type
-            : ast.tupleType(type.pos, types);
+            : ast.tupleType(type.pos(), types);
 
       case FUNCTION_TYPE:
         final Ast.FunctionType functionType = (Ast.FunctionType) type;
@@ -4896,7 +4898,7 @@ public class TypeResolver {
         return paramType.equals(functionType.paramType)
                 && resultType.equals(functionType.resultType)
             ? type
-            : ast.functionType(type.pos, paramType, resultType);
+            : ast.functionType(type.pos(), paramType, resultType);
 
       case NAMED_TYPE:
         final Ast.NamedType namedType = (Ast.NamedType) type;
@@ -4904,7 +4906,7 @@ public class TypeResolver {
             transformEager(namedType.types, t -> checkTypes(e, t));
         return args.equals(namedType.types)
             ? type
-            : ast.namedType(type.pos, args, namedType.name);
+            : ast.namedType(type.pos(), args, namedType.name);
 
       default:
         return type;
@@ -4928,7 +4930,7 @@ public class TypeResolver {
       throw new CompileException(
           format("cannot check parameterized type '%s'", bind.name.name),
           false,
-          bind.pos);
+          bind.pos());
     }
     return bind.copy(deduceChecks(e, baseType, bind.checks));
   }
@@ -5038,7 +5040,7 @@ public class TypeResolver {
               tyConType = dataType;
             }
             termMap.add(
-                (Ast.IdPat) ast.idPat(tyCon.pos, tyCon.id.name),
+                (Ast.IdPat) ast.idPat(tyCon.pos(), tyCon.id.name),
                 toTerm(tyConType, Subst.EMPTY));
             map.put(tyCon, toTerm(tyConType, Subst.EMPTY));
           }
@@ -5071,7 +5073,7 @@ public class TypeResolver {
               throw new CompileException(
                   "unbound type variable in type declaration: " + tyVar.name,
                   false,
-                  tyVar.pos);
+                  tyVar.pos());
             }
           }
         };
@@ -5183,7 +5185,7 @@ public class TypeResolver {
                 + "must be followed by a type constructor name; "
                 + "use `t1 * ... * tn` for a tuple type",
             false,
-            type.pos);
+            type.pos());
       }
       switch (type.op) {
         case TUPLE_TYPE:
@@ -5278,7 +5280,7 @@ public class TypeResolver {
                 + "must be followed by a type constructor name; "
                 + "use `t1 * ... * tn` for a tuple type",
             false,
-            type.pos);
+            type.pos());
       }
       switch (type.op) {
         case EXPRESSION_TYPE:
@@ -5430,7 +5432,7 @@ public class TypeResolver {
       valBindList.add(toValBind(e, funBind));
       registerMethod(funBind);
     }
-    return ast.valDecl(funDecl.pos, true, false, valBindList);
+    return ast.valDecl(funDecl.pos(), true, false, valBindList);
   }
 
   /**
@@ -5488,25 +5490,25 @@ public class TypeResolver {
       for (Ast.FunMatch funMatch : funBind.matchList) {
         matchList.add(
             ast.match(
-                funMatch.pos, patTuple(e, funMatch.patList), funMatch.exp));
+                funMatch.pos(), patTuple(e, funMatch.patList), funMatch.exp));
         if (funMatch.returnType != null) {
           if (returnType != null && !returnType.equals(funMatch.returnType)) {
             throw new CompileException(
                 "parameter or result constraints of "
                     + "clauses don't agree [tycon mismatch]",
                 false,
-                requireNonNull(prevReturnTypePos).plus(funMatch.pos));
+                requireNonNull(prevReturnTypePos).plus(funMatch.pos()));
           }
           returnType = funMatch.returnType;
-          prevReturnTypePos = funMatch.pos;
+          prevReturnTypePos = funMatch.pos();
         }
       }
       exp = ast.caseOf(Pos.sum(matchList), idTuple(varNames), matchList);
     }
     if (returnType != null) {
-      exp = ast.annotatedExp(exp.pos, exp, returnType);
+      exp = ast.annotatedExp(exp.pos(), exp, returnType);
     }
-    final Pos pos = funBind.pos;
+    final Pos pos = funBind.pos();
     for (Ast.Pat var : Lists.reverse(vars)) {
       exp = ast.fn(pos, ast.match(pos, var, exp));
     }
@@ -5543,11 +5545,12 @@ public class TypeResolver {
                 && ((Sequence) term).operator.equals(FN_TY_CON)) {
               list2.add(
                   ast.conPat(
-                      idPat.pos,
-                      ast.id(idPat.pos, idPat.name),
+                      idPat.pos(),
+                      ast.id(idPat.pos(), idPat.name),
                       patList.get(++i)));
             } else {
-              list2.add(ast.con0Pat(idPat.pos, ast.id(idPat.pos, idPat.name)));
+              list2.add(
+                  ast.con0Pat(idPat.pos(), ast.id(idPat.pos(), idPat.name)));
             }
             break;
           }
@@ -5731,7 +5734,7 @@ public class TypeResolver {
           throw new CompileException(
               "unbound constructor: " + conPat.tyCon.name,
               false,
-              conPat.tyCon.pos);
+              conPat.tyCon.pos());
         }
         final DataType dataType = typeCon1.dataType;
         final Type argType = typeCon1.argTypeKey.toType(typeSystem);
@@ -5805,8 +5808,8 @@ public class TypeResolver {
         && call.a1 instanceof Ast.RangeList) {
       return elemOnRangeList(e, call, v);
     }
-    Ast.Id id = ast.id(call.pos, requireNonNull(call.op.opName));
-    Ast.Tuple arg = ast.tuple(call.pos, ImmutableList.of(call.a0, call.a1));
+    Ast.Id id = ast.id(call.pos(), requireNonNull(call.op.opName));
+    Ast.Tuple arg = ast.tuple(call.pos(), ImmutableList.of(call.a0, call.a1));
     return deduceExpType(e, ast.apply(id, arg), v);
   }
 
@@ -5816,7 +5819,7 @@ public class TypeResolver {
    */
   private Ast.Exp elemOnRangeList(TypeEnv e, Ast.InfixCall call, Variable v) {
     final Ast.RangeList rangeList = (Ast.RangeList) call.a1;
-    final Pos pos = call.pos;
+    final Pos pos = call.pos();
     final Ast.Exp x = call.a0;
     final Ast.Exp result;
     if (rangeList.items.isEmpty()) {
@@ -5844,7 +5847,7 @@ public class TypeResolver {
 
   /** Registers a prefix operator. */
   private Ast.Exp prefix(TypeEnv e, Ast.PrefixCall call, Variable v) {
-    Ast.Id id = ast.id(call.pos, requireNonNull(call.op.opName));
+    Ast.Id id = ast.id(call.pos(), requireNonNull(call.op.opName));
     return deduceExpType(e, ast.apply(id, call.a), v);
   }
 
@@ -6219,7 +6222,7 @@ public class TypeResolver {
     static Function<String, RuntimeException> onlyValidInQuery(AstNode node) {
       return name ->
           new CompileException(
-              "'" + node + "' is only valid in a query", false, node.pos);
+              "'" + node + "' is only valid in a query", false, node.pos());
     }
 
     /**
@@ -6231,14 +6234,14 @@ public class TypeResolver {
           new CompileException(
               "'" + node + "' is only valid in a 'compute' clause",
               false,
-              node.pos);
+              node.pos());
     }
 
     /** Exception factory where a missing symbol is a user error. */
     static Function<String, RuntimeException> unbound(Ast.Exp id) {
       return name ->
           new CompileException(
-              "unbound variable or constructor: " + name, false, id.pos);
+              "unbound variable or constructor: " + name, false, id.pos());
     }
 
     default TypeEnv bindAll(Iterable<Map.Entry<String, Term>> nameTerms) {

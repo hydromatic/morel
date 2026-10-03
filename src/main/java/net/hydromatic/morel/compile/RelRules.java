@@ -110,7 +110,7 @@ public class RelRules {
               core.substitute(
                   typeSystem, outer.condition, outer.id, core.id(inner.id));
           return core.filter(
-              outer.pos,
+              outer.pos(),
               inner.id,
               inner.ordinalId,
               inner.input,
@@ -203,11 +203,11 @@ public class RelRules {
                     0);
             exp2 =
                 core.let(
-                    core.nonRecValDecl(inner.exp.pos, pat, null, inner.exp),
+                    core.nonRecValDecl(inner.exp.pos(), pat, null, inner.exp),
                     core.substitute(typeSystem, exp, outer.id, core.id(pat)));
           }
           return core.project(
-              outer.pos, typeSystem, inner.id, ordinal, inner.input, exp2);
+              outer.pos(), typeSystem, inner.id, ordinal, inner.input, exp2);
         }
       };
 

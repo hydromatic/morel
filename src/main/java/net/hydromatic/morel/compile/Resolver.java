@@ -342,7 +342,7 @@ public class Resolver {
         // Signatures are interface declarations that don't compile to anything.
         // Return a no-op declaration that evaluates to unit.
         return core.nonRecValDecl(
-            node.pos,
+            node.pos(),
             core.idPat(PrimitiveType.UNIT, "_signature", 0),
             null,
             core.unitLiteral());
@@ -490,7 +490,9 @@ public class Resolver {
           (pat, exp) ->
               patExps.add(
                   new PatExp(
-                      patIter.next(), r.toCore(exp), pat.pos.plus(exp.pos))));
+                      patIter.next(),
+                      r.toCore(exp),
+                      pat.pos().plus(exp.pos()))));
     } else {
       matches.forEach(
           (pat, exp) -> {
@@ -523,8 +525,9 @@ public class Resolver {
             patExps.add(
                 new PatExp(
                     corePat,
-                    enforcer.withChecks(coreExp, pat, pat.pos.plus(exp.pos)),
-                    pat.pos.plus(exp.pos)));
+                    enforcer.withChecks(
+                        coreExp, pat, pat.pos().plus(exp.pos())),
+                    pat.pos().plus(exp.pos())));
           });
       patExps.forEach(
           x -> Compiles.acceptBinding(typeMap.typeSystem, x.pat, bindings));
@@ -866,7 +869,7 @@ public class Resolver {
         final Type annotatedType = enforcer.claimedType(annotatedExp.type);
         return annotatedType == null
             ? annotatedCore
-            : enforcer.checked(annotatedCore, annotatedType, exp.pos);
+            : enforcer.checked(annotatedCore, annotatedType, exp.pos());
 
       case CHECK_EXP:
         // The type is not written anywhere, so build it here, where the
@@ -889,8 +892,8 @@ public class Resolver {
                     ImmutableList.of(),
                     checkExp.checks)
                 .toType(typeMap.typeSystem);
-        enforcer.compileChecks(checkType, checkExp.checks, checkExp.pos);
-        return enforcer.checked(checkCore, checkType, exp.pos);
+        enforcer.compileChecks(checkType, checkExp.checks, checkExp.pos());
+        return enforcer.checked(checkCore, checkType, exp.pos());
 
       case AS:
         final Ast.Cast cast = (Ast.Cast) exp;
@@ -900,7 +903,7 @@ public class Resolver {
         // is erased, as an annotation is.
         return castType == null
             ? castExp
-            : enforcer.checked(castExp, castType, exp.pos);
+            : enforcer.checked(castExp, castType, exp.pos());
 
       case AS_OPT:
         final Ast.Cast castOpt = (Ast.Cast) exp;
@@ -910,14 +913,14 @@ public class Resolver {
         if (castOptType == null) {
           // Converting to an unchecked type cannot fail.
           return core.apply(
-              exp.pos,
+              exp.pos(),
               optionType,
               core.constructor(
                   typeMap.typeSystem, BuiltIn.Constructor.OPTION_SOME),
               castOptExp);
         }
         return enforcer.checkedOpt(
-            castOptExp, castOptType, optionType, exp.pos);
+            castOptExp, castOptType, optionType, exp.pos());
       case ID:
         return toCore((Ast.Id) exp);
       case OP_SECTION:
@@ -973,7 +976,7 @@ public class Resolver {
     final Binding binding = env.getOpt(id.name);
     checkNotNull(binding, "not found", id);
     final Core.NamedPat idPat = getIdPat(id, binding.id);
-    return core.id(id.pos, idPat);
+    return core.id(id.pos(), idPat);
   }
 
   private Core.Exp toCore(Ast.OpSection opSection) {
@@ -983,7 +986,7 @@ public class Resolver {
     // Just return a reference to the operator binding
     // The operator is already defined as a function value
     final Core.NamedPat idPat = getIdPat(opSection, binding.id);
-    return core.id(opSection.pos, idPat);
+    return core.id(opSection.pos(), idPat);
   }
 
   private Core.Exp toCore(Ast.Current ignoredCurrent) {
@@ -1087,7 +1090,7 @@ public class Resolver {
     final Ast.Exp exp = exps.get(i);
     return enforcer.letValue(
         toCore(exp),
-        exp.pos,
+        exp.pos(),
         id -> {
           operands.put(exp, id);
           return bindOperands(record, exps, i + 1, operands);
@@ -1111,7 +1114,7 @@ public class Resolver {
       Map<Ast.Exp, Core.Id> operands,
       boolean claimed) {
     final List<Ast.Modifier> modifiers = record.modifiers;
-    final Pos pos = record.pos;
+    final Pos pos = record.pos();
     if (i == modifiers.size()) {
       final Type type = typeMap.getAliasedType(record);
       if (type instanceof AliasType) {
@@ -1247,7 +1250,7 @@ public class Resolver {
   private Core.Exp toCore(Ast.ListExp list) {
     final ListType type = (ListType) typeMap.getType(list);
     return core.apply(
-        list.pos,
+        list.pos(),
         type,
         core.functionLiteral(type, BuiltIn.Z_LIST),
         core.tuple(
@@ -1262,7 +1265,7 @@ public class Resolver {
     final Type type = typeMap.getType(exp);
     final ListType listType = typeMap.typeSystem.listType(type);
     return core.apply(
-        exp.pos,
+        exp.pos(),
         listType,
         core.functionLiteral(typeMap.typeSystem, BuiltIn.Z_LIST),
         core.tuple(typeMap.typeSystem, toCore(exp)));
@@ -1306,7 +1309,7 @@ public class Resolver {
       final List<Core.Exp> dicts = dictionaryArgsForUse(apply.fn);
       if (dicts != null) {
         for (Core.Exp dict : dicts) {
-          fn = core.apply(apply.pos, type, fn, dict);
+          fn = core.apply(apply.pos(), type, fn, dict);
         }
       }
       coreFn = fn;
@@ -1336,7 +1339,7 @@ public class Resolver {
               ? coreArg.unparsePlan(typeMap.typeSystem, width)
               : coreArg.unparseRenumbered(typeMap.typeSystem, width, true));
     }
-    return core.apply(apply.pos, type, coreFn, coreArg);
+    return core.apply(apply.pos(), type, coreFn, coreArg);
   }
 
   /**
@@ -1356,7 +1359,7 @@ public class Resolver {
         final String s = (String) ((Ast.Literal) apply.arg).value;
         if (Decimals.parseExact(s) == null) {
           throw new CompileException(
-              format("invalid decimal literal '%s'", s), false, apply.pos);
+              format("invalid decimal literal '%s'", s), false, apply.pos());
         }
       }
     }
@@ -1511,14 +1514,14 @@ public class Resolver {
       final Type fOutType = wrapFunctor(ts, mapBuiltIn, outType);
       fn =
           core.apply(
-              apply.pos,
+              apply.pos(),
               ts.fnType(fInType, fOutType),
               core.functionLiteral(ts, mapBuiltIn),
               fn);
       inType = fInType;
       outType = fOutType;
     }
-    return core.apply(apply.pos, type, fn, coreArg);
+    return core.apply(apply.pos(), type, fn, coreArg);
   }
 
   /**
@@ -1730,7 +1733,7 @@ public class Resolver {
       builtIn = builtIn.toWord();
     }
     return core.apply(
-        call.pos,
+        call.pos(),
         typeMap.getType(call),
         core.functionLiteral(typeMap.typeSystem, builtIn),
         core.tuple(typeMap.typeSystem, core0, core1));
@@ -1814,7 +1817,8 @@ public class Resolver {
     final FnType type = (FnType) typeMap.getType(fn);
     final List<Core.Match> matchList =
         transformEager(fn.matchList, m -> toCore(m, type.paramType));
-    final Core.Fn coreFn = core.fn(fn.pos, type, matchList, nameGenerator::inc);
+    final Core.Fn coreFn =
+        core.fn(fn.pos(), type, matchList, nameGenerator::inc);
     final Type paramType = enforcer.parameterType(fn, coreFn.idPat.type);
     if (paramType == null) {
       return coreFn;
@@ -1839,10 +1843,10 @@ public class Resolver {
         paramPat,
         core.let(
             core.nonRecValDecl(
-                fn.pos,
+                fn.pos(),
                 coreFn.idPat,
                 null,
-                enforcer.checked(core.id(paramPat), paramType, fn.pos)),
+                enforcer.checked(core.id(paramPat), paramType, fn.pos())),
             coreFn.exp));
   }
 
@@ -1852,13 +1856,13 @@ public class Resolver {
   }
 
   private Core.Raise toCore(Ast.Raise raise) {
-    return core.raise(raise.pos, typeMap.getType(raise), toCore(raise.exp));
+    return core.raise(raise.pos(), typeMap.getType(raise), toCore(raise.exp));
   }
 
   private Core.Case toCore(Ast.Case case_) {
     final Type argType = typeMap.getType(case_.exp);
     return core.caseOf(
-        case_.pos,
+        case_.pos(),
         typeMap.getType(case_),
         toCore(case_.exp),
         transformEager(case_.matchList, m -> toCore(m, argType)));
@@ -2129,14 +2133,14 @@ public class Resolver {
       final Core.IdPat rawPat =
           core.idPat(pat.type, () -> nameGenerator.getPrefixed("v"));
       final Core.Exp checked =
-          enforcer.checked(core.id(rawPat), claimed, match.pos);
+          enforcer.checked(core.id(rawPat), claimed, match.pos());
       if (pat instanceof Core.NamedPat) {
         return core.match(
-            match.pos,
+            match.pos(),
             rawPat,
             core.let(
                 core.nonRecValDecl(
-                    match.pos, (Core.NamedPat) pat, null, checked),
+                    match.pos(), (Core.NamedPat) pat, null, checked),
                 exp));
       }
       // A pattern that destructures binds no one name that covers the
@@ -2145,15 +2149,15 @@ public class Resolver {
       // was written, so it decides as it did before; it is only reached
       // through the check.
       return core.match(
-          match.pos,
+          match.pos(),
           rawPat,
           core.caseOf(
-              match.pos,
+              match.pos(),
               exp.type,
               checked,
-              ImmutableList.of(core.match(match.pos, pat, exp))));
+              ImmutableList.of(core.match(match.pos(), pat, exp))));
     }
-    return core.match(match.pos, pat, exp);
+    return core.match(match.pos(), pat, exp);
   }
 
   Core.Exp toCore(Ast.Query query) {
@@ -2355,13 +2359,13 @@ public class Resolver {
             if (pos[0] == null && aggregate.aggregate.op == Op.ID) {
               final String name = ((Ast.Id) aggregate.aggregate).name;
               if (name.equals("max") || name.equals("min")) {
-                pos[0] = aggregate.pos;
+                pos[0] = aggregate.pos();
               }
             }
             super.visit(aggregate);
           }
         });
-    return pos[0] != null ? pos[0] : compute.pos;
+    return pos[0] != null ? pos[0] : compute.pos();
   }
 
   /**
@@ -2498,7 +2502,7 @@ public class Resolver {
     }
 
     private void step(Ast.FromStep step) {
-      b.at(step.pos);
+      b.at(step.pos());
       if (step instanceof Ast.Scan) {
         scan((Ast.Scan) step);
       } else if (step instanceof Ast.Where) {
@@ -2602,7 +2606,7 @@ public class Resolver {
                 .transform((name, argType) -> core.idPat(argType, name, 0));
         b.push(
             core.tuplePat(typeMap.typeSystem, pats),
-            extent(scan.pat.pos, type, names));
+            extent(scan.pat.pos(), type, names));
         return names;
       }
       final Ast.@Nullable IdPat id = bareId(scan.pat);
@@ -2613,7 +2617,7 @@ public class Resolver {
         // paths -- so only the type is wanted.
         final Type type = typeMap.getType(scan.pat);
         return push(
-            scan.pat, extent(scan.pat.pos, type, ImmutableList.of(id.name)));
+            scan.pat, extent(scan.pat.pos(), type, ImmutableList.of(id.name)));
       }
       // A pattern that is not a name or a tuple of names is flattened: `from
       // {b, i}` scans `bool * int`, and the names are read out of the tuple
@@ -2624,7 +2628,7 @@ public class Resolver {
               typeMap.typeSystem,
               Resolver.this.toCore(scan.pat, typeMap.getType(scan.pat)));
       final List<String> names = transform(flat.expand(), pat -> pat.name);
-      return push(flat, extent(scan.pat.pos, flat.type, names));
+      return push(flat, extent(scan.pat.pos(), flat.type, names));
     }
 
     /**
@@ -2651,7 +2655,7 @@ public class Resolver {
       }
       final Core.@Nullable Exp condition =
           enforcer.deepCondition(
-              type, value.type, value, "", false, scan.pat.pos);
+              type, value.type, value, "", false, scan.pat.pos());
       if (condition != null) {
         b.filter(condition);
       }
@@ -2822,7 +2826,7 @@ public class Resolver {
       // the enclosing scope and not this query's row.
       final Core.Exp fn = toCore(through.exp, null);
       final Core.Exp collection =
-          core.apply(through.pos, typeMap.getType(through), fn, inner);
+          core.apply(through.pos(), typeMap.getType(through), fn, inner);
       binders.clear();
       binders.addAll(push(through.pat, collection));
       atom = binders.size() == 1;
@@ -3164,7 +3168,7 @@ public class Resolver {
           new Shuttle(typeMap.typeSystem) {
             @Override
             protected Core.Exp visit(Core.Id id) {
-              return id.idPat.equals(row) ? core.at(element, id.pos) : id;
+              return id.idPat.equals(row) ? core.at(element, id.pos()) : id;
             }
           });
     }
@@ -3418,7 +3422,7 @@ public class Resolver {
                   return id;
                 }
                 return core.at(
-                    inRel && bindNested ? bindInputs(path) : path, id.pos);
+                    inRel && bindNested ? bindInputs(path) : path, id.pos());
               }
             });
       }
@@ -3488,14 +3492,14 @@ public class Resolver {
             coreFrom = core.apply(Pos.ZERO, paramType, converterLit, coreFrom);
           }
         }
-        return core.apply(exp.pos, typeMap.getType(query), exp, coreFrom);
+        return core.apply(exp.pos(), typeMap.getType(query), exp, coreFrom);
       }
 
       final Core.Exp coreFrom = run(query.steps);
       if (query.op == Op.EXISTS) {
         // Translate "exists ..." as if they had written
         // "Relational.nonEmpty (from ...)"
-        return core.nonEmpty(typeMap.typeSystem, query.pos, coreFrom);
+        return core.nonEmpty(typeMap.typeSystem, query.pos(), coreFrom);
       } else if (query.op == Op.FORALL) {
         // Translate "forall ... require e" as if they had written
         // "not exists (from ... where not e)".
@@ -3503,7 +3507,7 @@ public class Resolver {
         // We assume that the last step is 'require e', and we know that
         // 'require e' will have been translated to the same as 'where not e'.
         checkArgument(last(query.steps).op == Op.REQUIRE);
-        return core.empty(typeMap.typeSystem, query.pos, coreFrom);
+        return core.empty(typeMap.typeSystem, query.pos(), coreFrom);
       } else if (query.isCompute()) {
         // Position the 'only' at the first 'max' or 'min' aggregate in the
         // 'compute' clause (or the whole clause if there is none), so that an
@@ -3642,7 +3646,7 @@ public class Resolver {
             core.apply(Pos.ZERO, argType, converterLit, paramRef);
         final Core.Exp applied =
             core.apply(
-                aggregate.pos, typeMap.getType(aggregate), aggFn, converted);
+                aggregate.pos(), typeMap.getType(aggregate), aggFn, converted);
         final FnType wrappedType =
             typeMap.typeSystem.fnType(
                 inputCollType, typeMap.getType(aggregate));
@@ -3650,7 +3654,7 @@ public class Resolver {
       }
       final Core.Aggregate coreAggregate =
           core.aggregate(
-              aggregate.pos,
+              aggregate.pos(),
               typeMap.getType(aggregate),
               aggFn,
               inputResolver.toCore(aggregate.argument));
@@ -3674,7 +3678,7 @@ public class Resolver {
       final FnType fnType = typeMap.typeSystem.fnType(type, type);
       Core.Aggregate coreAggregate =
           core.aggregate(
-              elements.pos,
+              elements.pos(),
               type,
               core.functionLiteral(fnType, BuiltIn.FN_ID),
               inputResolver.current);
