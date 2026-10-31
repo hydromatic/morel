@@ -20,6 +20,8 @@ package net.hydromatic.morel.compile;
 
 import static java.lang.Character.isDigit;
 import static java.util.Objects.requireNonNull;
+import static net.hydromatic.morel.parse.Parsers.rawEnd;
+import static net.hydromatic.morel.parse.Parsers.rawFenceLength;
 import static net.hydromatic.morel.util.Characters.scanNumber;
 
 import com.google.common.collect.HashMultiset;
@@ -31,8 +33,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import net.hydromatic.morel.parse.Parsers;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.ListType;
@@ -61,25 +61,11 @@ import org.jspecify.annotations.Nullable;
  * {@code a} to {@code z} and underscores, whose content is verbatim (no escape
  * processing, and newlines are real newlines), except that if the tag starts
  * with an underscore, a newline right after the opening fence is not content. A
- * raw literal is equivalent to the regular literal with the same content. Raw
- * literals are a feature of the script format, not of the Morel language;
- * {@link #toRawStrings} writes them.
+ * raw literal is equivalent to the regular literal with the same content. The
+ * printer writes raw literals (see {@link Parsers#rawLiteral}); they are not
+ * part of the Morel language.
  */
 public class OutputMatcher {
-  /**
-   * A top-level string value in a statement's output: {@code val name = "..." :
-   * string}, the literal and the type possibly wrapped onto following lines.
-   */
-  private static final Pattern TOP_LEVEL_STRING =
-      Pattern.compile(
-          "^(val \\S+ =)(\\s+)(\"(?:[^\"\\\\]|\\\\.)*\")\\s+: string$",
-          Pattern.MULTILINE);
-
-  /** Separator used when the printer wrapped a value onto the next line. */
-  private static final String WRAPPED_INDENT =
-      "\n" //
-          + "  ";
-
   private final TypeSystem typeSystem;
 
   public OutputMatcher(TypeSystem typeSystem) {
@@ -534,156 +520,6 @@ public class OutputMatcher {
       }
     }
     return -1;
-  }
-
-  // --- Raw string literals ---
-
-  /**
-   * Returns the length of the opening fence of a raw string literal starting at
-   * {@code pos}: 2 for "{|", or 2 + n for "{id|" where the tag has n
-   * characters, each a lower-case letter or underscore; or 0 if there is no raw
-   * literal there.
-   */
-  static int rawFenceLength(String s, int pos) {
-    if (pos >= s.length() || s.charAt(pos) != '{') {
-      return 0;
-    }
-    int i = pos + 1;
-    while (i < s.length() && isTagChar(s.charAt(i))) {
-      i++;
-    }
-    if (i < s.length() && s.charAt(i) == '|') {
-      return i + 1 - pos;
-    }
-    return 0;
-  }
-
-  /**
-   * Returns whether a character may appear in a raw literal's tag: a lower-case
-   * letter {@code a} to {@code z}, or an underscore.
-   */
-  static boolean isTagChar(char c) {
-    return c >= 'a' && c <= 'z' || c == '_';
-  }
-
-  /**
-   * Returns the position just after the closing fence of the raw string literal
-   * that starts at {@code pos}; if the literal is not closed, returns a
-   * position beyond the end of the string.
-   */
-  static int rawEnd(String s, int pos) {
-    final int fence = rawFenceLength(s, pos);
-    final String closing = "|" + s.substring(pos + 1, pos + fence - 1) + "}";
-    final int i = s.indexOf(closing, pos + fence);
-    return i < 0 ? s.length() + 1 : i + closing.length();
-  }
-
-  /**
-   * Rewrites the output of a statement so that each top-level string value that
-   * contains a newline, and has no space or tab before a newline, is a raw
-   * string literal.
-   *
-   * <p>A top-level string value is a line {@code val name = "..." : string},
-   * the literal and the type possibly wrapped onto following lines. It is
-   * replaced by {@code val name = {|...|} : string}, the content verbatim, its
-   * lines after the first starting at column 0, and the type following the
-   * closing fence. If the printer had wrapped the literal onto the line after
-   * {@code val name =}, the raw literal starts there too, indented by two
-   * spaces. A trailing newline in the content leaves the closing fence alone on
-   * the last line. If the content contains "|}", the fences carry the shortest
-   * identifier that does not occur in it. See {@link #rawLiteral} for the "{_|"
-   * form, whose content starts on the line after the opening fence.
-   *
-   * <p>Strings without a newline, strings with trailing whitespace on a line,
-   * and strings inside collections and records, are unchanged.
-   */
-  public static String toRawStrings(String output) {
-    final Matcher m = TOP_LEVEL_STRING.matcher(output);
-    StringBuilder b = null;
-    int last = 0;
-    while (m.find()) {
-      final String content = Parsers.unquoteString(m.group(3));
-      if (!wantsRaw(content)) {
-        continue;
-      }
-      if (b == null) {
-        b = new StringBuilder();
-      }
-      b.append(output, last, m.start())
-          .append(m.group(1))
-          // Keep the printer's layout: if it wrapped the value onto the next
-          // line, the raw literal starts on the next line too.
-          .append(m.group(2).indexOf('\n') < 0 ? " " : WRAPPED_INDENT)
-          .append(rawLiteral(content))
-          .append(" : string");
-      last = m.end();
-    }
-    if (b == null) {
-      return output;
-    }
-    return b.append(output, last, output.length()).toString();
-  }
-
-  /**
-   * Returns whether a string is written as a raw literal: it contains a
-   * newline; every other character is printable ASCII (so no tab, carriage
-   * return, control character or non-ASCII character, which would be invisible
-   * or fragile in the script, and a tab would fail the linter); and no line
-   * ends with a space (which is invisible, and easily lost by editors).
-   */
-  static boolean wantsRaw(String content) {
-    boolean newline = false;
-    for (int i = 0; i < content.length(); i++) {
-      final char c = content.charAt(i);
-      if (c == '\n') {
-        newline = true;
-        if (i > 0 && content.charAt(i - 1) == ' ') {
-          return false;
-        }
-      } else if (c < ' ' || c > '~') {
-        return false;
-      }
-    }
-    return newline;
-  }
-
-  /**
-   * Writes a string as a raw literal whose fences do not occur in it.
-   *
-   * <p>If the content's second line starts with a space, the content starts on
-   * the line after the opening fence, so that its lines line up in the script;
-   * the tag then starts with "_", which tells the reader to discard the newline
-   * after the fence: the literal reads "{_|", a newline, the content, "|_}".
-   * Otherwise the content starts right after the opening fence, "{|", and every
-   * newline in the literal is content.
-   */
-  public static String rawLiteral(String content) {
-    final boolean nextLine = startsOnNextLine(content);
-    final String prefix = nextLine ? "_" : "";
-    String tag = prefix;
-    for (int i = 1; content.contains("|" + tag + "}"); i++) {
-      tag = prefix + identifier(i);
-    }
-    return "{" + tag + "|" + (nextLine ? "\n" : "") + content + "|" + tag + "}";
-  }
-
-  /**
-   * Returns whether a raw literal's content starts on the line after the
-   * opening fence: when its second line starts with a space, so that the lines
-   * line up in the script.
-   */
-  static boolean startsOnNextLine(String content) {
-    final int i = content.indexOf('\n');
-    return i > 0 && i + 1 < content.length() && content.charAt(i + 1) == ' ';
-  }
-
-  /** Returns the i-th identifier in the sequence a, b, ..., z, aa, ab, ... */
-  private static String identifier(int i) {
-    final StringBuilder b = new StringBuilder();
-    for (; i > 0; i = (i - 1) / 26) {
-      b.append((char) ('a' + (i - 1) % 26));
-    }
-    return b.reverse().toString();
   }
 
   // --- Scanner ---

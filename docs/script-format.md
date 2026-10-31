@@ -89,10 +89,14 @@ f 2;
 
 ### Raw string literals
 
-A string value that contains a newline, and has no space or tab
-before any newline, is written as a *raw string literal*:
+A string value that contains at least as many newlines as the
+`rawStrings` property (by default 2), and has no space before any
+newline, is printed as a *raw string literal*. Scripts that print
+strings with one newline often set `rawStrings` to 1:
 
 ```
+Sys.set ("rawStrings", 1);
+> val it = () : unit
 "a\nb";
 > val it = {|a
 > b|} : string
@@ -104,11 +108,11 @@ lines after the first start at column 0 (immediately after the `> `
 prefix). A trailing newline in the content leaves the closing fence
 alone on the last line.
 
-If the content's second line starts with a space, the harness starts
+If the content's second line starts with a space, the printer starts
 the content on the line after the opening fence, so that the content's
-lines line up in the script. The tag then starts with an underscore,
-`{_|`, which is what tells the reader that the newline right after the
-opening fence is not content:
+lines line up. The tag then starts with an underscore, `{_|`, which is
+what tells the reader that the newline right after the opening fence
+is not content:
 
 ```
 "root {\n  common {\n    plan_id: 0\n  }\n}";
@@ -123,22 +127,24 @@ opening fence is not content:
 If the content contains `|}` (or `|_}`), the fences carry a longer
 tag, `{a|...|a}` or `{_a|...|_a}`. A tag consists of lower-case
 letters `a` to `z` and underscores, and starts with an underscore
-exactly when the content starts on the next line; the harness chooses
+exactly when the content starts on the next line; the printer chooses
 the shortest (`a`, `b`, ..., `z`, `aa`, ...) such that `|tag}` does
 not occur in the content.
 
-Only a top-level string value is written this way. A string inside a
+Only a top-level string value is printed this way. A string inside a
 list, record or other value keeps the regular escaped form. So does a
 string with a space before a newline (which would be invisible, and
 easily lost), or with any character that is not printable ASCII: a
 tab, a carriage return, a control character or a non-ASCII character
 would be invisible or fragile in the script, and a tab would fail the
-linter. If the printer would have wrapped the value onto
-the line after `val name =`, the raw literal starts on that line
-too, indented by two spaces.
+linter. A raw literal goes where the escaped literal would have gone:
+if the escaped literal would not fit on the line after `val name =`,
+the raw literal starts on the next line, indented by two spaces. A raw
+literal is printed in full, whatever `stringDepth` says.
 
-Raw string literals are a feature of the script format only. They
-are not part of the Morel language.
+Raw string literals are not part of the Morel language; the printer
+writes them, in the shell as in a script, and `OutputMatcher` reads
+them. If `rawStrings` is `NONE`, no string is printed raw.
 
 ### Properties that affect output
 
@@ -151,6 +157,7 @@ output deterministic or compact. The most common:
 | `printLength` | Elements of a collection printed before `...`          |
 | `printDepth`  | Nesting depth printed before `#`                       |
 | `stringDepth` | Characters of a string printed before `#`; `~1` is all |
+| `rawStrings`  | Line endings at which a string prints raw (see above)  |
 | `output`      | `"classic"` (default) or `"tabular"`                   |
 | `matchStrict` | Compare output verbatim (see below)                    |
 
@@ -251,9 +258,7 @@ equivalent": a false negative costs a regenerated line, but a false
 positive would hide a bug.
 
 The matcher does not run in strict mode, and it never alters the
-Morel language, lexer, parser or pretty-printer: the harness converts
-a multi-line string to a raw literal after the printer has produced
-the escaped form.
+Morel language, lexer, parser or pretty-printer.
 
 ## Testing the harness
 

@@ -19,6 +19,10 @@
  * Tests the "idempotent mode" for test scripts.
  *)
 
+(* Print a string with a newline as a raw literal. *)
+Sys.set ("rawStrings", 1);
+> val it = () : unit
+
 "a string";
 > val it = "a string" : string
 

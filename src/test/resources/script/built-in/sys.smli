@@ -399,6 +399,7 @@ map
 > productName          morel-java
 > productVersion       ?
 > rangeMaxLength       16777215
+> rawStrings           SOME 2
 > relationalize        false
 > scriptDirectory      ?
 > stringDepth          NONE
@@ -408,9 +409,9 @@ map
 >
 > val it : (string * string) list
 List.length (Sys.showAll ());
-> val it = 23 : int
+> val it = 24 : int
 List.length (showAll ());
-> val it = 23 : int
+> val it = 24 : int
 Sys.plan ();
 > val it =
 >   "apply(fnValue List.length, argCode apply(fnValue Sys.showAll, argCode constant([])))"
@@ -584,6 +585,44 @@ Sys.set ("stringDepth", NONE);
 > val it = () : unit
 "abcdefghij";
 > val it = "abcdefghij" : string
+
+(* "rawStrings" prints a string that contains at least that many
+ * newlines as a raw string literal. *)
+Sys.show "rawStrings";
+> val it = "SOME 2" : string
+"a\nb";
+> val it = "a\nb" : string
+"root {\n  common {\n    plan_id: 0\n  }\n}";
+> val it =
+>   {_|
+> root {
+>   common {
+>     plan_id: 0
+>   }
+> }|_} : string
+Sys.set ("rawStrings", 1);
+> val it = () : unit
+"a\nb";
+> val it = {|a
+> b|} : string
+Sys.set ("rawStrings", NONE);
+> val it = () : unit
+"root {\n  common {\n    plan_id: 0\n  }\n}";
+> val it =
+>   "root {\n  common {\n    plan_id: 0\n  }\n}"
+>   : string
+Sys.set ("rawStrings", 0);
+> val it = () : unit
+"abc";
+> val it = {|abc|} : string
+"a\tb";
+> val it = "a\tb" : string
+["a\nb"];
+> val it = ["a\nb"] : string list
+Sys.unset "rawStrings";
+> val it = () : unit
+"abc";
+> val it = "abc" : string
 
 (*) Ditto nesting, which "printDepth" elides.
 Sys.set ("printDepth", SOME 2);

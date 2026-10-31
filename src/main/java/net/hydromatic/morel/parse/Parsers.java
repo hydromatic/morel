@@ -293,6 +293,120 @@ public final class Parsers {
   }
 
   /**
+   * Returns the length of the opening fence of a raw string literal starting at
+   * {@code pos}: 2 for "{|", or 2 + n for "{id|" where the tag has n
+   * characters, each a lower-case letter or underscore; or 0 if there is no raw
+   * literal there.
+   */
+  public static int rawFenceLength(String s, int pos) {
+    if (pos >= s.length() || s.charAt(pos) != '{') {
+      return 0;
+    }
+    int i = pos + 1;
+    while (i < s.length() && isTagChar(s.charAt(i))) {
+      i++;
+    }
+    if (i < s.length() && s.charAt(i) == '|') {
+      return i + 1 - pos;
+    }
+    return 0;
+  }
+
+  /**
+   * Returns whether a character may appear in a raw literal's tag: a lower-case
+   * letter {@code a} to {@code z}, or an underscore.
+   */
+  private static boolean isTagChar(char c) {
+    return c >= 'a' && c <= 'z' || c == '_';
+  }
+
+  /**
+   * Returns the position just after the closing fence of the raw string literal
+   * that starts at {@code pos}; if the literal is not closed, returns a
+   * position beyond the end of the string.
+   */
+  public static int rawEnd(String s, int pos) {
+    final int fence = rawFenceLength(s, pos);
+    final String closing = "|" + s.substring(pos + 1, pos + fence - 1) + "}";
+    final int i = s.indexOf(closing, pos + fence);
+    return i < 0 ? s.length() + 1 : i + closing.length();
+  }
+
+  /**
+   * Returns whether a string should be written as a raw literal.
+   *
+   * <p>It should if it contains at least {@code minNewlines} newlines, and is
+   * safe to write raw: every character is a newline or printable ASCII (no tab,
+   * carriage return, control character or non-ASCII character, which would be
+   * invisible or fragile), and no newline follows a space (which would be
+   * invisible, and easily lost by editors). A space at the very end is fine,
+   * because the closing fence follows it.
+   *
+   * <p>If {@code minNewlines} is 0, a string with no newlines may be written
+   * raw; if it is negative, no string is.
+   *
+   * @param s String
+   * @param minNewlines Minimum number of newlines; negative means never
+   */
+  public static boolean shouldWriteRaw(String s, int minNewlines) {
+    if (minNewlines < 0) {
+      return false;
+    }
+    int newlineCount = 0;
+    for (int i = 0; i < s.length(); i++) {
+      final char c = s.charAt(i);
+      if (c == '\n') {
+        if (i > 0 && s.charAt(i - 1) == ' ') {
+          return false;
+        }
+        ++newlineCount;
+      } else if (c < ' ' || c > '~') {
+        return false;
+      }
+    }
+    return newlineCount >= minNewlines;
+  }
+
+  /**
+   * Writes a string as a raw literal whose fences do not occur in it.
+   *
+   * <p>If the content's second line starts with a space, the content starts on
+   * the line after the opening fence, so that its lines line up; the tag then
+   * starts with "_", which tells the reader to discard the newline after the
+   * fence: the literal reads "{_|", a newline, the content, "|_}". Otherwise
+   * the content starts right after the opening fence, "{|", and every newline
+   * in the literal is content.
+   */
+  public static String rawLiteral(String content) {
+    final boolean nextLine = startsOnNextLine(content);
+    final String prefix = nextLine ? "_" : "";
+    String tag = prefix;
+    for (int i = 1; content.contains("|" + tag + "}"); i++) {
+      tag = prefix + identifier(i);
+    }
+    return "{" + tag + "|" + (nextLine ? "\n" : "") + content + "|" + tag + "}";
+  }
+
+  /**
+   * Returns whether a raw literal's content starts on the line after the
+   * opening fence: when its second line starts with a space, so that the lines
+   * line up.
+   */
+  private static boolean startsOnNextLine(String content) {
+    final int i = content.indexOf('\n');
+    return i > 0 && i + 1 < content.length() && content.charAt(i + 1) == ' ';
+  }
+
+  /** Returns the i-th identifier in the sequence a, b, ..., z, aa, ab, ... */
+  private static String identifier(int i) {
+    final StringBuilder b = new StringBuilder();
+    for (; i > 0; i = (i - 1) / 26) {
+      b.append((char) ('a' + (i - 1) % 26));
+    }
+    return b.reverse().toString();
+  }
+
+  /**
    * Appends an identifier or label, enclosing it in back-ticks if necessary
    * (because it contains a back-tick or space, or is a reserved word).
    */

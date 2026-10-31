@@ -21,6 +21,9 @@
  *)
 Sys.set ("printLength", NONE);
 > val it = () : unit
+(* Print a string with a newline as a raw literal. *)
+Sys.set ("rawStrings", 1);
+> val it = () : unit
 
 (*) The whole structure.
 PP;

@@ -735,6 +735,83 @@ public class ShellTest {
         .assertOutput(is(expected));
   }
 
+  /**
+   * Tests the "rawStrings" property, which prints a string that contains
+   * newlines as a raw string literal.
+   */
+  @Test
+  void testRawStrings() {
+    String inputString =
+        "\"root {\\n  common {\\n    plan_id: 0\\n  }\\n}\";\n"
+            + "\"a\\nb\";\n"
+            + "\"a\\nb\\nc\";\n"
+            + "\"abc\";\n"
+            // a list of strings, and a string with a tab, are not raw
+            + "[\"a\\nb\\nc\"];\n"
+            + "\"a\\tb\\nc\\nd\";\n"
+            // a raw string ignores "stringDepth"
+            + "Sys.set (\"stringDepth\", 3);\n"
+            + "\"abcd\\nefgh\\nijkl\";\n"
+            + "Sys.unset \"stringDepth\";\n"
+            + "Sys.set (\"rawStrings\", NONE);\n"
+            + "\"a\\nb\\nc\";\n"
+            + "Sys.set (\"rawStrings\", 0);\n"
+            + "\"abc\";\n"
+            + "\"\";\n"
+            + "\"a|}b\";\n"
+            + "\"a\\tb\";\n"
+            + "Sys.set (\"rawStrings\", SOME 3);\n"
+            + "\"a\\nb\\nc\";\n"
+            + "\"a\\nb\\nc\\n\";\n"
+            // at "printDepth" 0, a raw string prints as "#", as any value does
+            + "Sys.set (\"printDepth\", 0);\n"
+            + "\"a\\nb\\nc\\n\";\n"
+            + "Sys.unset \"printDepth\";\n"
+            + "Sys.set (\"rawStrings\", ~1);\n";
+    String expected =
+        "val it = {_|\n"
+            + "root {\n"
+            + "  common {\n"
+            + "    plan_id: 0\n"
+            + "  }\n"
+            + "}|_} : string\n"
+            + "val it = \"a\\nb\" : string\n"
+            + "val it = {|a\n"
+            + "b\n"
+            + "c|} : string\n"
+            + "val it = \"abc\" : string\n"
+            + "val it = [\"a\\nb\\nc\"] : string list\n"
+            + "val it = \"a\\tb\\nc\\nd\" : string\n"
+            + "val it = () : unit\n"
+            + "val it = {|abcd\n"
+            + "efgh\n"
+            + "ijkl|} : string\n"
+            + "val it = () : unit\n"
+            + "val it = () : unit\n"
+            + "val it = \"a\\nb\\nc\" : string\n"
+            + "val it = () : unit\n"
+            + "val it = {|abc|} : string\n"
+            + "val it = {||} : string\n"
+            + "val it = {a|a|}b|a} : string\n"
+            + "val it = \"a\\tb\" : string\n"
+            + "val it = () : unit\n"
+            + "val it = \"a\\nb\\nc\" : string\n"
+            + "val it = {|a\n"
+            + "b\n"
+            + "c\n"
+            + "|} : string\n"
+            + "val it = # : unit\n"
+            + "val it = # : string\n"
+            + "val it = () : unit\n"
+            + "uncaught exception Fail [Fail: value for property 'rawStrings' "
+            + "must have type '(int check i => i >= 0) option']\n"
+            + "  raised at: stdIn:1.1-1.27\n";
+    fixture()
+        .withRaw(true)
+        .withInputString(inputString)
+        .assertOutput(is(expected));
+  }
+
   @Test
   void testPrintLength() {
     String inputString =

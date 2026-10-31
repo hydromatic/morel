@@ -284,6 +284,27 @@ public enum Prop {
           + "positive."),
 
   /**
+   * Integer option property "rawStrings" controls printing. A string value that
+   * contains at least this many newlines is printed as a raw string literal,
+   * {@code {|...|}}, rather than escaped.
+   *
+   * <p>Only a top-level string value is printed this way, and only if it would
+   * be safe and readable: not if it contains a tab, carriage return, control
+   * character or non-ASCII character, or a space before a newline. A raw string
+   * is printed in full, regardless of "stringDepth".
+   *
+   * <p>Default is {@code SOME 2}; {@code SOME 0} prints every such string raw;
+   * {@code NONE} means that strings are never printed raw.
+   */
+  RAW_STRINGS(
+      "rawStrings",
+      Kind.NON_NEGATIVE_INT_OPTION,
+      2,
+      "When printing, the number of newlines at which a string value is "
+          + "printed as a raw string literal. Must not be negative; NONE "
+          + "means that strings are never printed raw."),
+
+  /**
    * Boolean property "relationalize" is whether to convert to relational
    * algebra. Default is false.
    */

@@ -468,6 +468,7 @@ public class Compiler {
             Prop.PRINT_DEPTH.optionalIntValue(map, UNLIMITED),
             Prop.STRING_DEPTH.optionalIntValue(map, UNLIMITED),
             0,
+            UNLIMITED,
             BagPrinter.NATURAL);
     return new Code() {
       @Override
@@ -1682,6 +1683,8 @@ public class Compiler {
       Prop.Output output = Prop.OUTPUT.enumValue(map, Prop.Output.class);
       int printDepth = Prop.PRINT_DEPTH.optionalIntValue(map, UNLIMITED);
       int printLength = Prop.PRINT_LENGTH.optionalIntValue(map, UNLIMITED);
+      int rawStringMinNewlines =
+          Prop.RAW_STRINGS.optionalIntValue(map, UNLIMITED);
       return new Pretty(
           typeSystem,
           lineWidth,
@@ -1690,6 +1693,7 @@ public class Compiler {
           printDepth,
           stringDepth,
           stringFold,
+          rawStringMinNewlines,
           bagPrinter);
     }
   }

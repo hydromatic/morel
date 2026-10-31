@@ -20,6 +20,8 @@ package net.hydromatic.morel.compile;
 
 import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.parse.Parsers.appendId;
+import static net.hydromatic.morel.parse.Parsers.rawLiteral;
+import static net.hydromatic.morel.parse.Parsers.shouldWriteRaw;
 import static net.hydromatic.morel.util.Lindig.EMPTY;
 import static net.hydromatic.morel.util.Lindig.HARD_LINE;
 import static net.hydromatic.morel.util.Lindig.LINE;
@@ -69,6 +71,7 @@ class Pretty {
   private final int printDepth;
   private final int stringDepth;
   private final int stringFold;
+  private final int rawStringMinNewlines;
   private final BagPrinter bagPrinter;
 
   Pretty(
@@ -79,6 +82,7 @@ class Pretty {
       int printDepth,
       int stringDepth,
       int stringFold,
+      int rawStringMinNewlines,
       BagPrinter bagPrinter) {
     this.typeSystem = requireNonNull(typeSystem);
     this.lineWidth = lineWidth;
@@ -87,6 +91,7 @@ class Pretty {
     this.printDepth = printDepth;
     this.stringDepth = stringDepth;
     this.stringFold = stringFold;
+    this.rawStringMinNewlines = rawStringMinNewlines;
     this.bagPrinter = requireNonNull(bagPrinter);
   }
 
@@ -196,6 +201,15 @@ class Pretty {
   private StringBuilder prettyClassic(StringBuilder buf, TypedVal typedVal) {
     final StringBuilder prefix = new StringBuilder("val ");
     appendId(prefix, typedVal.name).append(" =");
+    // A string with enough newlines prints as a raw literal, in full
+    // (whatever "stringDepth" says) -- unless "printDepth" is 0, when the
+    // whole value prints as "#".
+    if (typedVal.o instanceof String
+        && typedVal.type == PrimitiveType.STRING
+        && printDepth != 0
+        && shouldWriteRaw((String) typedVal.o, rawStringMinNewlines)) {
+      return prettyRaw(buf, prefix, (String) typedVal.o);
+    }
     // The value is one level below the binding, so start at depth 1: at
     // "printDepth" 0 the whole value prints as "#", matching SML/NJ.
     final Doc valueDoc = valueDoc(typedVal.type, typedVal.o, 1);
@@ -229,6 +243,26 @@ class Pretty {
         beside(text(prefix.toString()), beside(valuePart, typePart));
     final int width = lineWidth < 0 ? Integer.MAX_VALUE : lineWidth - 1;
     return buf.append(render(width, doc));
+  }
+
+  /**
+   * Renders a string binding as a raw string literal.
+   *
+   * <p>The literal goes where {@link #prettyClassic} would put the escaped
+   * literal: after {@code val name =} if the escaped literal fits there (the
+   * type may wrap onto the next line, so it does not affect the decision),
+   * otherwise on the next line, indented by 2. The literal spans lines, so the
+   * type follows the closing fence.
+   */
+  private StringBuilder prettyRaw(
+      StringBuilder buf, CharSequence prefix, String s) {
+    final int width = lineWidth < 0 ? Integer.MAX_VALUE : lineWidth - 1;
+    final int escapedLength = Parsers.stringToString(s).length() + 2;
+    final boolean wrapped = prefix.length() + 1 + escapedLength > width;
+    return buf.append(prefix)
+        .append(wrapped ? "\n  " : " ")
+        .append(rawLiteral(s))
+        .append(" : string");
   }
 
   /**

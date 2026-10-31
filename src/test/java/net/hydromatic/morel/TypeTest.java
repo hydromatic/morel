@@ -19,6 +19,9 @@
 package net.hydromatic.morel;
 
 import static net.hydromatic.morel.compile.Resolver.subsumes;
+import static net.hydromatic.morel.parse.Parsers.rawEnd;
+import static net.hydromatic.morel.parse.Parsers.rawLiteral;
+import static net.hydromatic.morel.parse.Parsers.shouldWriteRaw;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
@@ -30,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Map;
 import net.hydromatic.morel.compile.BuiltIn;
 import net.hydromatic.morel.compile.OutputMatcher;
+import net.hydromatic.morel.parse.Parsers;
 import net.hydromatic.morel.type.FnType;
 import net.hydromatic.morel.type.ListType;
 import net.hydromatic.morel.type.PrimitiveType;
@@ -439,119 +443,61 @@ public class TypeTest {
     return String.join("\n", lines);
   }
 
-  /** Tests {@link OutputMatcher#toRawStrings}. */
+  /** Tests {@link Parsers#shouldWriteRaw} and {@link Parsers#rawLiteral}. */
   @Test
-  void testToRawStrings() {
-    // Unchanged: no newline in the string
-    assertThat(
-        OutputMatcher.toRawStrings("val it = \"ab\" : string"),
-        is("val it = \"ab\" : string"));
-    assertThat(
-        OutputMatcher.toRawStrings("val it = \"a\\\\nb\" : string"),
-        is("val it = \"a\\\\nb\" : string"));
-    // Unchanged: a space or tab before a newline
-    assertThat(
-        OutputMatcher.toRawStrings("val it = \"a \\nb\" : string"),
-        is("val it = \"a \\nb\" : string"));
-    assertThat(
-        OutputMatcher.toRawStrings("val it = \"a\\t\\nb\" : string"),
-        is("val it = \"a\\t\\nb\" : string"));
+  void testRawLiteral() {
+    // Safe: printable ASCII and newlines, including quotes and backslashes
+    assertThat(shouldWriteRaw("", 0), is(true));
+    assertThat(shouldWriteRaw("ab", 0), is(true));
+    assertThat(shouldWriteRaw(lines("say \"hi\"", "\\bye"), 0), is(true));
     // A space at the very end is visible (the fence follows it)
-    assertThat(
-        OutputMatcher.toRawStrings("val it = \"a\\nb \" : string"),
-        is(lines("val it = {|a", "b |} : string")));
-    // Unchanged: not a top-level string
-    assertThat(
-        OutputMatcher.toRawStrings("val it = [\"a\\nb\"] : string list"),
-        is("val it = [\"a\\nb\"] : string list"));
-    assertThat(
-        OutputMatcher.toRawStrings("val it = \"a\\nb\" : string variant"),
-        is("val it = \"a\\nb\" : string variant"));
-    // A newline makes a raw literal; quotes and backslashes become verbatim
-    assertThat(
-        OutputMatcher.toRawStrings("val it = \"a\\nb\" : string"),
-        is(lines("val it = {|a", "b|} : string")));
-    assertThat(
-        OutputMatcher.toRawStrings(
-            "val s = \"say \\\"hi\\\"\\n\\\\bye\" : string"),
-        is(lines("val s = {|say \"hi\"", "\\bye|} : string")));
-    // Unchanged: a tab, carriage return, control character or non-ASCII
-    // character anywhere, which would be invisible or fragile in the script
-    assertThat(
-        OutputMatcher.toRawStrings("val s = \"a\\n\\tb\" : string"),
-        is("val s = \"a\\n\\tb\" : string"));
-    assertThat(
-        OutputMatcher.toRawStrings("val s = \"a\\r\\nb\" : string"),
-        is("val s = \"a\\r\\nb\" : string"));
-    assertThat(
-        OutputMatcher.toRawStrings("val s = \"a\\^Lb\\nc\" : string"),
-        is("val s = \"a\\^Lb\\nc\" : string"));
-    assertThat(
-        OutputMatcher.toRawStrings("val s = \"a\\252\\nb\" : string"),
-        is("val s = \"a\\252\\nb\" : string"));
+    assertThat(shouldWriteRaw(lines("a", "b "), 0), is(true));
+    // Not safe: a space before a newline; a tab, carriage return, control
+    // character or non-ASCII character anywhere
+    assertThat(shouldWriteRaw(lines("a ", "b"), 0), is(false));
+    assertThat(shouldWriteRaw(lines("a\t", "b"), 0), is(false));
+    assertThat(shouldWriteRaw(lines("a", "\tb"), 0), is(false));
+    assertThat(shouldWriteRaw(lines("a\r", "b"), 0), is(false));
+    assertThat(shouldWriteRaw(lines("a\fb", "c"), 0), is(false));
+    assertThat(shouldWriteRaw(lines("a\u00aa", "b"), 0), is(false));
+    // At least "minNewlines" newlines; negative means never
+    assertThat(shouldWriteRaw(lines("a", "b"), 1), is(true));
+    assertThat(shouldWriteRaw(lines("a", "b"), 2), is(false));
+    assertThat(shouldWriteRaw(lines("a", "b", "c"), 2), is(true));
+    assertThat(shouldWriteRaw("", -1), is(false));
+    assertThat(shouldWriteRaw(lines("a", "b"), -1), is(false));
+    // Not safe, whatever the number of newlines
+    assertThat(shouldWriteRaw(lines("a ", "b", "c"), 2), is(false));
+
+    assertThat(rawLiteral("x"), is("{|x|}"));
+    assertThat(rawLiteral(""), is("{||}"));
+    assertThat(rawLiteral(lines("a", "b")), is(lines("{|a", "b|}")));
     // A trailing newline leaves the closing fence alone on the last line
-    assertThat(
-        OutputMatcher.toRawStrings("val it = \"a\\n\" : string"),
-        is(lines("val it = {|a", "|} : string")));
-    // If the printer wrapped the literal onto the next line, the raw literal
-    // starts on the next line too, indented; the type suffix may also have
-    // been wrapped, and follows the closing fence.
-    assertThat(
-        OutputMatcher.toRawStrings(
-            lines("val program =", "  \"a\\nb\" : string")),
-        is(lines("val program =", "  {|a", "b|} : string")));
-    assertThat(
-        OutputMatcher.toRawStrings(
-            lines("val program =", "  \"a\\nb\"", "  : string")),
-        is(lines("val program =", "  {|a", "b|} : string")));
-    assertThat(
-        OutputMatcher.toRawStrings(lines("val it = \"a\\nb\"", "  : string")),
-        is(lines("val it = {|a", "b|} : string")));
-    // Several bindings, and surrounding lines, in one output
-    assertThat(
-        OutputMatcher.toRawStrings(
-            lines(
-                "val a = \"x\\ny\" : string",
-                "val b = 1 : int",
-                "val c = \"p\\nq\" : string")),
-        is(
-            lines(
-                "val a = {|x",
-                "y|} : string",
-                "val b = 1 : int",
-                "val c = {|p",
-                "q|} : string")));
+    assertThat(rawLiteral(lines("a", "")), is(lines("{|a", "|}")));
     // The fences carry an identifier if the content contains "|}"
-    assertThat(
-        OutputMatcher.toRawStrings("val it = \"a|}\\nb\" : string"),
-        is(lines("val it = {a|a|}", "b|a} : string")));
-    assertThat(
-        OutputMatcher.toRawStrings("val it = \"|}|a}\\n\" : string"),
-        is(lines("val it = {b||}|a}", "|b} : string")));
-    assertThat(OutputMatcher.rawLiteral("x"), is("{|x|}"));
+    assertThat(rawLiteral(lines("a|}", "b")), is(lines("{a|a|}", "b|a}")));
+    assertThat(rawLiteral(lines("|}|a}", "")), is(lines("{b||}|a}", "|b}")));
     // If the second line starts with a space, the content starts on the
     // line after the "{_|" fence; content that starts with a newline does
     // not need that, because a newline after "{|" is content
+    assertThat(rawLiteral(lines("a", "  b")), is(lines("{_|", "a", "  b|_}")));
+    assertThat(rawLiteral(lines("", "a")), is(lines("{|", "a|}")));
     assertThat(
-        OutputMatcher.toRawStrings("val it = \"a\\n  b\" : string"),
-        is(lines("val it = {_|", "a", "  b|_} : string")));
+        rawLiteral(lines("a", "b", "  c")), is(lines("{|a", "b", "  c|}")));
     assertThat(
-        OutputMatcher.toRawStrings("val it = \"\\na\" : string"),
-        is(lines("val it = {|", "a|} : string")));
-    assertThat(
-        OutputMatcher.toRawStrings("val it = \"a\\nb\\n  c\" : string"),
-        is(lines("val it = {|a", "b", "  c|} : string")));
-    assertThat(
-        OutputMatcher.rawLiteral(lines("a", " b")),
-        is(lines("{_|", "a", " b|_}")));
-    assertThat(
-        OutputMatcher.rawLiteral(lines("a|_}", " b")),
-        is(lines("{_a|", "a|_}", " b|_a}")));
+        rawLiteral(lines("a|_}", " b")), is(lines("{_a|", "a|_}", " b|_a}")));
     final StringBuilder b = new StringBuilder("|}");
     for (char c = 'a'; c <= 'z'; c++) {
       b.append('|').append(c).append('}');
     }
-    assertThat(OutputMatcher.rawLiteral(b.toString()), is("{aa|" + b + "|aa}"));
+    assertThat(rawLiteral(b.toString()), is("{aa|" + b + "|aa}"));
+
+    // A literal that rawLiteral writes, rawEnd reads back
+    for (String content :
+        new String[] {"", "x", lines("a|}", "b"), lines("a", " b"), "a|"}) {
+      final String literal = rawLiteral(content);
+      assertThat(rawEnd(literal, 0), is(literal.length()));
+    }
   }
 }
 

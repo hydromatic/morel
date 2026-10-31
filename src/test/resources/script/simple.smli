@@ -20,6 +20,9 @@ Sys.set ("lineWidth", 78);
 > val it = () : unit
 Sys.set ("printDepth", 6);
 > val it = () : unit
+(* Print a string with a newline as a raw literal. *)
+Sys.set ("rawStrings", 1);
+> val it = () : unit
 
 (* Literals ------------------------------------------------------- *)
 

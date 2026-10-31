@@ -733,6 +733,7 @@ and unset using `Sys.unset name`.
 | productName          | string | morel-java | Name of the Morel product. |
 | productVersion       | string | 0.9.0   | Current version of Morel. |
 | rangeMaxLength       | IntInf.int | 16777215 | Largest number of values that expanding a range may produce. Must be positive. |
+| rawStrings           | int option | 2   | When printing, the number of newlines at which a string value is printed as a raw string literal. Must not be negative; NONE means that strings are never printed raw. |
 | relationalize        | bool   | false   | Whether to convert to relational algebra. |
 | scriptDirectory      | file   |         | Path of the directory where the 'use' command looks for scripts. When running a script, it is generally set to the directory that contains the script. |
 | stringDepth          | int option | 70  | When printing, the length of strings at which ellipsis begins. Must not be negative; NONE means that strings are printed in full. |

@@ -33,6 +33,9 @@ Sys.set ("output", "tabular");
 > val it = () : unit
 Sys.set ("stringDepth", NONE);
 > val it = () : unit
+(* Print a string with a newline as a raw literal. *)
+Sys.set ("rawStrings", 1);
+> val it = () : unit
 useSilently "scott.smli";
 > [opening scott.smli]
 > val it = () : unit
