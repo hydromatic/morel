@@ -37,6 +37,7 @@ import net.hydromatic.morel.compile.Inliner;
 import net.hydromatic.morel.compile.Resolver;
 import net.hydromatic.morel.compile.TypeResolver;
 import net.hydromatic.morel.eval.Applicable;
+import net.hydromatic.morel.eval.Applicable1;
 import net.hydromatic.morel.eval.Code;
 import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.eval.Session;
@@ -411,10 +412,18 @@ public class CalciteFunctions {
           this.compiled != null
               ? this.compiled
               : new Compiled(morelArgTypeJson, typeFactory, cx.typeSystem);
-      final Applicable fn = (Applicable) closure;
       final Stack stack = requireNonNull(THREAD_STACK.get());
       final Object o = compiled.converter.apply(arg);
-      return fn.apply(stack, o);
+      if (closure instanceof Applicable) {
+        return ((Applicable) closure).apply(stack, o);
+      }
+      // A curried built-in applied to one argument is an Applicable1, which
+      // is not an Applicable: it needs no stack, because it has nowhere to
+      // put one. `String.isPrefix "S"` is one.
+      @SuppressWarnings("unchecked")
+      final Applicable1<Object, Object> fn1 =
+          (Applicable1<Object, Object>) closure;
+      return fn1.apply(o);
     }
 
     /** Compiled state. */

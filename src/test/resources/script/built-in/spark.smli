@@ -1,0 +1,85 @@
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *
+ * Tests for the Spark structure, using the offline connection, whose
+ * catalog is the session's foreign data sets.
+ *)
+Spark;
+> val it =
+>   {catalog=fn,close=fn,connect=fn,connectDefault=fn,execute=fn,prepare=fn,
+>    remote=fn,toString=fn,using=fn}
+>   : {catalog:connection -> {...}, close:connection -> unit,
+>       connect:string -> {catalog:{...}, connection:connection},
+>       connectDefault:unit -> {catalog:{...}, connection:connection},
+>       execute:('a,'b) plan * 'a -> 'b,
+>       prepare:connection * ('c -> 'd) -> ('c,'d) plan,
+>       remote:connection * ('e -> 'f) -> 'e -> 'f,
+>       toString:('g,'h) plan -> string,
+>       using:(connection * 'i -> 'j) -> 'i -> 'j}
+
+(*) The offline connection. Its catalog has one database, scott.
+val spark = Spark.connect "mock:";
+> val spark = {catalog={},connection=<connection mock:>}
+>   : {catalog:{...}, connection:connection, ...}
+spark.catalog;
+> val it = {} : {...}
+
+(*) Browsing the catalog discovers a database's tables, then a table's type.
+spark.catalog.scott;
+> uncaught exception Spark [Spark: SCHEMA_NOT_FOUND: Database scott not found]
+>   raised at: 0.0-0.0
+spark.catalog.scott.depts;
+> uncaught exception Spark [Spark: SCHEMA_NOT_FOUND: Database scott not found]
+>   raised at: 0.0-0.0
+spark;
+> val it = {catalog={},connection=<connection mock:>}
+>   : {catalog:{...}, connection:connection, ...}
+
+(*) A table is a bag of records, and can be queried.
+from e in spark.catalog.scott.emps
+  where e.sal > decimal "2500"
+  yield {e.ename, e.sal};
+> uncaught exception Spark [Spark: SCHEMA_NOT_FOUND: Database scott not found]
+>   raised at: 0.0-0.0
+from d in spark.catalog.scott.depts
+  join e in spark.catalog.scott.emps on d.deptno = e.deptno
+  group d.dname compute {c = count over ()}
+  order dname;
+> uncaught exception Spark [Spark: SCHEMA_NOT_FOUND: Database scott not found]
+>   raised at: 0.0-0.0
+
+(*) The connection itself, and its catalog bound to a name.
+val c = spark.connection;
+> val c = <connection mock:> : connection
+val catalog = c.catalog ();
+> val catalog = {} : {...}
+catalog.scott.salgrades;
+> stdIn:1.1-1.14 Error: unresolved flex record (can't tell what fields there are besides #salgrades)
+>   raised at: stdIn:1.1-1.14
+
+(* Closing the connection. A later use raises Spark, even when the use
+ * is the discovery of a catalog field during type resolution. *)
+c.close ();
+> val it = () : unit
+c.close ();
+> val it = () : unit
+catalog.foodmart.sales_fact_1997;
+> stdIn:1.1-1.17 Error: unresolved flex record (can't tell what fields there are besides #sales_fact_1997)
+>   raised at: stdIn:1.1-1.17
+
+(*) End spark.smli

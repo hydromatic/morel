@@ -75,6 +75,8 @@ import net.hydromatic.morel.eval.Decimals;
 import net.hydromatic.morel.eval.Prop;
 import net.hydromatic.morel.eval.Session;
 import net.hydromatic.morel.eval.Unit;
+import net.hydromatic.morel.foreign.PreparedPlan;
+import net.hydromatic.morel.foreign.SparkBackend;
 import net.hydromatic.morel.type.AliasType;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.DataType;
@@ -1281,6 +1283,18 @@ public class Resolver {
       if (recordSelector.safe) {
         return toCoreSafeNav(apply, recordSelector, coreArg, type);
       }
+      if (!(coreArg.type instanceof RecordLikeType)) {
+        // A field of something whose record type was never settled: the
+        // parameter of `fn r => r.x`, where nothing says what else r has.
+        // Type resolution says so where it can; where it cannot, saying it
+        // here is better than casting and failing.
+        throw new CompileException(
+            "unresolved flex record (can't tell what fields there are besides #"
+                + recordSelector.name
+                + ")",
+            false,
+            apply.pos());
+      }
       RecordLikeType recordType = (RecordLikeType) coreArg.type;
       if (coreArg.type.isProgressive()) {
         Object o = valueOf(env, coreArg);
@@ -1339,7 +1353,165 @@ public class Resolver {
               ? coreArg.unparsePlan(typeMap.typeSystem, width)
               : coreArg.unparseRenumbered(typeMap.typeSystem, width, true));
     }
-    return core.apply(apply.pos(), type, coreFn, coreArg);
+    final Core.Exp apply2 = core.apply(apply.pos(), type, coreFn, coreArg);
+    if (isBuiltIn(coreFn, BuiltIn.SPARK_PREPARE)) {
+      return core.valueLiteral(apply2, prepare(apply, coreArg));
+    }
+    if (isBuiltIn(coreFn, BuiltIn.SPARK_REMOTE)) {
+      // `remote (c, f)` is `prepare` and `execute` in one step, so it is
+      // expanded here too, and its value is a function that runs the plan.
+      return core.valueLiteral(
+          apply2, Codes.sparkRemote(prepare(apply, coreArg), apply.pos()));
+    }
+    return apply2;
+  }
+
+  /**
+   * Returns whether a function takes a connection and a function, which is what
+   * the two intrinsics of the {@code Spark} structure take.
+   */
+  private static boolean takesConnectionAndFunction(FnType fnType) {
+    if (!(fnType.paramType instanceof TupleType)) {
+      return false;
+    }
+    final List<Type> argTypes = ((TupleType) fnType.paramType).argTypes;
+    return argTypes.size() == 2
+        && argTypes.get(0) instanceof DataType
+        && ((DataType) argTypes.get(0))
+            .name.equals(BuiltIn.Eqtype.CONNECTION.mlName())
+        && argTypes.get(1) instanceof FnType;
+  }
+
+  /**
+   * Prepares {@code (c, f)}: translates f for connection c, and returns the
+   * plan, which becomes a literal, so that a query is translated once, here,
+   * rather than each time its plan is used.
+   *
+   * <p>Expanded here for the reason {@code Sys.planOf} is: the argument's Core
+   * is to hand and is the tree the resolver built. The one thing the translator
+   * needs that the resolver has not yet done is inlining, because until a
+   * built-in is a function literal the translator cannot see which function a
+   * call is to; one pass is enough, and is what the compiler would do first
+   * anyway.
+   */
+  private PreparedPlan prepare(Ast.Apply apply, Core.Exp coreArg) {
+    if (coreArg.op != Op.TUPLE || ((Core.Tuple) coreArg).args.size() != 2) {
+      throw new CompileException(
+          "prepare expects a connection and a function", false, apply.pos());
+    }
+    final Core.Exp fn = ((Core.Tuple) coreArg).args.get(1);
+    final Core.Exp inlined =
+        fn.accept(Inliner.of(typeMap.typeSystem, env, null));
+    final Core.Rel[] rels = {null};
+    inlined.accept(
+        new Visitor() {
+          @Override
+          protected void visitRel(Core.Rel rel) {
+            if (rels[0] == null) {
+              rels[0] = rel;
+            }
+          }
+        });
+    // A query with no step but the scan -- `from e in emps` -- has no
+    // relational node in it, because it is the collection it reads; such a
+    // query is the collection.
+    final Core.Exp body =
+        inlined.op == Op.FN ? ((Core.Fn) inlined).exp : inlined;
+    final Core.Exp query =
+        rels[0] != null ? rels[0] : body.type.isCollection() ? body : null;
+    if (query == null) {
+      // Phase 1 prepares a query and nothing else; a function whose body is
+      // not relational has no plan.
+      // Raised as the translator raises its own refusals, so that every
+      // reason a plan cannot be prepared reads alike.
+      throw new SparkBackend.SparkException(
+          "UNSUPPORTED", "Spark cannot do a function that is not a query");
+    }
+    // The plan runs on the connection it was prepared for, so the plan holds
+    // it; and it computes a value of the type the program was typed against,
+    // so it holds that too.
+    final Object connection = valueOf(env, ((Core.Tuple) coreArg).args.get(0));
+    if (!(connection instanceof SparkBackend.Connection)) {
+      throw new SparkBackend.SparkException(
+          "UNSUPPORTED",
+          "Spark cannot see which connection to prepare on; bind the"
+              + " connection to a name");
+    }
+    final Type resultType = ((FnType) fn.type).resultType;
+    final boolean collection = resultType.isCollection();
+    return new PreparedPlan(
+        (SparkBackend.Connection) connection,
+        typeMap.typeSystem,
+        sourced(query),
+        parameters(inlined),
+        collection ? resultType.arg(0) : resultType,
+        collection);
+  }
+
+  /**
+   * Replaces each collection a query reads with the value it denotes, so that
+   * the translator can see what it is.
+   *
+   * <p>A query names its sources -- {@code spark.catalog.scott.emps}, {@code
+   * scott.emps}, {@code rates} -- and what crosses to Spark depends on what
+   * each one is, not on what it is called: a table of a connection's catalog is
+   * a table scan, and every other collection is rows to send. Only the
+   * environment knows which, and this is where the environment still reaches
+   * the plan; by the time the translator runs, the names are all it would have.
+   *
+   * <p>A name the environment cannot value is left as it is -- a plan's own
+   * parameter, for one, which has no value until it is executed -- and the
+   * translator refuses what it cannot read.
+   */
+  private Core.Exp sourced(Core.Exp query) {
+    return query.accept(
+        new Shuttle(typeMap.typeSystem) {
+          @Override
+          protected Core.Exp visit(Core.Apply apply) {
+            if (apply.type.isCollection()
+                && apply.fn.op == Op.RECORD_SELECTOR) {
+              final @Nullable Object value = valueOf(env, apply);
+              if (value != null) {
+                return core.valueLiteral(apply, value);
+              }
+            }
+            return super.visit(apply);
+          }
+        });
+  }
+
+  /**
+   * Returns the parameters of the function a plan was prepared from, in the
+   * order the argument holds them; empty if it has none.
+   *
+   * <p>A function of unit has a parameter in the tree but none to pass, which
+   * is the same thing as none. A function of several arguments is a function of
+   * a tuple, which the core destructures -- {@code fn (d, j) => e} is {@code fn
+   * v => case v of (d, j) => e} -- so its parameters are the names that case
+   * binds, and the argument's components answer to them one for one.
+   */
+  private static List<Core.IdPat> parameters(Core.Exp fn) {
+    if (fn.op != Op.FN) {
+      return ImmutableList.of();
+    }
+    final Core.Fn fn2 = (Core.Fn) fn;
+    if (fn2.idPat.type == PrimitiveType.UNIT) {
+      return ImmutableList.of();
+    }
+    if (fn2.exp.op == Op.CASE) {
+      final Core.Case case_ = (Core.Case) fn2.exp;
+      if (case_.exp.op == Op.ID
+          && ((Core.Id) case_.exp).idPat.equals(fn2.idPat)
+          && case_.matchList.size() == 1
+          && case_.matchList.get(0).pat.op == Op.TUPLE_PAT) {
+        final List<Core.Pat> pats =
+            ((Core.TuplePat) case_.matchList.get(0).pat).args;
+        if (pats.stream().allMatch(pat -> pat.op == Op.ID_PAT)) {
+          return transformEager(pats, pat -> (Core.IdPat) pat);
+        }
+      }
+    }
+    return ImmutableList.of(fn2.idPat);
   }
 
   /**
@@ -1378,10 +1550,15 @@ public class Resolver {
     // Ask only where the answer could be yes. `valueOf` walks into a record
     // to read a field, and a query's binder has no value to read: `intFn.f 1`
     // is a selector application too, and looking that one up walks off the
-    // end of a placeholder row. The result type is enough of a filter,
-    // because the built-ins reached this way return a string.
-    if (!(exp.type instanceof FnType)
-        || ((FnType) exp.type).resultType != PrimitiveType.STRING) {
+    // end of a placeholder row. The type is enough of a filter: the built-ins
+    // reached this way either return a string, as `Sys.planOf` does, or take a
+    // connection and a function, as `Spark.prepare` and `Spark.remote` do.
+    if (!(exp.type instanceof FnType)) {
+      return false;
+    }
+    final FnType fnType = (FnType) exp.type;
+    if (fnType.resultType != PrimitiveType.STRING
+        && !takesConnectionAndFunction(fnType)) {
       return false;
     }
     final @Nullable Object o = valueOf(env, exp);

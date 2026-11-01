@@ -994,6 +994,30 @@ public class Core {
     }
 
     /**
+     * Returns the expression a value literal was derived from, or null if this
+     * is not a value literal.
+     *
+     * <p>A value remembers where it came from, and sometimes only the
+     * expression has what a reader needs: the name of a table, say, which the
+     * rows the value holds do not say.
+     */
+    public @Nullable Exp valueExp() {
+      return op == Op.VALUE_LITERAL ? ((Wrapper) value).exp : null;
+    }
+
+    /**
+     * Returns what a value literal holds, as it holds it, or null if this is
+     * not a value literal.
+     *
+     * <p>Unlike {@link #unwrap}, this converts nothing and fetches nothing: a
+     * caller that must know what kind of value it has, before asking the value
+     * for anything, can only ask this.
+     */
+    public @Nullable Object valueObject() {
+      return op == Op.VALUE_LITERAL ? ((Wrapper) value).o : null;
+    }
+
+    /**
      * Returns the value of this literal as a given class, or throws {@link
      * ClassCastException}. If the class is not {@link Comparable}, the value
      * will be in a wrapper.

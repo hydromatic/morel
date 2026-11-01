@@ -88,6 +88,9 @@ public abstract class Environments {
     if (SKIP) {
       return environment;
     }
+    if (session != null) {
+      session.foreignValues = ImmutableMap.copyOf(valueMap);
+    }
     final List<Binding> bindings = new ArrayList<>();
     BuiltIn.dataTypes(typeSystem, bindings);
     final Predicate<String> excludeStructure;

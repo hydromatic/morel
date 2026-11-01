@@ -163,6 +163,23 @@ output deterministic or compact. The most common:
 
 `Sys.unset` restores a property's default.
 
+### Skipping a script
+
+A script whose header has a line
+
+```
+(*) requires: <condition>
+```
+
+runs only when the condition holds, and is otherwise reported as
+skipped. Several conditions, separated by spaces, must all hold. The
+conditions are `spark-adapter` (the Spark adapter is on
+the class path, which needs JDK 17 or later), `no-spark-adapter` (it
+is not), and `spark` (a live Spark Connect server: the system property
+`morel.spark` is set and `SPARK_REMOTE` names the server; the harness
+then binds `spark` to a connection to it, as `Spark.connect` would
+return, and closes it after the script).
+
 ## The harness
 
 `Main`, run in idempotent mode, is the harness. It reads the script,

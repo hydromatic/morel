@@ -401,6 +401,10 @@ class Pretty {
           return text(String.valueOf(value));
       }
     }
+    if (value instanceof TypedValue) {
+      // A table in a catalog: print "<relation>" rather than fetch its rows.
+      return text(RelList.RELATION);
+    }
     final List<Object> list = toList(value);
     if (dataType.name.equals("vector")) {
       return beside(

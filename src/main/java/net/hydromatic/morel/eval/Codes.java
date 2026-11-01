@@ -54,11 +54,15 @@ import net.hydromatic.morel.eval.code.OptionCodes;
 import net.hydromatic.morel.eval.code.RangeCodes;
 import net.hydromatic.morel.eval.code.RealCodes;
 import net.hydromatic.morel.eval.code.RelationalCodes;
+import net.hydromatic.morel.eval.code.SparkCodes;
 import net.hydromatic.morel.eval.code.StringCodes;
 import net.hydromatic.morel.eval.code.SysCodes;
 import net.hydromatic.morel.eval.code.VectorCodes;
 import net.hydromatic.morel.eval.code.WordCodes;
+import net.hydromatic.morel.foreign.PreparedPlan;
 import net.hydromatic.morel.foreign.RelList;
+import net.hydromatic.morel.foreign.SparkBackend;
+import net.hydromatic.morel.foreign.SparkConnections;
 import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
@@ -566,6 +570,7 @@ public abstract class Codes {
     RelationalCodes.register(b::add);
     RangeCodes.register(b::add);
     SysCodes.register(b::add);
+    SparkCodes.register(b::add);
     GeneralCodes.register(b::add);
     // lint: sort until '#}' where '##b\.add\(BuiltIn' erase 'b\.'
     b.add(BuiltIn.BAG_NIL, ImmutableList.of());
@@ -614,6 +619,54 @@ public abstract class Codes {
 
   public static StringBuilder appendFloat(StringBuilder buf, float f) {
     return buf.append(realToString(f));
+  }
+
+  /**
+   * Returns the function that {@code Spark.remote} is: one that executes a
+   * prepared plan.
+   */
+  public static Applicable1 sparkRemote(PreparedPlan plan, Pos pos) {
+    return SparkCodes.remote(plan, pos);
+  }
+
+  /**
+   * Converts an error from Spark into a Morel exception.
+   *
+   * <p>A failure that local evaluation has a name for raises the exception it
+   * raises locally, so that a query fails the same way wherever it ran; see
+   * {@link #morelExn}. Everything else raises {@code Spark}, carrying Spark's
+   * error class and message.
+   */
+  public static MorelRuntimeException sparkException(
+      SparkBackend.SparkException e, Pos pos) {
+    final @Nullable BuiltInExn exn = morelExn(e.errorClass);
+    if (exn != null) {
+      return new MorelRuntimeException(exn, pos);
+    }
+    return new MorelRuntimeException(
+        BuiltInExn.SPARK, SparkConnections.payload(e), pos);
+  }
+
+  /**
+   * Returns the Morel exception that a Spark error class means, or null if
+   * Morel has no name for it.
+   *
+   * <p>Only a failure of the computation maps: dividing by zero is `Div`
+   * whether Spark noticed it or Morel did. A failure of the connection, or of
+   * the catalog, has no local counterpart and stays `Spark`.
+   */
+  public static @Nullable BuiltInExn morelExn(String errorClass) {
+    switch (errorClass) {
+      case "DIVIDE_BY_ZERO":
+      case "INTERVAL_DIVIDED_BY_ZERO":
+        return BuiltInExn.DIV;
+      case "ARITHMETIC_OVERFLOW":
+      case "CAST_OVERFLOW":
+      case "BINARY_ARITHMETIC_OVERFLOW":
+        return BuiltInExn.OVERFLOW;
+      default:
+        return null;
+    }
   }
 
   /**
@@ -815,6 +868,12 @@ public abstract class Codes {
 
     @Override
     public Describer describe(Describer describer) {
+      if (value instanceof PreparedPlan) {
+        // A plan is a value like any other, but a description that said
+        // "constant" and left it at that would hide the only thing anyone
+        // reads a plan description for.
+        return describer.start("spark", ((PreparedPlan) value)::describe);
+      }
       return describer.start("constant", d -> d.arg("", value));
     }
 

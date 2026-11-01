@@ -33,6 +33,7 @@ import net.hydromatic.morel.compile.BagPrinter;
 import net.hydromatic.morel.compile.CompileException;
 import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.compile.NameGenerator;
+import net.hydromatic.morel.foreign.ForeignValue;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.ColorScheme;
 import net.hydromatic.morel.util.MorelException;
@@ -79,6 +80,12 @@ public class Session {
   public Core.@Nullable Decl coreDecl;
   /** The compile environment of the previous command, for re-planning. */
   public @Nullable Environment environment;
+
+  /**
+   * The foreign data sets bound in this session's environment, by name. The
+   * offline Spark connection's catalog is made of these.
+   */
+  public Map<String, ForeignValue> foreignValues = ImmutableMap.of();
   /** Property values. */
   public final Map<Prop, Object> map;
 

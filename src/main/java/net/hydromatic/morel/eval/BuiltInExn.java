@@ -47,6 +47,7 @@ public enum BuiltInExn {
   OVERFLOW("General", BuiltIn.Constructor.EXN_OVERFLOW, "overflow"),
   SIZE("General", BuiltIn.Constructor.EXN_SIZE, "size"),
   SPAN("General", BuiltIn.Constructor.EXN_SPAN, null),
+  SPARK("Spark", BuiltIn.Constructor.EXN_SPARK, null),
   SUBSCRIPT(
       "General", BuiltIn.Constructor.EXN_SUBSCRIPT, "subscript out of bounds"),
   TIME("Time", BuiltIn.Constructor.EXN_TIME, null),

@@ -4479,6 +4479,155 @@ public enum BuiltIn {
       ts -> ts.forallType(1, h -> ts.fnType(h.collection(0), h.get(0)))),
 
   /**
+   * Function "Spark.catalog", of type "connection &rarr; {...}".
+   *
+   * <p>"catalog c" returns the root of the catalog of connection c: a
+   * progressively typed record whose fields are databases, whose fields in turn
+   * are tables, each a bag of records.
+   */
+  SPARK_CATALOG(
+      "Spark",
+      "catalog",
+      true,
+      ts -> ts.fnType(ts.lookup(Eqtype.CONNECTION), progressiveUnit(ts))),
+
+  /**
+   * Function "Spark.close", of type "connection &rarr; unit".
+   *
+   * <p>"close c" closes connection c. Any later use of it raises {@code Spark}.
+   */
+  SPARK_CLOSE(
+      "Spark",
+      "close",
+      true,
+      ts -> ts.fnType(ts.lookup(Eqtype.CONNECTION), UNIT)),
+
+  /**
+   * Function "Spark.connect", of type "string &rarr; {catalog: {...},
+   * connection: connection}".
+   *
+   * <p>"connect uri" opens a connection to the Spark Connect server at uri
+   * (such as "sc://localhost:15002"), or the offline connection whose catalog
+   * is the session's foreign data sets if uri is "mock:". Returns a record
+   * whose "connection" field is the connection and whose "catalog" field is the
+   * root of its catalog.
+   */
+  SPARK_CONNECT(
+      "Spark", "connect", ts -> ts.fnType(STRING, connectionRecord(ts))),
+
+  /**
+   * Function "Spark.connectDefault", of type "unit &rarr; {catalog: {...},
+   * connection: connection}".
+   *
+   * <p>"connectDefault ()" opens a connection to the server named by the
+   * SPARK_REMOTE environment variable, as "connect" does.
+   */
+  SPARK_CONNECT_DEFAULT(
+      "Spark", "connectDefault", ts -> ts.fnType(UNIT, connectionRecord(ts))),
+
+  /**
+   * Function "Spark.execute", of type "(&alpha;, &beta;) plan * &alpha; &rarr;
+   * &beta;".
+   *
+   * <p>"execute (p, a)" runs plan p on its connection, with argument a, and
+   * returns what it computes.
+   */
+  SPARK_EXECUTE(
+      "Spark",
+      "execute",
+      true,
+      ts ->
+          ts.forallType(
+              2,
+              h ->
+                  ts.fnType(
+                      ts.tupleType(planType(ts, h.get(0), h.get(1)), h.get(0)),
+                      h.get(1)))),
+
+  /**
+   * Function "Spark.prepare", of type "connection * (&alpha; &rarr; &beta;)
+   * &rarr; (&alpha;, &beta;) plan".
+   *
+   * <p>"prepare (c, f)" translates f into a plan that computes the same
+   * function on connection c.
+   *
+   * <p>It is an intrinsic: it reads the parse tree of f rather than evaluating
+   * it, and is expanded where it is resolved, as {@link #SYS_PLAN_OF} is; see
+   * {@code Resolver.toCore(Ast.Apply)}.
+   */
+  SPARK_PREPARE(
+      "Spark",
+      "prepare",
+      true,
+      ts ->
+          ts.forallType(
+              2,
+              h ->
+                  ts.fnType(
+                      ts.tupleType(
+                          ts.lookup(Eqtype.CONNECTION),
+                          ts.fnType(h.get(0), h.get(1))),
+                      planType(ts, h.get(0), h.get(1))))),
+
+  /**
+   * Function "Spark.remote", of type "connection * (&alpha; &rarr; &beta;)
+   * &rarr; &alpha; &rarr; &beta;".
+   *
+   * <p>"remote (c, f)" is f prepared on connection c and executed there: a
+   * function of the same type as f that computes what f computes.
+   *
+   * <p>Like {@link #SPARK_PREPARE}, which it is built on, it is an intrinsic,
+   * and reads the parse tree of f rather than evaluating it.
+   */
+  SPARK_REMOTE(
+      "Spark",
+      "remote",
+      true,
+      ts ->
+          ts.forallType(
+              2,
+              h ->
+                  ts.fnType(
+                      ts.tupleType(
+                          ts.lookup(Eqtype.CONNECTION),
+                          ts.fnType(h.get(0), h.get(1))),
+                      ts.fnType(h.get(0), h.get(1))))),
+
+  /**
+   * Function "Spark.toString", of type "(&alpha;, &beta;) plan &rarr; string".
+   *
+   * <p>"toString p" is the plan as text, in Spark's protobuf text format.
+   */
+  SPARK_TO_STRING(
+      "Spark",
+      "toString",
+      true,
+      ts ->
+          ts.forallType(
+              2, h -> ts.fnType(planType(ts, h.get(0), h.get(1)), STRING))),
+
+  /**
+   * Function "Spark.using", of type "(connection * &alpha; &rarr; &beta;)
+   * &rarr; &alpha; &rarr; &beta;".
+   *
+   * <p>"using f" returns a function that opens the default connection, applies
+   * f to the connection and its argument, and closes the connection afterwards,
+   * whether or not f raised.
+   */
+  SPARK_USING(
+      "Spark",
+      "using",
+      ts ->
+          ts.forallType(
+              2,
+              h ->
+                  ts.fnType(
+                      ts.fnType(
+                          ts.tupleType(ts.lookup(Eqtype.CONNECTION), h.get(0)),
+                          h.get(1)),
+                      ts.fnType(h.get(0), h.get(1))))),
+
+  /**
    * Function "String.collate", of type "(char * char &rarr; order) &rarr;
    * string * string &rarr; order".
    */
@@ -5942,6 +6091,30 @@ public enum BuiltIn {
     ALIASES = aliasBuilder.build();
   }
 
+  /** Returns the type "{...}", a progressive record with no known fields. */
+  private static Type progressiveUnit(TypeSystem ts) {
+    return ts.progressiveRecordType(
+        ImmutableSortedMap.<String, Type>orderedBy(RecordType.ORDERING)
+            .build());
+  }
+
+  /**
+   * Returns the type "{catalog: {...}, connection: connection}" that {@code
+   * Spark.connect} returns.
+   */
+  private static Type connectionRecord(TypeSystem ts) {
+    return ts.recordType(
+        ImmutableSortedMap.<String, Type>orderedBy(RecordType.ORDERING)
+            .put("catalog", progressiveUnit(ts))
+            .put("connection", ts.lookup(Eqtype.CONNECTION))
+            .build());
+  }
+
+  /** Returns the type "(&alpha;, &beta;) plan". */
+  private static Type planType(TypeSystem ts, Type argType, Type resultType) {
+    return ts.apply(ts.lookup(Eqtype.PLAN), argType, resultType);
+  }
+
   BuiltIn(
       String structure,
       String mlName,
@@ -6542,9 +6715,17 @@ public enum BuiltIn {
      * back as a bag. Internal, and named so that no program can write it.
      */
     COLLECTION("$collection", 1),
+    /** A connection to Spark; see the {@code Spark} structure. */
+    CONNECTION("connection", 0),
     DATE("date", 0),
     DECIMAL("decimal", 0),
     LIST("list", 1),
+    /**
+     * A query translated for a connection; see the {@code Spark} structure. The
+     * parameters are phantom: they record what the plan takes and computes, and
+     * a plan holds neither.
+     */
+    PLAN("plan", 2),
     TIME("time", 0),
     VECTOR("vector", 1);
 
@@ -6626,6 +6807,16 @@ public enum BuiltIn {
     EXN_OVERFLOW(Datatype.EXN, "Overflow"),
     EXN_SIZE(Datatype.EXN, "Size"),
     EXN_SPAN(Datatype.EXN, "Span"),
+    EXN_SPARK(
+        Datatype.EXN,
+        "Spark",
+        h ->
+            Keys.record(
+                ImmutableSortedMap.<String, Type.Key>orderedBy(
+                        RecordType.ORDERING)
+                    .put("errorClass", STRING.key())
+                    .put("message", STRING.key())
+                    .build())),
     EXN_SUBSCRIPT(Datatype.EXN, "Subscript"),
     EXN_TIME(Datatype.EXN, "Time"),
     EXN_UNEQUAL_LENGTHS(Datatype.EXN, "UnequalLengths"),
