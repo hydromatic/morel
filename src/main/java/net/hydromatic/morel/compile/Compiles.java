@@ -34,10 +34,12 @@ import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.ast.Op;
 import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.ast.Visitor;
+import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.eval.Prop;
 import net.hydromatic.morel.eval.Session;
 import net.hydromatic.morel.foreign.Calcite;
 import net.hydromatic.morel.foreign.ForeignValue;
+import net.hydromatic.morel.foreign.SparkBackend;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.PrimitiveType;
@@ -77,14 +79,154 @@ public abstract class Compiles {
       @Nullable Calcite calcite,
       Consumer<CompileException> warningConsumer,
       Tracer tracer) {
-    Ast.Decl decl;
-    if (statement instanceof Ast.Exp) {
-      decl = toValDecl((Ast.Exp) statement);
-    } else {
-      decl = (Ast.Decl) statement;
+    try {
+      return prepareStatement_(
+          typeSystem,
+          session,
+          env,
+          statement,
+          calcite,
+          warningConsumer,
+          tracer);
+    } catch (SparkBackend.SparkException e) {
+      // Every failure raises Spark, and a refusal
+      // to
+      // translate is a failure like any other: it reaches the program as the
+      // exception that every Spark failure raises, rather than as whatever a
+      // Java exception's text happens to look like.
+      throw Codes.sparkException(
+          e,
+          statement instanceof Ast.Exp
+              ? ((Ast.Exp) statement).pos()
+              : Pos.ZERO);
+    }
+  }
+
+  /** Does the work of {@link #prepareStatement}. */
+  private static CompiledStatement prepareStatement_(
+      TypeSystem typeSystem,
+      Session session,
+      Environment env,
+      AstNode statement,
+      @Nullable Calcite calcite,
+      Consumer<CompileException> warningConsumer,
+      Tracer tracer) {
+    final AstNode statement2 = pushDown(session, env, statement);
+    if (statement2 != statement) {
+      // Pushing down was asked for, and this is the query rewritten to run on
+      // Spark. A query Spark cannot do is refused where its plan is made, and
+      // what to do then is the session's choice.
+      final List<CompileException> warnings = new ArrayList<>();
+      try {
+        final CompiledStatement compiled =
+            prepareDecl(
+                typeSystem,
+                session,
+                env,
+                calcite,
+                decl(statement2),
+                warnings::add,
+                tracer);
+        warnings.forEach(warningConsumer);
+        return compiled;
+      } catch (SparkBackend.SparkException e) {
+        // The warnings of an attempt that came to nothing go with it.
+        if (!Prop.SPARK_FALLBACK.booleanValue(session.map) || !refusal(e)) {
+          throw e;
+        }
+        warningConsumer.accept(
+            new CompileException(
+                "not pushed down to Spark, so evaluated here: "
+                    + e.getMessage(),
+                true,
+                ((Ast.Exp) statement).pos()));
+      }
     }
     return prepareDecl(
-        typeSystem, session, env, calcite, decl, warningConsumer, tracer);
+        typeSystem,
+        session,
+        env,
+        calcite,
+        decl(statement),
+        warningConsumer,
+        tracer);
+  }
+
+  /** Returns a statement as a declaration, wrapping an expression in "val". */
+  private static Ast.Decl decl(AstNode statement) {
+    return statement instanceof Ast.Exp
+        ? toValDecl((Ast.Exp) statement)
+        : (Ast.Decl) statement;
+  }
+
+  /**
+   * Returns whether a Spark error is a refusal to translate, as against a
+   * failure of something else.
+   *
+   * <p>Only a refusal has a local answer that is the same answer. A query that
+   * reached the server and failed there, a connection that is not there, a null
+   * in a column that has no room for it -- none of those is an invitation to
+   * compute something else.
+   */
+  private static boolean refusal(SparkBackend.SparkException e) {
+    return e.errorClass.equals("UNSUPPORTED")
+        || e.errorClass.equals("UNSUPPORTED_TYPE");
+  }
+
+  /**
+   * Returns a statement with every query pushed down to Spark, or the statement
+   * itself if the session is not asking for that.
+   *
+   * <p>A query becomes {@code (spark.connection.remote (fn () => e)) ()}. A
+   * declaration is left alone, because the names a session binds are its own,
+   * and so is a call to {@code Sys}, which configures the session rather than
+   * asking a question.
+   *
+   * <p>Every statement passes here, whichever way Morel was started, so the
+   * property means the same in a shell, a script and {@code --eval}.
+   */
+  private static AstNode pushDown(
+      Session session, Environment env, AstNode statement) {
+    if (!Prop.SPARK_PUSH_DOWN.booleanValue(session.map)
+        || !isQuery(statement)) {
+      return statement;
+    }
+    final Ast.Exp query = (Ast.Exp) statement;
+    if (env.getTop("spark") == null) {
+      // Pushing down needs a connection, and the rewrite would name one that
+      // is not there; "unbound variable spark" would not say why.
+      throw new CompileException(
+          "sparkPushDown is set, but no connection is bound as 'spark';"
+              + " start Morel with --spark, or bind one with"
+              + " 'val spark = Spark.connect uri'",
+          false,
+          query.pos());
+    }
+    // Built as a tree rather than as text, because writing a query out and
+    // parsing it again is not faithful: a nested query loses its parentheses,
+    // and the step after it is read as the subquery's own.
+    final Pos pos = query.pos();
+    final Ast.Exp connection =
+        ast.apply(ast.recordSelector(pos, "connection"), ast.id(pos, "spark"));
+    final Ast.Exp remote =
+        ast.apply(ast.recordSelector(pos, "remote"), ast.id(pos, "Spark"));
+    final Ast.Exp fn = ast.fn(pos, ast.match(pos, ast.tuplePat(pos), query));
+    return ast.apply(
+        ast.apply(remote, ast.tuple(pos, ImmutableList.of(connection, fn))),
+        ast.unitLiteral(pos));
+  }
+
+  /**
+   * Returns whether a statement is a query that Spark could be asked to run: a
+   * {@code from} with at least one step.
+   *
+   * <p>Everything else is left alone -- a declaration binds a name, a call to
+   * {@code Sys} configures the session, and a bare {@code from} asks for one
+   * empty row, which is not a question for a cluster.
+   */
+  private static boolean isQuery(AstNode statement) {
+    return statement instanceof Ast.From
+        && !((Ast.From) statement).steps.isEmpty();
   }
 
   /**

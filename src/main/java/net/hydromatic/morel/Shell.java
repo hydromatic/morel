@@ -58,6 +58,7 @@ import net.hydromatic.morel.eval.Session;
 import net.hydromatic.morel.foreign.Calcite;
 import net.hydromatic.morel.foreign.DataSet;
 import net.hydromatic.morel.foreign.ForeignValue;
+import net.hydromatic.morel.foreign.SparkConnections;
 import net.hydromatic.morel.parse.MorelParseException;
 import net.hydromatic.morel.parse.MorelParserImpl;
 import net.hydromatic.morel.type.Binding;
@@ -196,6 +197,17 @@ public class Shell {
       if (arg.startsWith("--color-scheme=")) {
         c = c.withColorScheme(arg.substring("--color-scheme=".length()));
       }
+      if (arg.equals("--spark")) {
+        // The default server, whose URI SPARK_REMOTE holds.
+        c = c.withSparkUri("");
+      }
+      if (arg.startsWith("--spark=")) {
+        c = c.withSparkUri(arg.substring("--spark=".length()));
+      }
+      if (arg.equals("--no-spark")) {
+        // What omitting "--spark" does; said out loud.
+        c = c.withSparkUri(null);
+      }
     }
 
     return c.withValueMap(ImmutableMap.copyOf(valueMapBuilder));
@@ -227,8 +239,12 @@ public class Shell {
     final Map<Prop, Object> map = new LinkedHashMap<>();
     Prop.DIRECTORY.set(map, config.directory);
     Prop.SCRIPT_DIRECTORY.set(map, config.directory);
+    if (config.sparkUri != null) {
+      Prop.SPARK_PUSH_DOWN.set(map, true);
+    }
     final Session session = new Session(map, typeSystem);
-    Environment env = Environments.env(typeSystem, session, config.valueMap);
+    Environment env =
+        Environments.env(typeSystem, session, valueMap(config, typeSystem));
 
     String code = requireNonNull(config.eval);
     // Ensure the code ends with a semicolon
@@ -257,8 +273,36 @@ public class Shell {
       warningList.forEach(w -> terminal.writer().println(w.description()));
     } catch (MorelParseException | CompileException e) {
       terminal.writer().println(e.description());
+    } catch (MorelRuntimeException e) {
+      // A statement that fails while it is being compiled -- a query the
+      // Spark backend cannot translate, say -- reaches here, and is the
+      // statement's answer rather than the end of the run.
+      final StringBuilder buf = new StringBuilder();
+      session.handle(e, buf);
+      terminal.writer().println(buf);
     }
     terminal.writer().flush();
+  }
+
+  /**
+   * Returns the values to bind in the initial environment: the foreign data
+   * sets that {@code --foreign} named, and the Spark connection that {@code
+   * --spark} named, as {@code spark}.
+   *
+   * <p>Binding the connection is what makes {@code spark.catalog.scott.emps}
+   * work on the first line, and what gives {@code sparkPushDown} a connection
+   * to name.
+   */
+  private static Map<String, ForeignValue> valueMap(
+      ConfigImpl config, TypeSystem typeSystem) {
+    if (config.sparkUri == null) {
+      return config.valueMap;
+    }
+    final Map<String, ForeignValue> map = new LinkedHashMap<>(config.valueMap);
+    map.put(
+        "spark",
+        SparkConnections.binding(typeSystem, config.valueMap, config.sparkUri));
+    return map;
   }
 
   /**
@@ -424,6 +468,9 @@ public class Shell {
     if (background != null) {
       Prop.TERMINAL_BACKGROUND.set(map, background);
     }
+    if (config.sparkUri != null) {
+      Prop.SPARK_PUSH_DOWN.set(map, true);
+    }
     final Session session = new Session(map, typeSystem);
 
     final LineReaderBuilder lineReaderBuilder =
@@ -440,7 +487,8 @@ public class Shell {
     }
     LineReader lineReader = lineReaderBuilder.build();
 
-    Environment env = Environments.env(typeSystem, session, config.valueMap);
+    Environment env =
+        Environments.env(typeSystem, session, valueMap(config, typeSystem));
     final LineFn lineFn =
         new TerminalLineFn(minusPrompt, equalsPrompt, lineReader);
     final SubShell subShell =
@@ -635,6 +683,13 @@ public class Shell {
     Config withEval(@Nullable String eval);
 
     Config withColorScheme(@Nullable String colorScheme);
+
+    /**
+     * Binds the Spark Connect server at {@code sparkUri} as {@code spark}, and
+     * sets {@code sparkPushDown} so that queries run there. The empty string
+     * means the default server; null means no Spark.
+     */
+    Config withSparkUri(@Nullable String sparkUri);
   }
 
   /** Implementation of {@link Config}. */
@@ -650,6 +705,13 @@ public class Shell {
     private final @Nullable String eval;
     private final @Nullable String colorScheme;
 
+    /**
+     * URI of the Spark Connect server to bind as {@code spark}, or null for
+     * none. The empty string means the default server, from {@code
+     * SPARK_REMOTE}.
+     */
+    private final @Nullable String sparkUri;
+
     static final ConfigImpl DEFAULT =
         new ConfigImpl(
             true,
@@ -659,6 +721,7 @@ public class Shell {
             false,
             ImmutableMap.of(),
             new File(""),
+            null,
             null,
             null,
             null);
@@ -673,7 +736,8 @@ public class Shell {
         File directory,
         @Nullable String maxUseDepth,
         @Nullable String eval,
-        @Nullable String colorScheme) {
+        @Nullable String colorScheme,
+        @Nullable String sparkUri) {
       this.banner = banner;
       this.dumb = dumb;
       this.system = system;
@@ -684,6 +748,7 @@ public class Shell {
       this.maxUseDepth = maxUseDepth;
       this.eval = eval;
       this.colorScheme = colorScheme;
+      this.sparkUri = sparkUri;
     }
 
     @Override
@@ -701,7 +766,8 @@ public class Shell {
           directory,
           maxUseDepth,
           eval,
-          colorScheme);
+          colorScheme,
+          sparkUri);
     }
 
     @Override
@@ -719,7 +785,8 @@ public class Shell {
           directory,
           maxUseDepth,
           eval,
-          colorScheme);
+          colorScheme,
+          sparkUri);
     }
 
     @Override
@@ -737,7 +804,8 @@ public class Shell {
           directory,
           maxUseDepth,
           eval,
-          colorScheme);
+          colorScheme,
+          sparkUri);
     }
 
     @Override
@@ -755,7 +823,8 @@ public class Shell {
           directory,
           maxUseDepth,
           eval,
-          colorScheme);
+          colorScheme,
+          sparkUri);
     }
 
     @Override
@@ -773,7 +842,8 @@ public class Shell {
           directory,
           maxUseDepth,
           eval,
-          colorScheme);
+          colorScheme,
+          sparkUri);
     }
 
     @Override
@@ -793,7 +863,8 @@ public class Shell {
           directory,
           maxUseDepth,
           eval,
-          colorScheme);
+          colorScheme,
+          sparkUri);
     }
 
     @Override
@@ -811,7 +882,8 @@ public class Shell {
           directory,
           maxUseDepth,
           eval,
-          colorScheme);
+          colorScheme,
+          sparkUri);
     }
 
     @Override
@@ -829,7 +901,8 @@ public class Shell {
           directory,
           maxUseDepth,
           eval,
-          colorScheme);
+          colorScheme,
+          sparkUri);
     }
 
     @Override
@@ -847,7 +920,27 @@ public class Shell {
           directory,
           maxUseDepth,
           eval,
-          colorScheme);
+          colorScheme,
+          sparkUri);
+    }
+
+    @Override
+    public ConfigImpl withSparkUri(@Nullable String sparkUri) {
+      if (Objects.equals(this.sparkUri, sparkUri)) {
+        return this;
+      }
+      return new ConfigImpl(
+          banner,
+          dumb,
+          system,
+          echo,
+          help,
+          valueMap,
+          directory,
+          maxUseDepth,
+          eval,
+          colorScheme,
+          sparkUri);
     }
 
     @Override
@@ -865,7 +958,8 @@ public class Shell {
           directory,
           maxUseDepth,
           eval,
-          colorScheme);
+          colorScheme,
+          sparkUri);
     }
   }
 
@@ -996,6 +1090,14 @@ public class Shell {
                   }
                 } catch (MorelParseException | CompileException e) {
                   outLines.accept(e.description());
+                } catch (MorelRuntimeException e) {
+                  // A statement that fails while it is being compiled -- a
+                  // catalog that cannot be read, say -- fails as one that
+                  // fails while running does, and the session goes on. The
+                  // script runner has always done this; the shell had not.
+                  final StringBuilder buf2 = new StringBuilder();
+                  session.handle(e, buf2);
+                  outLines.accept(buf2.toString());
                 }
                 if (echo) {
                   outLines.accept(code);

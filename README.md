@@ -94,6 +94,7 @@ file:
 * [Morel language reference](docs/reference.md)
 * [Library](docs/lib/index.md)
 * [Query reference](docs/query.md)
+* [Morel on Spark](docs/spark.md)
 * [Datalog support](docs/datalog.md)
 * ["How to" guide](docs/howto.md)
 * [Change log](HISTORY.md)

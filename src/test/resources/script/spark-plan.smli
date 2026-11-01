@@ -164,17 +164,20 @@ val emps = spark.catalog.scott.emps;
   from e in spark.catalog.scott.emps
     yield {s = Real.toString (Real.fromInt e.empno)}
 )).toString ();
-> Spark {errorClass = "UNSUPPORTED", message = "Spark cannot do Real.toString, which the table calls unsupported"}
+> uncaught exception Spark [Spark: UNSUPPORTED: Spark cannot do Real.toString, which the table calls unsupported]
+>   raised at: stdIn:4.14
 (spark.connection.prepare (fn () =>
   from e in spark.catalog.scott.emps yield {cs = String.explode e.ename}
 )).toString ();
-> Spark {errorClass = "UNSUPPORTED", message = "Spark cannot do String.explode, which the table calls unsupported"}
+> uncaught exception Spark [Spark: UNSUPPORTED: Spark cannot do String.explode, which the table calls unsupported]
+>   raised at: stdIn:3.14
 (spark.connection.prepare (fn () =>
   from e in spark.catalog.scott.emps
     where String.compare (e.ename, "KING") = LESS
     yield e.ename
 )).toString ();
-> Spark {errorClass = "UNSUPPORTED", message = "Spark cannot do String.compare, which the table calls unsupported"}
+> uncaught exception Spark [Spark: UNSUPPORTED: Spark cannot do String.compare, which the table calls unsupported]
+>   raised at: stdIn:5.14
 
 (* Phase 1 prepares a query and nothing else, and a plan is all Spark or it
  * is an error. A function whose body is not a query has no plan; nor has one
@@ -182,7 +185,8 @@ val emps = spark.catalog.scott.emps;
  * parameter, which crosses only at "execute". Either is refused where the
  * plan is prepared, and the refusal says what it could not do. *)
 (spark.connection.prepare (fn () => 1 + 2)).toString ();
-> Spark {errorClass = "UNSUPPORTED", message = "Spark cannot do a function that is not a query"}
+> uncaught exception Spark [Spark: UNSUPPORTED: Spark cannot do a function that is not a query]
+>   raised at: stdIn:1.55
 (spark.connection.prepare (fn d =>
   from e in spark.catalog.scott.emps
     where e.deptno = d
@@ -271,6 +275,8 @@ val db = {t = [{i = 1}, {i = 2}]};
 Sys.set ("sparkPushDown", true);
 > val it = () : unit
 from e in scott.emps where e.deptno = 10 yield {e.ename, u = ()};
+> stdIn:1.1-1.65 Warning: not pushed down to Spark, so evaluated here: Spark cannot do expression UNIT_LITERAL
+>   raised at: stdIn:1.1-1.65
 > val it = [{ename="CLARK",u=()},{ename="KING",u=()},...]
 >   : {ename:string, u:unit} bag
 
@@ -281,8 +287,8 @@ from e in scott.emps where e.deptno = 10 yield {e.ename, u = ()};
 Sys.set ("sparkFallback", false);
 > val it = () : unit
 from e in scott.emps where e.deptno = 10 yield {e.ename, u = ()};
-> val it = [{ename="CLARK",u=()},{ename="KING",u=()},...]
->   : {ename:string, u:unit} bag
+> uncaught exception Spark [Spark: UNSUPPORTED: Spark cannot do expression UNIT_LITERAL]
+>   raised at: stdIn:1.1-1.65
 
 (* A failure on the server is not a refusal, so the fallback does not catch
  * it: this query is one the translator can do, and the offline connection
@@ -290,7 +296,8 @@ from e in scott.emps where e.deptno = 10 yield {e.ename, u = ()};
 Sys.set ("sparkFallback", true);
 > val it = () : unit
 from e in scott.emps where e.deptno = 10 yield e.ename;
-> val it = ["CLARK","KING",...] : string bag
+> uncaught exception Spark [Spark: MOCK: The offline connection cannot execute a plan; connect to a server]
+>   raised at: stdIn:1.1-1.55
 Sys.set ("sparkPushDown", false);
 > val it = () : unit
 

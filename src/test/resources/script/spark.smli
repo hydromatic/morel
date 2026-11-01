@@ -266,7 +266,8 @@ from e in scott.emps
 Sys.set ("sparkPushDown", true);
 > val it = () : unit
 from i in [1, 2] where i > 1;
-> val it = [2] : int list
+> stdIn:1.1-1.29 Error: sparkPushDown is set, but no connection is bound as 'spark'; start Morel with --spark, or bind one with 'val spark = Spark.connect uri'
+>   raised at: stdIn:1.1-1.29
 Sys.set ("sparkPushDown", false);
 > val it = () : unit
 

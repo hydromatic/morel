@@ -129,7 +129,8 @@ Sys.set ("output", "tabular");
 (spark.connection.prepare (fn () =>
   from e in spark.catalog.scott.emps group e.job order job
 )).execute ();
-> Spark {errorClass = "UNSUPPORTED", message = "Spark cannot do the variable $0"}
+> uncaught exception Spark [Spark: UNSUPPORTED: Spark cannot do the variable $0]
+>   raised at: stdIn:3.13
 
 (* Query 8: left join, which asks for a whole employee row. The right row is
  * an option because the join may find nothing, and the commission and the

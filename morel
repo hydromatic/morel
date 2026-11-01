@@ -48,6 +48,16 @@ usage() {
   echo
   echo "Options (all commands):"
   echo "  --foreign=CLASS     Load foreign dataset from Java class."
+  echo "  --spark[=URI]       Connect to the Spark Connect server at URI, bind it"
+  echo "                      as 'spark', and run each query there. Without URI,"
+  echo "                      uses \$SPARK_REMOTE if set, else sc://localhost:15002."
+  echo "                      Starts no server: run"
+  echo "                      src/test/resources/spark/start-spark.sh for a local"
+  echo "                      one, or name a cluster of your own. Turn the"
+  echo "                      pushing off within a session with"
+  echo "                      Sys.set (\"sparkPushDown\", false)."
+  echo "  --no-spark          No Spark: what omitting --spark does (the default),"
+  echo "                      said out loud. \$SPARK_REMOTE is hidden from Morel."
   echo
   echo "Cell syntax (inside <!-- morel ... --> comments):"
   echo "  Commands (mutually exclusive; default is 'run'):"
@@ -75,6 +85,7 @@ HELP=
 EVAL_EXPR=
 ECHO=
 FOREIGN=
+SPARK=
 FILES=()
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -108,6 +119,18 @@ while [ $# -gt 0 ]; do
       ;;
     (--foreign=*)
       FOREIGN="$FOREIGN $1"
+      shift
+      ;;
+    (--spark)
+      SPARK=${SPARK_REMOTE:-sc://localhost:15002}
+      shift
+      ;;
+    (--spark=*)
+      SPARK="${1#--spark=}"
+      shift
+      ;;
+    (--no-spark)
+      SPARK=
       shift
       ;;
     (*.smli)
@@ -162,6 +185,24 @@ fi
 
 export JAVA_OPTS=-Djavax.xml.parsers.DocumentBuilderFactory=com.sun.org.apache.xerces.internal.jaxp.DocumentBuilderFactoryImpl
 
+# With "--spark", Morel binds the server as "spark" and sends queries to
+# it. Nothing here starts a server: run
+# src/test/resources/spark/start-spark.sh, which has the options for that,
+# or point "--spark" at a cluster of your own. SPARK_REMOTE is exported so
+# that the URI has one source inside Morel, the one "connectDefault" reads.
+if [ "$SPARK" ]; then
+  export SPARK_REMOTE="$SPARK"
+  SPARK_OPT=--spark
+else
+  unset SPARK_REMOTE
+  SPARK_OPT=
+fi
+
+# The adapter's Arrow library needs this on JDK 9 and later. It is needed
+# whether or not there is a server, because preparing a plan over a local
+# collection encodes its rows as Arrow.
+JAVA_OPTS="$JAVA_OPTS --add-opens=java.base/java.nio=ALL-UNNAMED"
+
 # Default foreign dataset for all modes.
 DEFAULT_FOREIGN="--foreign=net.hydromatic.morel.BuiltInDataSet\$Dictionary"
 
@@ -194,6 +235,7 @@ case "$SUBCMD" in
       exec java $VM_OPTS -cp "${CP}" $JAVA_OPTS net.hydromatic.morel.Shell \
            "$DEFAULT_FOREIGN" \
            $FOREIGN \
+           $SPARK_OPT \
            --directory="$(pwd)" \
            --terminal=dumb \
            --banner=false \
@@ -202,6 +244,7 @@ case "$SUBCMD" in
       exec java $VM_OPTS -cp "${CP}" $JAVA_OPTS net.hydromatic.morel.Shell \
            "$DEFAULT_FOREIGN" \
            $FOREIGN \
+           $SPARK_OPT \
            --directory="$(pwd)" \
            $HEADLESS_OPTS \
            "${FILES[@]}"

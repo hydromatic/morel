@@ -81,6 +81,7 @@ public class Main {
   private final BufferingReader in;
   private final PrintWriter out;
   private final boolean echo;
+
   private final Map<String, ForeignValue> valueMap;
   final TypeSystem typeSystem = new TypeSystem();
   final boolean idempotent;

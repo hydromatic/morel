@@ -188,7 +188,8 @@ infrastructure:
   - These are Morel source files with expected output
   - Run via `MainTest` methods that check actual vs. expected output
   - The format, harness and output matching are described in
-    `docs/script-format.md`
+    `docs/script-format.md`; a script with a `(*) requires: <condition>`
+    header line runs only when the condition holds
 
 Key test files in `src/test/resources/script/`:
 - `built-in.smli`: Tests for built-in functions and operators
@@ -354,6 +355,46 @@ Notes:
 Note the `LargeInt`-is-fixed-precision gotcha: `LargeInt.int` = the 32-bit
 `int`, so `Word.toLargeInt`/`toLargeIntX` raise `Overflow` for values that
 don't fit in `int` and cannot honor the spec's "never raises" for `toLargeIntX`.
+
+### The Spark adapter
+
+The Spark backend (`net.hydromatic.morel.spark`) needs JDK 17 and the gRPC,
+protobuf and Arrow libraries, so it is compiled only under the `spark` Maven
+profile, which activates on JDK 17 and later; on older JDKs the package is
+excluded and Morel builds without it. The rest of Morel refers to it only
+through `foreign.SparkBackend`, which loads it by name. Protobuf messages and
+gRPC stubs are generated from `src/main/protobuf/spark/connect/*.proto`
+(vendored from Spark 4.0.0) into `target/generated-sources/protobuf`.
+
+The adapter is absent below JDK 17, so a test that touches it must say so --
+`assumeTrue(SparkBackend.isAvailable(), ...)` -- or it will fail on the JDK 8
+and 11 configurations of CI, where even the offline (`mock:`) connection
+cannot be opened. `fullMake` cannot see that, because it runs on one JDK
+with the profile on; this reproduces it on any JDK:
+
+```bash
+./mvnw verify -P '!spark'
+```
+
+To run the tests that need a Spark Connect server (Docker required):
+
+```bash
+export SPARK_REMOTE=$(src/test/resources/spark/start-spark.sh)
+./mvnw test -Dtest=SparkConnectTest -Dmorel.spark=true
+```
+
+To use that server from a session, where `--spark` binds it as `spark` and
+sends each query to it:
+
+```bash
+./morel --spark
+```
+
+The plan and design for the Spark work are `plan.md` and `spec.md` on the
+[`467-spark`](https://github.com/julianhyde/morel/tree/467-spark) branch,
+which are not merged to main: the design and the diary of the work, not
+reference material. The reference material is
+[docs/spark.md](docs/spark.md).
 
 ### Adding a Language Feature
 

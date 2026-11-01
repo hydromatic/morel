@@ -35,7 +35,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    # One configuration starts a Spark Connect server, which has an image to
+    # pull and a server to wait for; the rest have three minutes' work.
+    timeout-minutes: ${{ matrix.spark && 15 || 3 }}
 
     strategy:
       matrix:
@@ -44,6 +46,7 @@ jobs:
         hsqldb-version: [ "" ]
         checkstyle-version: [ "" ]
         javadoc: [ false ]
+        spark: [ false ]
         include:
           - java-version: "8"
             guava-version: "23.1-jre"
@@ -57,7 +60,20 @@ jobs:
             javadoc: true
           - java-version: "21"
             guava-version: "31.1-jre"
+          # The configuration that tests against a live Spark Connect
+          # server. One is enough: what the adapter does with a server is
+          # the same whichever JDK asked, and this is the JDK that the
+          # weekly Spark workflow uses. It must be 17 or later, because
+          # that is where the "spark" Maven profile activates.
+          #
+          # This is here while the adapter is new and the workflow itself
+          # is unproven, so that a push that breaks either is caught by the
+          # push. Once it has been green for a month of pushes, delete this
+          # entry and let the weekly workflow (spark.yml) cover Spark: a
+          # test that starts a server on every push is worth its minutes
+          # only while it is still finding things.
           - java-version: "21"
+            spark: true
           - java-version: "25"
 
     steps:
@@ -70,6 +86,11 @@ jobs:
           java-version: ${{ matrix.java-version }}
           distribution: 'temurin'
           cache: 'maven'
+      - name: Start Spark Connect server
+        if: matrix.spark
+        run: |
+          uri=$(src/test/resources/spark/start-spark.sh --new)
+          echo "SPARK_REMOTE=$uri" >> "$GITHUB_ENV"
       - name: Build with Maven
         run: |
           GOALS=verify
@@ -90,6 +111,13 @@ jobs:
           then
             DEFS="$DEFS -Dhsqldb.version=${{ matrix.hsqldb-version }}"
           fi
+          if [ "${{ matrix.spark }}" = true ]
+          then
+            DEFS="$DEFS -Dmorel.spark=true"
+          fi
           mvn $DEFS --batch-mode $GOALS
+      - name: Server log on failure
+        if: failure() && matrix.spark
+        run: docker logs --tail 200 morel-spark
 
 # End main.yml
