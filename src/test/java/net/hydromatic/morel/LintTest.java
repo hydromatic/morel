@@ -1816,7 +1816,7 @@ public class LintTest {
     final File targetDocsDir = new File(baseDir, "target/docs");
     final List<String> errors = new ArrayList<>();
     final List<File> mdFiles = new ArrayList<>();
-    collectMdFiles(docsDir, mdFiles);
+    collectFiles(docsDir, ".md", mdFiles);
     mdFiles.sort(Comparator.comparing(File::getPath));
     for (File file : mdFiles) {
       final String relPath = docsDir.toURI().relativize(file.toURI()).getPath();
@@ -1857,16 +1857,19 @@ public class LintTest {
     }
   }
 
-  /** Collects all {@code .md} files recursively under {@code dir}. */
-  private static void collectMdFiles(File dir, List<File> files) {
+  /**
+   * Collects all files whose name ends with {@code suffix}, recursively under
+   * {@code dir}.
+   */
+  private static void collectFiles(File dir, String suffix, List<File> files) {
     final File @Nullable [] children = dir.listFiles();
     if (children == null) {
       return;
     }
     for (File f : children) {
       if (f.isDirectory()) {
-        collectMdFiles(f, files);
-      } else if (f.getName().endsWith(".md")) {
+        collectFiles(f, suffix, files);
+      } else if (f.getName().endsWith(suffix)) {
         files.add(f);
       }
     }
@@ -2048,6 +2051,42 @@ public class LintTest {
                   + "Create a file for each in %s",
               missing, scriptDir.getAbsolutePath()));
     }
+  }
+
+  /**
+   * Checks that every package in {@code src/main/java} has a {@code
+   * package-info.java} that declares {@code @NullMarked}.
+   *
+   * <p>JSpecify's {@code @Nullable} has no defined meaning in a package that is
+   * not marked, so a tool that reads the annotations -- an IDE, say -- sees
+   * different code from the build, which tells NullAway a package prefix
+   * instead.
+   */
+  @Test
+  void testPackagesNullMarked() throws IOException {
+    final File sourceDir =
+        new File(getBaseDir(TestUtils.class), "src/main/java");
+    final List<File> javaFiles = new ArrayList<>();
+    collectFiles(sourceDir, ".java", javaFiles);
+    final TreeSet<File> packageDirs = new TreeSet<>();
+    for (File file : javaFiles) {
+      packageDirs.add(file.getParentFile());
+    }
+    final List<String> errors = new ArrayList<>();
+    for (File dir : packageDirs) {
+      final File file = new File(dir, "package-info.java");
+      if (!file.exists()) {
+        errors.add(file + " does not exist");
+      } else {
+        final List<String> lines =
+            Files.readAllLines(file.toPath(), StandardCharsets.UTF_8);
+        if (lines.stream().noneMatch(line -> line.contains("@NullMarked"))) {
+          errors.add(file + " does not declare @NullMarked");
+        }
+      }
+    }
+    assertThat(
+        "Packages that are not null-marked:\n" + errors, errors, empty());
   }
 
   /**
