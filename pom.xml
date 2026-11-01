@@ -127,6 +127,7 @@ License.
     <versions-maven-plugin.version>2.21.0</versions-maven-plugin.version>
 
     <git-commit-id.skip>false</git-commit-id.skip>
+    <maven-compiler-plugin.failOnWarning>true</maven-compiler-plugin.failOnWarning>
     <maven-javadoc-plugin.additionalOptions>-html5</maven-javadoc-plugin.additionalOptions>
     <maven-javadoc-plugin.excludePackageNames>net.hydromatic.morel.parse</maven-javadoc-plugin.excludePackageNames>
     <nullaway.severity>ERROR</nullaway.severity>
@@ -336,6 +337,16 @@ License.
         <configuration>
           <source>8</source>
           <target>8</target>
+          <!-- A call to a deprecated API fails the build. '-Xlint:-options'
+               silences the warning that source 8 is obsolete, which would
+               otherwise fail it too; the 'java8' profile turns the failure
+               off, because javac 8 warns about an annotation it cannot
+               read. -->
+          <showDeprecation>true</showDeprecation>
+          <failOnWarning>${maven-compiler-plugin.failOnWarning}</failOnWarning>
+          <compilerArgs>
+            <arg>-Xlint:-options</arg>
+          </compilerArgs>
         </configuration>
       </plugin>
       <plugin>
@@ -564,6 +575,14 @@ License.
       <properties>
         <!-- Java 1.8 does not support -html5, so we pass another harmless option -->
         <maven-javadoc-html5>-notimestamp</maven-javadoc-html5>
+        <!-- JSpecify's @NullMarked is targeted at ElementType.MODULE, which
+             javac 8 does not know; it warns "unknown enum constant
+             java.lang.annotation.ElementType.MODULE" when it reads the
+             annotation. The warning is about the annotation, not about our
+             code, and there is no -Xlint category that turns it off, so on
+             this JDK a warning cannot fail the build. Deprecation warnings
+             are still printed, and the other JDKs enforce them. -->
+        <maven-compiler-plugin.failOnWarning>false</maven-compiler-plugin.failOnWarning>
       </properties>
     </profile>
     <profile>
@@ -589,6 +608,7 @@ License.
             <configuration>
               <fork>true</fork>
               <compilerArgs>
+                <arg>-Xlint:-options</arg>
                 <arg>-XDcompilePolicy=simple</arg>
                 <!-- Error Prone requires this option on JDK 21 and lower;
                      later JDKs ignore it. -->

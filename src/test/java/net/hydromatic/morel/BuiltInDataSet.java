@@ -22,6 +22,7 @@ import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.util.Static.last;
 
 import com.google.common.collect.ImmutableSet;
+import java.time.Duration;
 import java.util.AbstractMap;
 import java.util.List;
 import java.util.Locale;
@@ -172,7 +173,7 @@ public enum BuiltInDataSet implements DataSet {
     dataSource.setUsername(user);
     dataSource.setPassword(password);
     dataSource.setMaxTotal(50);
-    dataSource.setMaxWaitMillis(5000);
+    dataSource.setMaxWait(Duration.ofSeconds(5));
     return dataSource;
   }
 

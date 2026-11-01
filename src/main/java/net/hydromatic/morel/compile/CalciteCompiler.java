@@ -91,6 +91,7 @@ import org.apache.calcite.rex.RexSubQuery;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.util.JsonBuilder;
 import org.jspecify.annotations.Nullable;
@@ -1165,8 +1166,8 @@ public class CalciteCompiler extends Compiler {
     } else {
       final RelDataTypeSystem typeSystem =
           cx.relBuilder.getTypeFactory().getTypeSystem();
-      if (d.precision() > typeSystem.getMaxNumericPrecision()
-          || d.scale() > typeSystem.getMaxNumericScale()) {
+      if (d.precision() > typeSystem.getMaxPrecision(SqlTypeName.DECIMAL)
+          || d.scale() > typeSystem.getMaxScale(SqlTypeName.DECIMAL)) {
         return null;
       }
     }

@@ -40,6 +40,8 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.Schemas;
 import org.apache.calcite.schema.Table;
+import org.apache.calcite.schema.lookup.LikePattern;
+import org.apache.calcite.schema.lookup.Lookup;
 import org.apache.calcite.tools.RelBuilder;
 
 /**
@@ -94,22 +96,24 @@ public class CalciteForeignValue implements ForeignValue {
   private Type toType(SchemaPlus schema, TypeSystem typeSystem) {
     final SortedMap<String, Type> fields = RecordType.mutableMap();
     final List<String> schemaPath = Schemas.path(schema).names();
-    schema
-        .getTableNames()
+    final Lookup<Table> tables = schema.tables();
+    tables
+        .getNames(LikePattern.any())
         .forEach(
             tableName -> {
-              Table table = requireNonNull(schema.getTable(tableName));
+              Table table = requireNonNull(tables.get(tableName));
               final List<String> tablePath = append(schemaPath, tableName);
               fields.put(
                   nameConverter.convert(schemaPath, tableName),
                   toType(tablePath, table, typeSystem));
             });
-    schema
-        .getSubSchemaNames()
+    final Lookup<? extends SchemaPlus> subSchemas = schema.subSchemas();
+    subSchemas
+        .getNames(LikePattern.any())
         .forEach(
             subSchemaName -> {
               final SchemaPlus subSchema =
-                  requireNonNull(schema.getSubSchema(subSchemaName));
+                  requireNonNull(subSchemas.get(subSchemaName));
               fields.put(
                   nameConverter.convert(schemaPath, subSchemaName),
                   toType(subSchema, typeSystem));
@@ -156,7 +160,8 @@ public class CalciteForeignValue implements ForeignValue {
     final SortedMap<String, Object> fieldValues = RecordType.mutableMap();
     final List<String> schemaPath = Schemas.path(schema).names();
     schema
-        .getTableNames()
+        .tables()
+        .getNames(LikePattern.any())
         .forEach(
             tableName -> {
               final RelBuilder b = calcite.relBuilder;
@@ -194,12 +199,13 @@ public class CalciteForeignValue implements ForeignValue {
             });
 
     // Recursively walk sub-schemas and add their tables to fieldValues
-    schema
-        .getSubSchemaNames()
+    final Lookup<? extends SchemaPlus> subSchemas = schema.subSchemas();
+    subSchemas
+        .getNames(LikePattern.any())
         .forEach(
             subSchemaName -> {
               final SchemaPlus subSchema =
-                  requireNonNull(schema.getSubSchema(subSchemaName));
+                  requireNonNull(subSchemas.get(subSchemaName));
               fieldValues.put(
                   nameConverter.convert(schemaPath, subSchemaName),
                   valueFor(subSchema));
