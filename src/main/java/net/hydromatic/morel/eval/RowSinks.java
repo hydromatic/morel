@@ -374,7 +374,7 @@ public abstract class RowSinks {
       return describer.start(
           "join",
           d ->
-              d.arg("pat", pat)
+              d.arg("pat", pat.describe(describer))
                   .arg("exp", code)
                   .argIf(
                       "condition",
@@ -504,7 +504,7 @@ public abstract class RowSinks {
       return describer.start(
           "buildJoin",
           d ->
-              d.arg("pat", pat)
+              d.arg("pat", pat.describe(describer))
                   .arg("exp", code)
                   .argIf(
                       "condition",

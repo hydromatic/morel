@@ -22,14 +22,16 @@ import com.google.common.collect.Lists;
 import com.google.common.primitives.UnsignedLong;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.function.BiConsumer;
+import java.util.Set;
 import net.hydromatic.morel.compile.BuiltIn;
 import net.hydromatic.morel.parse.Parsers;
 import net.hydromatic.morel.util.Lindig;
 import net.hydromatic.morel.util.Lindig.Doc;
+import net.hydromatic.morel.util.Pair;
 
 /**
  * Context for writing an AST out as a string.
@@ -65,6 +67,21 @@ public class AstWriter {
    * it is rendered.
    */
   private boolean lineStart = true;
+
+  /** The suffix each pattern prints under; see {@link #suffix}. */
+  private final Map<Pair<String, Integer>, Integer> suffixes = new HashMap<>();
+
+  /** How many patterns of each name this writer has met. */
+  private final Map<String, Integer> nextSuffix = new HashMap<>();
+
+  /**
+   * The name each node's pattern prints under, assigned when the node that
+   * binds it prints; see {@link #bindIds}.
+   */
+  private final Map<Core.IdPat, String> idNames = new HashMap<>();
+
+  /** The names of the ids in scope where the writer is now. */
+  private final List<String> visibleIds = new ArrayList<>();
 
   public AstWriter() {
     this(false);
@@ -212,22 +229,117 @@ public class AstWriter {
   }
 
   /**
-   * Appends a reference to a node's pattern: {@code $0}, {@code $1} or {@code
-   * $ordinal}. In tree mode, a pattern read outside the node that binds it -- a
-   * join's left id read from its right input -- prints under a generated name
-   * instead; see {@link #generatedName}.
+   * Appends a reference to a node's pattern: an id, such as {@code $e} or
+   * {@code $0}, or {@code $ordinal}.
+   *
+   * <p>An id prints under the name its node gave it when the node printed; see
+   * {@link #bindIds}. An id whose node has not printed, such as a path a
+   * builder returns, prints under the name the node would give it.
    */
   public AstWriter idRef(Core.IdPat pat) {
-    return append(pat.name);
+    return appendRaw(idName(pat));
+  }
+
+  /** Returns the name under which a node's pattern prints. */
+  protected String idName(Core.IdPat pat) {
+    final String name = idNames.get(pat);
+    if (name != null) {
+      return name;
+    }
+    if (pat.name.equals("$ordinal")) {
+      return pat.name;
+    }
+    return baseName(pat);
+  }
+
+  /** Returns the name an id prints under, before it is numbered. */
+  private String baseName(Core.IdPat pat) {
+    final String idName = Core.NamedPat.idName(pat.name);
+    return idName == null ? "r" : renameGenerated(idName);
   }
 
   /**
-   * Returns the generated name under which a node's pattern prints where the
-   * pattern's own name would be ambiguous: as a dependent join's argument, and
-   * in its right input.
+   * Returns the name under which a generated binder's name prints. This writer
+   * prints it as it is; a writer that renumbers binders renumbers it.
    */
-  public String generatedName(Core.IdPat pat) {
-    return "v$" + pat.i;
+  protected String renameGenerated(String name) {
+    return name;
+  }
+
+  /**
+   * Gives each pattern a node binds the name it prints under, and returns the
+   * names.
+   *
+   * <p>An id named after a binder prints as the binder, {@code e} for {@code
+   * $e}; any other id prints as {@code r}. An id is in scope in its node's
+   * expressions, and a join's left id in the join's right input as well, so a
+   * name is numbered -- {@code e_1} -- only if an id of that name is already in
+   * scope, the node binds two, or an ordinary variable of that name occurs
+   * where the id is in scope, as {@code r} does in {@code yield x + y + r}. The
+   * names are a function of the tree, not of the ordinals the compiler happened
+   * to give its patterns.
+   */
+  private List<String> bindIds(Core.Rel rel) {
+    final List<String> names = new ArrayList<>();
+    if (rel.patterns().isEmpty()) {
+      return names;
+    }
+    final Set<String> varNames = varNamesInScope(rel);
+    for (Core.IdPat pat : rel.patterns()) {
+      final String name;
+      if (pat.name.equals("$ordinal")) {
+        name = pat.name;
+      } else {
+        final String base = baseName(pat);
+        String candidate = base;
+        for (int i = 1;
+            visibleIds.contains(candidate)
+                || names.contains(candidate)
+                || varNames.contains(candidate);
+            i++) {
+          candidate = base + "_" + i;
+        }
+        name = candidate;
+      }
+      idNames.put(pat, name);
+      names.add(name);
+    }
+    return names;
+  }
+
+  /**
+   * Returns the names of the ordinary variables that occur where a node's ids
+   * are in scope: in its own expressions, and in a join's right input.
+   */
+  private static Set<String> varNamesInScope(Core.Rel rel) {
+    // A node's own expressions are what its subtree mentions and its inputs
+    // do not, so count each name's occurrences and subtract the inputs'.
+    final Map<String, Integer> counts = varCounts(rel);
+    final List<Core.Exp> inputs = rel.inputs();
+    for (int i = 0; i < inputs.size(); i++) {
+      if (rel instanceof Core.Join && i == 1) {
+        continue;
+      }
+      varCounts(inputs.get(i))
+          .forEach((name, count) -> counts.merge(name, -count, Integer::sum));
+    }
+    counts.values().removeIf(count -> count <= 0);
+    return counts.keySet();
+  }
+
+  /** Counts the occurrences of each ordinary variable in a tree. */
+  private static Map<String, Integer> varCounts(Core.Exp exp) {
+    final Map<String, Integer> counts = new HashMap<>();
+    exp.accept(
+        new Visitor() {
+          @Override
+          protected void visit(Core.Id id) {
+            if (id.idPat.name.charAt(0) != '$') {
+              counts.merge(id.idPat.name, 1, Integer::sum);
+            }
+          }
+        });
+    return counts;
   }
 
   /**
@@ -235,18 +347,31 @@ public class AstWriter {
    * indented two deeper, each on lines of its own.
    */
   public AstWriter describe(Core.Rel rel, int indent) {
-    describeLine(rel, indent);
-    for (Core.Exp input : rel.inputs()) {
-      describeInput(input, indent + 2);
+    final int scope = visibleIds.size();
+    final List<String> names = bindIds(rel);
+    describeLine(rel, names, indent);
+    final List<Core.Exp> inputs = rel.inputs();
+    for (int i = 0; i < inputs.size(); i++) {
+      if (rel instanceof Core.Join && i == 1) {
+        // The right input is evaluated once per left element, and may read
+        // it.
+        visibleIds.add(idName(((Core.Join) rel).leftId));
+      }
+      describeInput(inputs.get(i), indent + 2);
+      truncate(visibleIds, scope);
     }
     return this;
+  }
+
+  private static void truncate(List<?> list, int size) {
+    list.subList(size, list.size()).clear();
   }
 
   /**
    * Appends a node's own line: its operator, its arguments, and if {@link
    * #withTypes} its collection type.
    */
-  private void describeLine(Core.Rel rel, int indent) {
+  private void describeLine(Core.Rel rel, List<String> names, int indent) {
     indent(indent);
     // The node's own line, which wraps four from the node where it does not
     // fit. Its inputs are two, so a continuation cannot be mistaken for a
@@ -260,7 +385,14 @@ public class AstWriter {
       startGroup(indent + 4);
     }
     append(rel.op.lowerName);
-    inNode(rel, (w, r) -> r.describeArgs(w));
+    // The patterns the node binds, which are in scope in its arguments.
+    final int scope = visibleIds.size();
+    for (String name : names) {
+      append(" ").appendRaw(name);
+      visibleIds.add(name);
+    }
+    rel.describeArgs(this);
+    truncate(visibleIds, scope);
     if (withTypes()) {
       append(" : ").append(typeRef(rel.type.moniker()));
     }
@@ -323,15 +455,6 @@ public class AstWriter {
       append(entry.getKey()).append(" = ").append(entry.getValue(), 0, 0);
     }
     return append("]");
-  }
-
-  /**
-   * Runs {@code action}, which prints a node's arguments, with {@code rel} as
-   * the node they belong to. A writer that renumbers binders scopes what the
-   * node binds to its arguments.
-   */
-  public void inNode(Core.Rel rel, BiConsumer<AstWriter, Core.Rel> action) {
-    action.accept(this, rel);
   }
 
   /**
@@ -477,10 +600,27 @@ public class AstWriter {
    */
   public AstWriter id(String name, int i) {
     raw(name);
-    if (i > 0) {
-      raw("_" + i);
+    final int j = suffix(name, i);
+    if (j > 0) {
+      raw("_" + j);
     }
     return this;
+  }
+
+  /**
+   * Returns the suffix under which the {@code i}th pattern called {@code name}
+   * prints: 0, meaning no suffix, for the first one this writer meets, 1 for
+   * the next, and so on.
+   *
+   * <p>The ordinal a pattern carries counts every binder the compiler made, so
+   * printing it would make the text depend on how many binders came before --
+   * on history, not on the expression. Numbering by the order the reader meets
+   * them keeps the text a function of what is printed, so that two expressions
+   * that differ only in their binders' ordinals print alike.
+   */
+  private int suffix(String name, int i) {
+    return suffixes.computeIfAbsent(
+        Pair.of(name, i), k -> nextSuffix.merge(name, 1, Integer::sum) - 1);
   }
 
   /**
@@ -504,11 +644,12 @@ public class AstWriter {
 
   /** Appends an ordinal-qualified variable identifier, quoting if necessary. */
   public AstWriter idQuoted(String name, int i) {
-    if (i == 0) {
+    final int j = suffix(name, i);
+    if (j == 0) {
       appendQuoted(name);
     } else {
       // "name_i" is never a reserved word, so it does not need quoting.
-      raw(name + "_" + i);
+      raw(name + "_" + j);
     }
     return this;
   }

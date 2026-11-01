@@ -2756,7 +2756,7 @@ public class MainTest {
         "from i\n" //
             + "where Option.getOpt (i, false)";
     final String core =
-        "val it = filter [#getOpt Option ($0, false)]\n" //
+        "val it = filter i [#getOpt Option (i, false)]\n" //
             + "  extent \"bool option\"\n";
     ml(ml)
         .assertType("bool option list")
@@ -3145,8 +3145,8 @@ public class MainTest {
             + " yield {a, a2 = a + a, sb}";
     final String plan =
         "from("
-            + "sink join(pat $0, exp tuple(tuple(constant(2), constant(3))), "
-            + "sink group(key tuple(apply(fnValue nth:0, argCode stack(offset 1, name $0))), "
+            + "sink join(pat r, exp tuple(tuple(constant(2), constant(3))), "
+            + "sink group(key tuple(apply(fnValue nth:0, argCode stack(offset 1, name r))), "
             + "agg aggregate, "
             + "sink yield(codes [tuple(get(name a), get(name sb))], "
             + "sink collect(tuple(apply(fnValue nth:0, argCode stack(offset 1, name $0)), "

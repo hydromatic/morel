@@ -23,9 +23,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
@@ -33,7 +31,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.BiConsumer;
 import java.util.regex.Matcher;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.Comparators;
@@ -190,8 +187,6 @@ public abstract class AstNode {
   private static class RenumberingAstWriter extends AstWriter {
     final Map<String, List<Integer>> nameIds = new HashMap<>();
     final Map<String, String> names = new LinkedHashMap<>();
-    /** The nodes whose arguments are printing, innermost first. */
-    final Deque<Core.Rel> nodes = new ArrayDeque<>();
 
     /**
      * The types a plan line was too narrow to name, in the order they were
@@ -275,7 +270,7 @@ public abstract class AstNode {
           p ->
               paramNames.add(
                   p.name.charAt(0) == '$'
-                      ? generatedName((Core.IdPat) p)
+                      ? idName((Core.IdPat) p)
                       : rename(p.name)));
       paramNames.sort(Comparators::compareNumberedNames);
       return "r$" + i + "[" + String.join(", ", paramNames) + "]";
@@ -353,33 +348,8 @@ public abstract class AstNode {
     }
 
     @Override
-    public AstWriter idRef(Core.IdPat pat) {
-      // Inside the node that binds it, a pattern prints as its own name. Read
-      // from outside -- a join's left id from its right input, an id from a
-      // tree nested in an expression -- it prints under a generated name, the
-      // same one the node prints as its argument.
-      if (!nodes.isEmpty() && nodes.peek().patterns().contains(pat)) {
-        return appendRaw(pat.name);
-      }
-      return appendRaw(generatedName(pat));
-    }
-
-    @Override
-    public String generatedName(Core.IdPat pat) {
-      // A node's pattern takes its ordinal from the same counter as generated
-      // binders, so `v$` with that ordinal names no binder, and the renaming
-      // numbers it with the rest.
-      return rename("v$" + pat.i);
-    }
-
-    @Override
-    public void inNode(Core.Rel rel, BiConsumer<AstWriter, Core.Rel> action) {
-      nodes.push(rel);
-      try {
-        action.accept(this, rel);
-      } finally {
-        nodes.pop();
-      }
+    protected String renameGenerated(String name) {
+      return rename(name);
     }
 
     @Override

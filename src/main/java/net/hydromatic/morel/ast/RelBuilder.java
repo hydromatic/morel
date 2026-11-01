@@ -113,8 +113,16 @@ public class RelBuilder {
 
   /** Pushes the rebuilt form of one node, having rebuilt its inputs. */
   private void rebuild(Core.Exp exp) {
+    rebuild(exp, null);
+  }
+
+  /** Rebuilds a node, giving a leaf an id named as the node above names it. */
+  private void rebuild(Core.Exp exp, Core.@Nullable IdPat above) {
     if (!(exp instanceof Core.Rel)) {
-      push(exp);
+      // The leaf's own id is not in the tree -- a leaf is just an
+      // expression -- so it takes a fresh id of the name the node above
+      // used.
+      push(exp, above == null ? null : elementPatLike(exp, above));
       return;
     }
     rebuildRel((Core.Rel) exp);
@@ -125,20 +133,20 @@ public class RelBuilder {
   private void rebuildRel(Core.Rel exp) {
     if (exp instanceof Core.Filter) {
       final Core.Filter filter = (Core.Filter) exp;
-      rebuild(filter.input);
+      rebuild(filter.input, filter.id);
       filter(repattern(filter, filter.condition));
     } else if (exp instanceof Core.Project) {
       final Core.Project project = (Core.Project) exp;
-      rebuild(project.input);
+      rebuild(project.input, project.id);
       project(repattern(project, project.exp));
     } else if (exp instanceof Core.Join) {
       final Core.Join join = (Core.Join) exp;
-      rebuild(join.left);
+      rebuild(join.left, join.leftId);
       // The right input may read the left id; it reads the new one.
       final Core.IdPat leftId = frame(0).id;
       rebuild(
-          core.substitute(
-              typeSystem, join.right, join.leftId, core.id(leftId)));
+          core.substitute(typeSystem, join.right, join.leftId, core.id(leftId)),
+          join.rightId);
       pair();
       final Core.IdPat rightId = rightId(frame(1));
       Core.Exp condition =
@@ -234,7 +242,17 @@ public class RelBuilder {
 
   /** Pushes a relational expression, whose element has no name of its own. */
   public RelBuilder push(Core.Exp rel) {
-    final Core.IdPat id = elementPat(rel);
+    return push(rel, null);
+  }
+
+  /**
+   * Pushes a relational expression, over a given id if there is one.
+   *
+   * <p>Rebuilding a tree uses this, so that a leaf's id keeps the name the node
+   * above it gave it.
+   */
+  private RelBuilder push(Core.Exp rel, Core.@Nullable IdPat idPat) {
+    final Core.IdPat id = idPat == null ? elementPat(rel) : idPat;
     stack.push(new Frame(rel, id, elementNames(rel, id, ImmutableMap.of())));
     return this;
   }
@@ -244,7 +262,7 @@ public class RelBuilder {
    * emps} names the element {@code e}.
    */
   public RelBuilder push(String name, Core.Exp rel) {
-    final Core.IdPat id = elementPat(rel);
+    final Core.IdPat id = elementPat(rel, name);
     stack.push(
         new Frame(
             rel,
@@ -266,7 +284,12 @@ public class RelBuilder {
    */
   public RelBuilder push(Core.Pat pat, Core.Exp rel) {
     final Map<String, Core.Exp> names = new LinkedHashMap<>();
-    final Core.IdPat id = elementPat(rel);
+    // A bare name lends the id its name; anything else is erased, and the
+    // id has no name to borrow.
+    final Core.IdPat id =
+        pat instanceof Core.IdPat
+            ? elementPat(rel, ((Core.IdPat) pat).name)
+            : elementPat(rel);
     final Core.Exp element = core.id(id);
     if (!destructure(pat, element, names)) {
       throw new IllegalArgumentException(
@@ -662,12 +685,19 @@ public class RelBuilder {
     return core.substitute(typeSystem, exp, frame.id, core.id(rightId(frame)));
   }
 
-  /** Returns the pattern that names a frame's element as a right input. */
+  /**
+   * Returns the id by which a join refers to the current element of a frame as
+   * its right input, named as the frame's id is: the right id of {@code from e
+   * in emps, d in depts} is {@code d}, as the left id is {@code e}.
+   */
   private Core.IdPat rightId(Frame frame) {
     if (frame.rightId == null) {
+      final @Nullable String name = Core.NamedPat.idName(frame.id.name);
       frame.rightId =
-          core.rightElementPat(
-              frame.rel.type.elementType(), typeSystem.nameGenerator::inc);
+          name == null
+              ? core.rightElementPat(
+                  frame.rel.type.elementType(), typeSystem.nameGenerator::inc)
+              : elementPat(frame.rel, name);
     }
     return frame.rightId;
   }
@@ -696,11 +726,33 @@ public class RelBuilder {
   }
 
   /**
+   * Returns the id by which a node refers to a collection's current element,
+   * called after the name the query gave it.
+   *
+   * <p>An id that prints as {@code e} rather than {@code $0} makes a plan
+   * easier to read, and gives a translator to another system a name to use:
+   * Spark calls it a subquery alias, and {@code $0} is not a name Spark would
+   * accept.
+   */
+  private Core.IdPat elementPat(Core.Exp rel, String name) {
+    return core.elementPat(
+        rel.type.elementType(), name, typeSystem.nameGenerator::inc);
+  }
+
+  /** Returns a fresh id for a collection's element, named as another id is. */
+  private Core.IdPat elementPatLike(Core.Exp rel, Core.IdPat id) {
+    final @Nullable String name = Core.NamedPat.idName(id.name);
+    return name == null ? elementPat(rel) : elementPat(rel, name);
+  }
+
+  /**
    * Returns the frame for a node built on another frame whose element is the
    * same, so that it offers the same names, over an id of its own.
    */
   private Frame above(Frame frame, Core.Exp rel) {
-    final Core.IdPat id = elementPat(rel);
+    // The element is the input's, so the id keeps the input's name; a node
+    // above a collection called `e` still calls its id `e`.
+    final Core.IdPat id = elementPatLike(rel, frame.id);
     final ImmutableMap.Builder<String, Core.Exp> b = ImmutableMap.builder();
     frame.names.forEach(
         (name, exp) ->

@@ -89,7 +89,7 @@ plusOne o timesTwo o plusThree;
 > val it = 13 : int
 Sys.plan ();
 > val it =
->   "apply(fnCode apply2(fnValue General.o, match(x, apply2(fnValue Int.+, stack(offset 1, name x), constant(1))), apply2(fnValue General.o, match(x_1, apply2(fnValue Int.*, stack(offset 1, name x), constant(2))), match(x_2, apply2(fnValue Int.+, stack(offset 1, name x), constant(3))))), argCode constant(3))"
+>   "apply(fnCode apply2(fnValue General.o, match(x, apply2(fnValue Int.+, stack(offset 1, name x), constant(1))), apply2(fnValue General.o, match(x, apply2(fnValue Int.*, stack(offset 1, name x), constant(2))), match(x, apply2(fnValue Int.+, stack(offset 1, name x), constant(3))))), argCode constant(3))"
 >   : string
 
 General.ignore;

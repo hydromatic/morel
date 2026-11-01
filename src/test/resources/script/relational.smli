@@ -3411,7 +3411,7 @@ yield {r1.j, r1.s};
 >    {j=8,s="morel"}] : {j:int, s:string} list
 Sys.plan();
 > val it =
->   "from(sink join(pat $0_3727, exp apply2(fnValue List.tabulate, constant(6), match(i, tuple(stack(offset 1, name i), apply2(fnValue Int.+, stack(offset 1, name i), constant(3)), apply3(fnValue String.substring, constant(morel), constant(0), stack(offset 1, name i))))), sink collect(tuple(apply(fnValue nth:1, argCode stack(offset 1, name $0)), apply(fnValue nth:2, argCode stack(offset 1, name $0))))))"
+>   "from(sink join(pat r1, exp apply2(fnValue List.tabulate, constant(6), match(i, tuple(stack(offset 1, name i), apply2(fnValue Int.+, stack(offset 1, name i), constant(3)), apply3(fnValue String.substring, constant(morel), constant(0), stack(offset 1, name i))))), sink collect(tuple(apply(fnValue nth:1, argCode stack(offset 1, name r1)), apply(fnValue nth:2, argCode stack(offset 1, name r1))))))"
 >   : string
 
 
@@ -3475,7 +3475,7 @@ end;
 > val it = ["Shaggy","Scooby"] : string list
 Sys.plan();
 > val it =
->   "from(sink join(pat $0_3737, exp constant([[10, 100, Fred], [20, 101, Velma], [30, 102, Shaggy], [30, 103, Scooby]]), sink where(condition apply2(fnValue =, apply(fnValue nth:0, argCode stack(offset 1, name $0)), constant(30)), sink collect(apply(fnValue nth:2, argCode stack(offset 1, name $0))))))"
+>   "from(sink join(pat e138, exp constant([[10, 100, Fred], [20, 101, Velma], [30, 102, Shaggy], [30, 103, Scooby]]), sink where(condition apply2(fnValue =, apply(fnValue nth:0, argCode stack(offset 1, name e138)), constant(30)), sink collect(apply(fnValue nth:2, argCode stack(offset 1, name e138))))))"
 >   : string
 
 (* Same, via a predicate
@@ -3491,7 +3491,7 @@ end;
 > val it = ["Shaggy","Scooby"] : string list
 Sys.plan();
 > val it =
->   "from(sink join(pat $0_3744, exp constant([[10, 100, Fred], [20, 101, Velma], [30, 102, Shaggy], [30, 103, Scooby]]), sink where(condition apply2(fnValue =, apply(fnValue nth:0, argCode stack(offset 1, name $0)), constant(30)), sink collect(apply(fnValue nth:2, argCode stack(offset 1, name $0))))))"
+>   "from(sink join(pat e140, exp constant([[10, 100, Fred], [20, 101, Velma], [30, 102, Shaggy], [30, 103, Scooby]]), sink where(condition apply2(fnValue =, apply(fnValue nth:0, argCode stack(offset 1, name e140)), constant(30)), sink collect(apply(fnValue nth:2, argCode stack(offset 1, name e140))))))"
 >   : string
 
 (*) into and through

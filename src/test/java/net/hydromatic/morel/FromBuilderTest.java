@@ -138,8 +138,8 @@ public class FromBuilderTest {
     assertThat(
         exp,
         hasToString(
-            "project [#2 $0]\n"
-                + "  filter [#1 $0 = 1]\n"
+            "project r [#2 r]\n"
+                + "  filter r [#1 r = 1]\n"
                 + "    [(1, \"a\"), (2, \"b\")]\n"));
     assertThat(exp.type, hasToString("string list"));
   }
@@ -158,15 +158,15 @@ public class FromBuilderTest {
     final Core.IdPat s = f.idPat("s", f.stringType);
     final FromBuilder fb = core.fromBuilder(f.typeSystem);
     fb.scan(e, f.emps);
-    assertThat(fb.field("e"), hasToString("$0"));
-    assertThat(fb.field(0), hasToString("$0"));
-    assertThat(fb.field("e", "deptno"), hasToString("#deptno $0"));
+    assertThat(fb.field("e"), hasToString("e"));
+    assertThat(fb.field(0), hasToString("e"));
+    assertThat(fb.field("e", "deptno"), hasToString("#deptno e"));
 
     fb.scan(f.tuplePat(p, s), f.pairs);
-    assertThat(fb.field("e"), hasToString("#1 $0"));
-    assertThat(fb.field("p"), hasToString("#1 (#2 $0)"));
-    assertThat(fb.field(2), hasToString("#2 (#2 $0)"));
-    assertThat(fb.field("e", "name"), hasToString("#name (#1 $0)"));
+    assertThat(fb.field("e"), hasToString("#1 r"));
+    assertThat(fb.field("p"), hasToString("#1 (#2 r)"));
+    assertThat(fb.field(2), hasToString("#2 (#2 r)"));
+    assertThat(fb.field("e", "name"), hasToString("#name (#1 r)"));
     assertThrows(IllegalArgumentException.class, () -> fb.field("q"));
 
     // The id and the field are interchangeable in an expression.
@@ -180,9 +180,9 @@ public class FromBuilderTest {
     assertThat(
         exp,
         hasToString(
-            "project [{name = #name (#1 $0), s = #2 (#2 $0)}]\n"
-                + "  filter [#deptno (#1 $0) = #1 (#2 $0)]\n"
-                + "    join\n"
+            "project r [{name = #name (#1 r), s = #2 (#2 r)}]\n"
+                + "  filter r [#deptno (#1 r) = #1 (#2 r)]\n"
+                + "    join e r\n"
                 + "      [{deptno = 10, name = \"Fred\"},"
                 + " {deptno = 20, name = \"Velma\"}]\n"
                 + "      [(1, \"a\"), (2, \"b\")]\n"));
@@ -202,21 +202,21 @@ public class FromBuilderTest {
     final Core.IdPat s = f.idPat("s", f.stringType);
     final FromBuilder fb = core.fromBuilder(f.typeSystem);
     fb.scan(core.recordPat(f.empType, ImmutableList.of(deptno, name)), f.emps);
-    assertThat(fb.field("deptno"), hasToString("#deptno $0"));
-    assertThat(fb.field("name"), hasToString("#name $0"));
+    assertThat(fb.field("deptno"), hasToString("#deptno r"));
+    assertThat(fb.field("name"), hasToString("#name r"));
 
     fb.scan(f.tuplePat(p, s), f.pairs);
-    assertThat(fb.field("deptno"), hasToString("#deptno (#1 $0)"));
-    assertThat(fb.field("s"), hasToString("#2 (#2 $0)"));
+    assertThat(fb.field("deptno"), hasToString("#deptno (#1 r)"));
+    assertThat(fb.field("s"), hasToString("#2 (#2 r)"));
     fb.where(core.equal(f.typeSystem, core.id(deptno), core.id(p)))
         .yield_(core.id(name));
     final Core.Exp exp = fb.build();
     assertThat(
         exp,
         hasToString(
-            "project [#name (#1 $0)]\n"
-                + "  filter [#deptno (#1 $0) = #1 (#2 $0)]\n"
-                + "    join\n"
+            "project r [#name (#1 r)]\n"
+                + "  filter r [#deptno (#1 r) = #1 (#2 r)]\n"
+                + "    join r r_1\n"
                 + "      [{deptno = 10, name = \"Fred\"},"
                 + " {deptno = 20, name = \"Velma\"}]\n"
                 + "      [(1, \"a\"), (2, \"b\")]\n"));
@@ -252,13 +252,13 @@ public class FromBuilderTest {
     assertThat(
         ((Core.Rel) exp).describe(f.typeSystem),
         is(
-            "project [#2 $0]\n"
-                + "  join [v$0]\n"
-                + "    [{deptno = 10, name = \"Fred\"},"
-                + " {deptno = 20, name = \"Velma\"}]\n"
-                + "    project [#2 $0]\n"
-                + "      filter [#1 $0 = #deptno v$0]\n"
-                + "        [(1, \"a\"), (2, \"b\")]\n"));
+            "project r [#2 r]\n" //
+                + "  join e t\n"
+                + "    [{deptno = 10, name = \"Fred\"}, {deptno = 20, name = \"Velma\"}]\n"
+                + "    project r [#2 r]\n"
+                + "      filter r [#1 r = #deptno e]\n"
+                + "        [(1, \"a\"), (2, \"b\")]\n"
+                + ""));
     assertThat(exp.type, hasToString("string list"));
   }
 
@@ -277,17 +277,17 @@ public class FromBuilderTest {
     final SortedMap<String, Core.Aggregate> aggregates = new TreeMap<>();
     aggregates.put("c", f.count());
     fb.group(false, keys, aggregates);
-    assertThat(fb.field("d"), hasToString("#d $0"));
-    assertThat(fb.field("c"), hasToString("#c $0"));
+    assertThat(fb.field("d"), hasToString("#d r"));
+    assertThat(fb.field("c"), hasToString("#c r"));
     fb.where(core.greaterThan(f.typeSystem, fb.field("c"), f.intLiteral(1)));
     final Core.Exp exp = fb.build();
     assertThat(
         ((Core.Rel) exp).describe(f.typeSystem),
         is(
-            "filter [#c $0 > 1]\n"
-                + "  group [d = #deptno $0] [c = #count Relational]\n"
-                + "    [{deptno = 10, name = \"Fred\"},"
-                + " {deptno = 20, name = \"Velma\"}]\n"));
+            "filter r [#c r > 1]\n" //
+                + "  group e [d = #deptno e] [c = #count Relational]\n"
+                + "    [{deptno = 10, name = \"Fred\"}, {deptno = 20, name = \"Velma\"}]\n"
+                + ""));
     assertThat(exp.type, hasToString("{c:int, d:int} list"));
   }
 
@@ -302,7 +302,7 @@ public class FromBuilderTest {
     final Core.IdPat i = f.idPat("i", f.intType);
     final FromBuilder fb = core.fromBuilder(f.typeSystem);
     fb.scan(i, f.ints);
-    assertThat(fb.field("i"), hasToString("$0"));
+    assertThat(fb.field("i"), hasToString("i"));
     fb.where(core.greaterThan(f.typeSystem, core.id(i), f.intLiteral(1)))
         .yield_(core.equal(f.typeSystem, fb.field("i"), f.intLiteral(2)));
     assertThrows(IllegalArgumentException.class, () -> fb.field("i"));
@@ -310,9 +310,11 @@ public class FromBuilderTest {
     assertThat(
         exp,
         hasToString(
-            "project [$0 = 2]\n" //
-                + "  filter [$0 > 1]\n"
-                + "    [1, 2, 3]\n"));
+            "project i [i = 2]\n" //
+                + "  filter i [i > 1]\n"
+                + "    [1, 2, 3]\n"
+                + ""
+                + ""));
     assertThat(exp.type, hasToString("bool list"));
   }
 
@@ -341,11 +343,11 @@ public class FromBuilderTest {
     assertThat(
         exp,
         hasToString(
-            "sort [$0]\n"
-                + "  group [x = #x $0, y = #y $0]\n"
-                + "    project [{x = #2 (#1 $0), y = #2 (#2 $0)}]\n"
-                + "      filter [#2 (#1 $0) <> #2 (#2 $0)]\n"
-                + "        join [#1 $1 = #1 $0]\n"
+            "sort r [r]\n"
+                + "  group r [x = #x r, y = #y r]\n"
+                + "    project r [{x = #2 (#1 r), y = #2 (#2 r)}]\n"
+                + "      filter r [#2 (#1 r) <> #2 (#2 r)]\n"
+                + "        join r r_1 [#1 r_1 = #1 r]\n"
                 + "          [(1, \"a\"), (2, \"b\")]\n"
                 + "          [(1, \"a\"), (2, \"b\")]\n"));
     assertThat(exp.type, hasToString("{x:string, y:string} list"));

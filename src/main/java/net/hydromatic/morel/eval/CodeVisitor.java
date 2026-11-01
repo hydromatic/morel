@@ -52,6 +52,11 @@ class CodeVisitor implements Describer {
   }
 
   @Override
+  public String rename(String name) {
+    return name;
+  }
+
+  @Override
   public Describer start(String name, Consumer<Detail> consumer) {
     consumer.accept(detail);
     return this;

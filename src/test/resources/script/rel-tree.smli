@@ -40,25 +40,26 @@ useSilently "scott.smli";
 (* ---------------------------------------------------------------- *)
 (* Leaves.
  *
- * A leaf is a bare expression and holds no name: the binder `i` is
- * gone, and the filter reads the element as `$0`.
+ * A leaf is a bare expression and holds no name. The filter above it
+ * binds the element, and names its id `i` after the binder.
  *)
 Sys.planOf (from i in [1, 2, 3] where i > 1);
 > val it = {_|
-> filter [$0 > 1] : int list
+> filter i [i > 1] : int list
 >   [1, 2, 3] : int list
 > |_} : string
 
 (* A leaf whose element is a record. The element type is read off the
  * expression, so it is the record type, and a field access prints as
- * `#deptno $0`. The type is 41 characters, so it prints as `t[1]` and
- * once in the legend.
+ * `#deptno d`. The type is 41 characters, so it prints as `t[1]` and
+ * once in the legend. Each node binds an id of its own, and both are
+ * `d`: an id is in scope only in its own node's expressions.
  *)
 Sys.planOf (from d in scott.depts where d.deptno > 20 yield d.dname);
 > val it =
 >   {_|
-> project [#dname $0] : string bag
->   filter [#deptno $0 > 20] : t$0
+> project d [#dname d] : string bag
+>   filter d [#deptno d > 20] : t$0
 >     #depts scott : t$0
 >
 > t$0 {deptno:int, dname:string, loc:string} bag
@@ -73,8 +74,8 @@ from where true yield 1;
 Sys.planOf (from where true yield 1);
 > val it =
 >   {_|
-> project [1] : int list
->   filter [true] : unit list
+> project r [1] : int list
+>   filter r [true] : unit list
 >     [()] : unit list
 > |_} : string
 
@@ -90,10 +91,10 @@ Sys.planOf (
     yield {dname = d.dname, ename = e.ename});
 > val it =
 >   {_|
-> project [{dname = #dname (#1 $0), ename = #ename (#2 $0)}] : t$0
->   filter [#deptno (#2 $0) = #deptno (#1 $0)
->       andalso #job (#2 $0) = "PRESIDENT"] : t$1
->     join : t$1
+> project r [{dname = #dname (#1 r), ename = #ename (#2 r)}] : t$0
+>   filter r [#deptno (#2 r) = #deptno (#1 r)
+>       andalso #job (#2 r) = "PRESIDENT"] : t$1
+>     join d e : t$1
 >       #depts scott : t$2
 >       #emps scott : t$3
 >
@@ -104,7 +105,7 @@ Sys.planOf (
 > |_} : string
 
 (* Three inputs. Joins nest to the left, and the components stay flat:
- * `$0` has three of them, read as `#1`, `#2`, `#3`.
+ * the element that `r` refers to has three of them, read as `#1`, `#2`, `#3`.
  *)
 Sys.planOf (
   from d in scott.depts, e in scott.emps, b in scott.bonuses
@@ -112,13 +113,13 @@ Sys.planOf (
     yield {d.dname, e.ename, b.comm});
 > val it =
 >   {_|
-> project [{comm = #comm (#3 $0),
->     dname = #dname (#1 $0),
->     ename = #ename (#2 $0)}] : t$0
->   filter [#deptno (#2 $0) = #deptno (#1 $0)
->       andalso #ename (#3 $0) = #ename (#2 $0)] : t$1
->     join : t$1
->       join : t$2
+> project r [{comm = #comm (#3 r),
+>     dname = #dname (#1 r),
+>     ename = #ename (#2 r)}] : t$0
+>   filter r [#deptno (#2 r) = #deptno (#1 r)
+>       andalso #ename (#3 r) = #ename (#2 r)] : t$1
+>     join r b : t$1
+>       join d e : t$2
 >         #depts scott : t$3
 >         #emps scott : t$4
 >       #bonuses scott : t$5
@@ -140,16 +141,94 @@ Sys.planOf (
     yield {d.dname, e.ename});
 > val it =
 >   {_|
-> project [{dname = #dname (#1 $0), ename = #ename (#2 $0)}] : t$0
->   join [v$0] : t$1
+> project r [{dname = #dname (#1 r), ename = #ename (#2 r)}] : t$0
+>   join d e : t$1
 >     #depts scott : t$2
->     filter [#deptno $0 = #deptno v$0] : t$3
+>     filter e2 [#deptno e2 = #deptno d] : t$3
 >       #emps scott : t$3
 >
 > t$0 {dname:string, ename:string} bag
 > t$1 ({deptno:int, dname:string, loc:string} * {comm:real, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int, sal:real}) bag
 > t$2 {deptno:int, dname:string, loc:string} bag
 > t$3 {comm:real, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int, sal:real} bag
+> |_} : string
+
+(* Each node's header lists the ids it binds, named after the binders
+ * whose collections they range over: the join binds `d` and `e`, the
+ * filter binds `e`. The right input reads `d`, the join's left id,
+ * which makes the join dependent. No binder names the join's pair, so
+ * the projection calls its id `r`.
+ *)
+Sys.planOf (
+  from d in scott.depts,
+      e in (from e in scott.emps where e.deptno = d.deptno)
+    yield {d.dname, e.ename});
+> val it =
+>   {_|
+> project r [{dname = #dname (#1 r), ename = #ename (#2 r)}] : t$0
+>   join d e : t$1
+>     #depts scott : t$2
+>     filter e [#deptno e = #deptno d] : t$3
+>       #emps scott : t$3
+>
+> t$0 {dname:string, ename:string} bag
+> t$1 ({deptno:int, dname:string, loc:string} * {comm:real, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int, sal:real}) bag
+> t$2 {deptno:int, dname:string, loc:string} bag
+> t$3 {comm:real, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int, sal:real} bag
+> |_} : string
+
+(* An independent join binds two ids, and its condition reads both. A
+ * union binds no id, and each of its inputs binds its own `e`; as
+ * each is in scope only in its own node, none needs a suffix.
+ *)
+from e in (from e in scott.emps where e.job = "MANAGER"
+      union distinct (from e in scott.emps where e.deptno = 10)),
+    d in scott.depts on e.deptno = d.deptno
+  yield {d.dname, e.ename};
+> dname      ename
+> ---------- ------
+> RESEARCH   JONES
+> SALES      BLAKE
+> ACCOUNTING CLARK
+> ACCOUNTING KING
+> ACCOUNTING MILLER
+>
+> val it : {dname:string, ename:string} bag
+Sys.planOf (
+  from e in (from e in scott.emps where e.job = "MANAGER"
+        union distinct (from e in scott.emps where e.deptno = 10)),
+      d in scott.depts on e.deptno = d.deptno
+    yield {d.dname, e.ename});
+> val it =
+>   {_|
+> project r [{dname = #dname (#2 r), ename = #ename (#1 r)}] : t$0
+>   join e d [#deptno e = #deptno d] : t$1
+>     union : t$2
+>       filter e [#job e = "MANAGER"] : t$2
+>         #emps scott : t$2
+>       filter e [#deptno e = 10] : t$2
+>         #emps scott : t$2
+>     #depts scott : t$3
+>
+> t$0 {dname:string, ename:string} bag
+> t$1 ({comm:real, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int, sal:real} * {deptno:int, dname:string, loc:string}) bag
+> t$2 {comm:real, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int, sal:real} bag
+> t$3 {deptno:int, dname:string, loc:string} bag
+> |_} : string
+
+(* An id is never called the same as a variable that occurs in its
+ * scope. Here the projection's id would be `r`, but the projection
+ * reads the variable `r`, so the id is `r_1`.
+ *)
+val r = 5;
+> val r = 5 : int
+Sys.planOf (from x in [1, 2], y in [3, 4] yield x + y + r);
+> val it =
+>   {_|
+> project r_1 [#1 r_1 + #2 r_1 + r] : int list
+>   join x y : (int * int) list
+>     [1, 2] : int list
+>     [3, 4] : int list
 > |_} : string
 
 (* ---------------------------------------------------------------- *)
@@ -187,8 +266,8 @@ Sys.planOf (
     yield {d.dname, who = e?.ename});
 > val it =
 >   {_|
-> project [{dname = #dname (#1 $0), who = #map Option #ename (#2 $0)}] : t$0
->   join [left] [#deptno $1 = #deptno $0] : t$1
+> project r [{dname = #dname (#1 r), who = #map Option #ename (#2 r)}] : t$0
+>   join d e [left] [#deptno e = #deptno d] : t$1
 >     #depts scott : t$2
 >     #emps scott : t$3
 >
@@ -205,9 +284,9 @@ Sys.planOf (
     yield {d.dname, who = e?.ename});
 > val it =
 >   {_|
-> project [{dname = #dname (#2 $0), who = #map Option #ename (#1 $0)}] : t$0
->   join [right] [#deptno $0 = #deptno $1] : t$1
->     filter [#job $0 = "PRESIDENT"] : t$2
+> project r [{dname = #dname (#2 r), who = #map Option #ename (#1 r)}] : t$0
+>   join e d [right] [#deptno e = #deptno d] : t$1
+>     filter x [#job x = "PRESIDENT"] : t$2
 >       #emps scott : t$2
 >     #depts scott : t$3
 >
@@ -235,10 +314,10 @@ Sys.planOf (
     yield {dname = d?.dname, who = e?.ename});
 > val it =
 >   {_|
-> project [{dname = #map Option #dname (#2 $0),
->     who = #map Option #ename (#1 $0)}] : t$0
->   join [full] [#deptno $0 = #deptno $1] : t$1
->     filter [#job $0 = "PRESIDENT"] : t$2
+> project r [{dname = #map Option #dname (#2 r),
+>     who = #map Option #ename (#1 r)}] : t$0
+>   join e d [full] [#deptno e = #deptno d] : t$1
+>     filter x [#job x = "PRESIDENT"] : t$2
 >       #emps scott : t$2
 >     #depts scott : t$3
 >
@@ -259,7 +338,7 @@ Sys.planOf (
     compute {c = count over (), total = sum over e.sal});
 > val it =
 >   {_|
-> group [deptno = #deptno $0] [c = count over (), total = sum over #sal $0] : t$0
+> group e [deptno = #deptno e] [c = count over (), total = sum over #sal e] : t$0
 >   #emps scott : t$1
 >
 > t$0 {c:int, deptno:int, total:real} bag
@@ -273,7 +352,7 @@ Sys.planOf (
 Sys.planOf (from i in [1, 2] group {} compute {c = count over ()});
 > val it =
 >   {_|
-> group [] [c = fn col$0 => count (#fromList Bag col$0) over ()] : {c:int} list
+> group i [] [c = fn col$0 => count (#fromList Bag col$0) over ()] : {c:int} list
 >   [1, 2] : int list
 > |_} : string
 from i in [] group {} compute {c = count over ()};
@@ -286,16 +365,16 @@ from i in [] group {} compute {c = count over ()};
 (* `order` is a sort, and it changes the kind: its input is a `bag`
  * and its output a `list`. `skip` and `take` are nodes of their own,
  * whose arguments are evaluated before the first element and so cannot
- * mention `$0`.
+ * mention the id.
  *)
 Sys.planOf (
   from e in scott.emps order e.sal skip 2 take 3 yield e.ename);
 > val it =
 >   {_|
-> project [#ename $0] : string list
+> project e [#ename e] : string list
 >   take [3] : t$0
 >     skip [2] : t$0
->       sort [#sal $0] : t$0
+>       sort e [#sal e] : t$0
 >         #emps scott : t$1
 >
 > t$0 {comm:real, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int, sal:real} list
@@ -331,7 +410,7 @@ Sys.planOf (from i in [3, 1, 2] order i unorder);
 > val it =
 >   {_|
 > unorder : int bag
->   sort [$0] : int list
+>   sort i [i] : int list
 >     [3, 1, 2] : int list
 > |_} : string
 
@@ -357,21 +436,21 @@ Sys.planOf (
     yield x);
 > val it =
 >   {_|
-> filter [let
->       val v$0 = $0
+> filter x [let
+>       val v$0 = x
 >     in
 >       #nonEmpty Relational (r$0[v$0]) andalso #nonEmpty Relational (r$1[v$0])
 >     end] : int list
 >   [1, 2, 3] : int list
 >
 > r$0[v$0] =
->   project [{a = #1 $0, b = #2 $0}] : {a:int, b:int} list
->     filter [#1 $0 = v$0] : (int * int) list
+>   project r [{a = #1 r, b = #2 r}] : {a:int, b:int} list
+>     filter r [#1 r = v$0] : (int * int) list
 >       pairs : (int * int) list
 >
 > r$1[v$0] =
->   project [{c = #1 $0, d = #2 $0}] : {c:int, d:int} list
->     filter [#2 $0 = v$0 + 1] : (int * int) list
+>   project r [{c = #1 r, d = #2 r}] : {c:int, d:int} list
+>     filter r [#2 r = v$0 + 1] : (int * int) list
 >       pairs : (int * int) list
 > |_} : string
 
@@ -402,21 +481,21 @@ Sys.planOf (
     yield x);
 > val it =
 >   {_|
-> filter [let val v$0 = $0 in #nonEmpty Relational (r$0[v$0]) end] : int list
+> filter x [let val v$0 = x in #nonEmpty Relational (r$0[v$0]) end] : int list
 >   [1, 2, 3] : int list
 >
 > r$0[v$0] =
->   project [{a = #1 $0, b = #2 $0}] : {a:int, b:int} list
->     filter [let
->           val v$1 = $0
+>   project r [{a = #1 r, b = #2 r}] : {a:int, b:int} list
+>     filter r [let
+>           val v$1 = r
 >         in
->           #1 $0 = v$0 andalso #nonEmpty Relational (r$1[v$1])
+>           #1 r = v$0 andalso #nonEmpty Relational (r$1[v$1])
 >         end] : (int * int) list
 >       pairs : (int * int) list
 >
 > r$1[v$1] =
->   project [{c = #1 $0, d = #2 $0}] : {c:int, d:int} list
->     filter [#1 $0 = #2 v$1] : (int * int) list
+>   project r [{c = #1 r, d = #2 r}] : {c:int, d:int} list
+>     filter r [#1 r = #2 v$1] : (int * int) list
 >       pairs : (int * int) list
 > |_} : string
 
@@ -426,27 +505,27 @@ Sys.planOf (
  * before anything prints it, so these negate a variable. *)
 Sys.planOf (from i in [1, 2, 3] yield ~i);
 > val it = {_|
-> project [~ $0] : int list
+> project i [~ i] : int list
 >   [1, 2, 3] : int list
 > |_} : string
 Sys.planOf (from i in [1, 2, 3] yield op ~ i);
 > val it = {_|
-> project [~ $0] : int list
+> project i [~ i] : int list
 >   [1, 2, 3] : int list
 > |_} : string
 Sys.planOf (from i in [1, 2, 3] yield ~ (i + 1));
 > val it = {_|
-> project [~ ($0 + 1)] : int list
+> project i [~ (i + 1)] : int list
 >   [1, 2, 3] : int list
 > |_} : string
 Sys.planOf (from i in [1, 2, 3] yield ~i + 1);
 > val it = {_|
-> project [~ $0 + 1] : int list
+> project i [~ i + 1] : int list
 >   [1, 2, 3] : int list
 > |_} : string
 Sys.planOf (from i in [1, 2, 3] where ~i < 0);
 > val it = {_|
-> filter [~ $0 < 0] : int list
+> filter i [~ i < 0] : int list
 >   [1, 2, 3] : int list
 > |_} : string
 from i in [1, 2, 3] yield ~i;
@@ -470,8 +549,8 @@ val es = [{id = 100, name = "Fred", deptno = 10}];
 Sys.planOf (from e in es order e.deptno where ordinal > 1);
 > val it =
 >   {_|
-> filter [$ordinal > 1] : t$0
->   sort [#deptno $0] : t$0
+> filter e $ordinal [$ordinal > 1] : t$0
+>   sort e [#deptno e] : t$0
 >     es : t$0
 >
 > t$0 {deptno:int, id:int, name:string} list
@@ -483,8 +562,8 @@ from a in es, b in es, c in es, d in es, e in es, f in es, g in es, h in es
 Sys.planOf (from e in es order e.deptno where ordinal > 1);
 > val it =
 >   {_|
-> filter [$ordinal > 1] : t$0
->   sort [#deptno $0] : t$0
+> filter e $ordinal [$ordinal > 1] : t$0
+>   sort e [#deptno e] : t$0
 >     es : t$0
 >
 > t$0 {deptno:int, id:int, name:string} list
@@ -529,9 +608,9 @@ Sys.planOf (
     yield e.ename);
 > val it =
 >   {_|
-> project [#ename $0] : string bag
->   filter [#deptno $0 = 10 andalso #job $0 = "CLERK"
->       andalso #sal $0 > 1000.0] : t$0
+> project e [#ename e] : string bag
+>   filter e [#deptno e = 10 andalso #job e = "CLERK"
+>       andalso #sal e > 1000.0] : t$0
 >     #emps scott : t$0
 >
 > t$0 {comm:real, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int, sal:real} bag
@@ -546,8 +625,8 @@ from e in scott.emps
 Sys.planOf (from i in [1, 2, 3] group i);
 > val it =
 >   {_|
-> project [#i $0] : int list
->   group [i = $0] : {i:int} list
+> project r [#i r] : int list
+>   group i [i = i] : {i:int} list
 >     [1, 2, 3] : int list
 > |_} : string
 from i in [1, 2, 3] group i;
@@ -560,7 +639,7 @@ from i in [1, 2, 3] group i;
 Sys.planOf (from c in [#"a" ..] where c <= #"d");
 > val it =
 >   {_|
-> filter [$0 <= #"d"] : char list
+> filter c [c <= #"d"] : char list
 >   #flatten Range ([AT_LEAST #"a"]) : char list
 > |_} : string
 from c in [#"a" ..] where c <= #"d";
@@ -568,7 +647,7 @@ from c in [#"a" ..] where c <= #"d";
 Sys.planOf (from i where i elem [1, 2, 3] andalso i > 1);
 > val it =
 >   {_|
-> filter [$0 elem [1, 2, 3] andalso $0 > 1] : int list
+> filter i [i elem [1, 2, 3] andalso i > 1] : int list
 >   extent "int" : int list
 > |_} : string
 from i where i elem [1, 2, 3] andalso i > 1;

@@ -42,6 +42,17 @@ public interface Describer {
    */
   int register(String name, int i);
 
+  /**
+   * Renumbers a name that the compiler generated, such as {@code v$3727}, by
+   * first occurrence, so that a plan's text does not depend on what was
+   * compiled before it. Each prefix is numbered in its own sequence; a name
+   * that the compiler did not generate is returned unchanged.
+   *
+   * <p>For example, if called with "v$7", "t$4", "v$3", "v$7", "x" returns
+   * "v$0", "t$0", "v$1", "v$0", "x".
+   */
+  String rename(String name);
+
   /** Provided as a callback while describing a node. */
   interface Detail {
     /** Prints an atomic argument. */

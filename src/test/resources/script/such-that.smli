@@ -358,9 +358,9 @@ Sys.planEx "3";
 > val it =
 >   {_|
 > val it =
->   project [{f = #2 $0, t = #1 $0}] : {f:int, t:int} list
->     filter [#`*` Int (3, #1 $0) + #`*` Int (5, #2 $0) = 30] : (int * int) list
->       join : (int * int) list
+>   project r [{f = #2 r, t = #1 r}] : {f:int, t:int} list
+>     filter r [#`*` Int (3, #1 r) + #`*` Int (5, #2 r) = 30] : (int * int) list
+>       join t f : (int * int) list
 >         #flatten Range ([CLOSED (0, 10)]) : int list
 >         #flatten Range ([CLOSED (0, 6)]) : int list
 > |_} : string
@@ -716,9 +716,9 @@ Sys.planEx "999";
 > val it =
 >   {_|
 > val it =
->   sort [$0] : int list
->     project [#x $0] : int list
->       group [x = $0] : {x:int} list
+>   sort r [r] : int list
+>     project r [#x r] : int list
+>       group x [x = x] : {x:int} list
 >         [1, 2, 4] : int list
 > |_} : string
 
@@ -750,10 +750,10 @@ Sys.planEx "3";
 > val it =
 >   {_|
 > val it =
->   project [#2 $0] : int list
->     join [v$0] : (int * int) list
+>   project r [#2 r] : int list
+>     join r r_1 : (int * int) list
 >       [3, 5, 7] : int list
->       #flatten Range ([OPEN (#`-` Int (v$0, 5), v$0)]) : int list
+>       #flatten Range ([OPEN (#`-` Int (r, 5), r)]) : int list
 > |_} : string
 
 from x in [3, 5, 7], y
@@ -1519,11 +1519,11 @@ Sys.planEx "999";
 > val it =
 >   {_|
 > val it =
->   project [{p = #2 $0, s = #1 $0}] : t$0
->     join [v$0] : (string * string) list
+>   project r [{p = #2 r, s = #1 r}] : t$0
+>     join r r_1 : (string * string) list
 >       ["abcd", "ant"] : string list
->       #tabulate List (#size String v$0 + 1,
->           fn i => #substring String (v$0, 0, i)) : string list
+>       #tabulate List (#size String r + 1,
+>           fn i => #substring String (r, 0, i)) : string list
 >
 > t$0 {p:string, s:string} list
 > |_} : string
@@ -1538,23 +1538,23 @@ Sys.planEx "999";
 > val it =
 >   {_|
 > val it =
->   sort [$0] : string list
->     filter [let
->           val v$0 = $0
+>   sort p [p] : string list
+>     filter r [let
+>           val v$0 = r
 >         in
 >           #nonEmpty Relational (r$0[v$0])
 >         end] : string list
->       sort [$0] : string list
->         project [#p $0] : string bag
->           group [p = $0] : {p:string} bag
->             project [#2 $0] : string bag
->               join [v$1] : (string * string) bag
+>       sort r [r] : string list
+>         project r [#p r] : string bag
+>           group r [p = r] : {p:string} bag
+>             project r [#2 r] : string bag
+>               join w$0 p : (string * string) bag
 >                 ["abcd", "ant"] : string list
->                 #tabulate Bag (#size String v$1 + 1,
->                     fn i => #substring String (v$1, 0, i)) : string bag
+>                 #tabulate Bag (#size String w$0 + 1,
+>                     fn i => #substring String (w$0, 0, i)) : string bag
 >
 > r$0[v$0] =
->   filter [#isPrefix String v$0 $0] : string list
+>   filter s [#isPrefix String v$0 s] : string list
 >     ["abcd", "ant"] : string list
 > |_} : string
 
@@ -2502,7 +2502,7 @@ Sys.planEx "0";
 > val it =
 >   {_|
 > val it =
->   filter [op elem ($0, #depts scott)] : t$0
+>   filter d [op elem (d, #depts scott)] : t$0
 >     extent "{deptno:int, dname:string, loc:string}" : t$0
 >
 > t$0 {deptno:int, dname:string, loc:string} list
@@ -2511,9 +2511,9 @@ Sys.planEx "3";
 > val it =
 >   {_|
 > val it =
->   sort [$0] : t$0
->     project [#d $0] : t$0
->       group [d = $0] : t$1
+>   sort r [r] : t$0
+>     project r [#d r] : t$0
+>       group d [d = d] : t$1
 >         #toList Bag (#depts scott) : t$0
 >
 > t$0 {deptno:int, dname:string, loc:string} list
@@ -2535,11 +2535,11 @@ Sys.planEx "0";
 > val it =
 >   {_|
 > val it =
->   project [{deptno = #2 $0, loc = #1 $0, name = #3 $0}] : t$0
->     filter [op elem ({deptno = #2 $0, dname = #3 $0, loc = #1 $0},
+>   project r [{deptno = #2 r, loc = #1 r, name = #3 r}] : t$0
+>     filter r [op elem ({deptno = #2 r, dname = #3 r, loc = #1 r},
 >         #depts scott)] : t$1
->       join : t$1
->         join : (string * int) list
+>       join r name : t$1
+>         join loc deptno : (string * int) list
 >           extent "string" : string list
 >           extent "int" : int list
 >         extent "string" : string list
@@ -2552,9 +2552,9 @@ Sys.planEx "3";
 > val it =
 >   {_|
 > val it =
->   project [{deptno = #deptno $0, loc = #loc $0, name = #name $0}] : t$0
->     sort [$0] : t$0
->       group [deptno = #deptno $0, loc = #loc $0, name = #dname $0] : t$0
+>   project r [{deptno = #deptno r, loc = #loc r, name = #name r}] : t$0
+>     sort r [r] : t$0
+>       group r [deptno = #deptno r, loc = #loc r, name = #dname r] : t$0
 >         #toList Bag (#depts scott) : t$1
 >
 > t$0 {deptno:int, loc:string, name:string} list
@@ -2576,11 +2576,11 @@ Sys.planEx "0";
 > val it =
 >   {_|
 > val it =
->   project [{dno = #1 $0, name = #2 $0}] : t$0
->     filter [op elem ({deptno = #1 $0, dname = #2 $0, loc = "CHICAGO"},
+>   project r [{dno = #1 r, name = #2 r}] : t$0
+>     filter r [op elem ({deptno = #1 r, dname = #2 r, loc = "CHICAGO"},
 >         #depts scott)
->         andalso #1 $0 > 20] : (int * string) list
->       join : (int * string) list
+>         andalso #1 r > 20] : (int * string) list
+>       join dno name : (int * string) list
 >         extent "int" : int list
 >         extent "string" : string list
 >
@@ -2590,12 +2590,12 @@ Sys.planEx "3";
 > val it =
 >   {_|
 > val it =
->   project [{dno = #1 $0, name = #2 $0}] : t$0
->     filter [#1 $0 > 20] : (int * string) list
->       project [(#dno $0, #name $0)] : (int * string) list
->         sort [$0] : t$0
->           group [dno = #deptno $0, name = #dname $0] : t$0
->             filter [#loc $0 = "CHICAGO"] : t$1
+>   project r [{dno = #1 r, name = #2 r}] : t$0
+>     filter r [#1 r > 20] : (int * string) list
+>       project r [(#dno r, #name r)] : (int * string) list
+>         sort r [r] : t$0
+>           group r [dno = #deptno r, name = #dname r] : t$0
+>             filter r [#loc r = "CHICAGO"] : t$1
 >               #toList Bag (#depts scott) : t$1
 >
 > t$0 {dno:int, name:string} list
@@ -2619,14 +2619,14 @@ Sys.planEx "0";
 > val it =
 >   {_|
 > val it =
->   project [{dno = #deptno (#3 $0), name = #dname (#3 $0)}] : t$0
->     filter [#1 $0 = 30] : t$1
->       filter [#loc (#3 $0) = "CHICAGO"] : t$1
->         filter [#2 $0 = #dname (#3 $0)] : t$1
->           filter [#deptno (#3 $0) = #1 $0] : t$1
->             filter [op elem (#3 $0, #depts scott)] : t$1
->               join : t$1
->                 join : (int * string) list
+>   project r [{dno = #deptno (#3 r), name = #dname (#3 r)}] : t$0
+>     filter r [#1 r = 30] : t$1
+>       filter r [#loc (#3 r) = "CHICAGO"] : t$1
+>         filter r [#2 r = #dname (#3 r)] : t$1
+>           filter r [#deptno (#3 r) = #1 r] : t$1
+>             filter r [op elem (#3 r, #depts scott)] : t$1
+>               join r v : t$1
+>                 join dno name : (int * string) list
 >                   extent "int" : int list
 >                   extent "string" : string list
 >                 extent "{deptno:int, dname:string, loc:string}" : t$2
@@ -2639,17 +2639,17 @@ Sys.planEx "3";
 > val it =
 >   {_|
 > val it =
->   project [{dno = #deptno (#3 $0), name = #dname (#3 $0)}] : t$0
->     filter [#loc (#3 $0) = "CHICAGO" andalso #1 $0 = 30] : t$1
->       project [(#2 $0, #3 $0, #1 $0)] : t$1
->         join [v$0] : t$2
->           sort [$0] : t$3
->             project [#v $0] : t$3
->               group [v = $0] : t$4
+>   project r [{dno = #deptno (#3 r), name = #dname (#3 r)}] : t$0
+>     filter r [#loc (#3 r) = "CHICAGO" andalso #1 r = 30] : t$1
+>       project r [(#2 r, #3 r, #1 r)] : t$1
+>         join r r_1 : t$2
+>           sort r [r] : t$3
+>             project r [#v r] : t$3
+>               group v [v = v] : t$4
 >                 #toList Bag (#depts scott) : t$3
->           join : (int * string) list
->             [#deptno v$0] : int list
->             [#dname v$0] : string list
+>           join dno name : (int * string) list
+>             [#deptno r] : int list
+>             [#dname r] : string list
 >
 > t$0 {dno:int, name:string} list
 > t$1 (int * string * {deptno:int, dname:string, loc:string}) list
@@ -2675,14 +2675,14 @@ Sys.planEx "0";
 > val it =
 >   {_|
 > val it =
->   project [{dno = #deptno (#3 $0), name = #dname (#3 $0)}] : t$0
->     filter [#1 $0 > 25] : t$1
->       filter [#loc (#3 $0) = "CHICAGO"] : t$1
->         filter [#2 $0 = #dname (#3 $0)] : t$1
->           filter [#deptno (#3 $0) = #1 $0] : t$1
->             filter [op elem (#3 $0, #depts scott)] : t$1
->               join : t$1
->                 join : (int * string) list
+>   project r [{dno = #deptno (#3 r), name = #dname (#3 r)}] : t$0
+>     filter r [#1 r > 25] : t$1
+>       filter r [#loc (#3 r) = "CHICAGO"] : t$1
+>         filter r [#2 r = #dname (#3 r)] : t$1
+>           filter r [#deptno (#3 r) = #1 r] : t$1
+>             filter r [op elem (#3 r, #depts scott)] : t$1
+>               join r v : t$1
+>                 join dno name : (int * string) list
 >                   extent "int" : int list
 >                   extent "string" : string list
 >                 extent "{deptno:int, dname:string, loc:string}" : t$2
@@ -2695,17 +2695,17 @@ Sys.planEx "3";
 > val it =
 >   {_|
 > val it =
->   project [{dno = #deptno (#3 $0), name = #dname (#3 $0)}] : t$0
->     filter [#loc (#3 $0) = "CHICAGO" andalso #1 $0 > 25] : t$1
->       project [(#2 $0, #3 $0, #1 $0)] : t$1
->         join [v$0] : t$2
->           sort [$0] : t$3
->             project [#v $0] : t$3
->               group [v = $0] : t$4
+>   project r [{dno = #deptno (#3 r), name = #dname (#3 r)}] : t$0
+>     filter r [#loc (#3 r) = "CHICAGO" andalso #1 r > 25] : t$1
+>       project r [(#2 r, #3 r, #1 r)] : t$1
+>         join r r_1 : t$2
+>           sort r [r] : t$3
+>             project r [#v r] : t$3
+>               group v [v = v] : t$4
 >                 #toList Bag (#depts scott) : t$3
->           join : (int * string) list
->             [#deptno v$0] : int list
->             [#dname v$0] : string list
+>           join dno name : (int * string) list
+>             [#deptno r] : int list
+>             [#dname r] : string list
 >
 > t$0 {dno:int, name:string} list
 > t$1 (int * string * {deptno:int, dname:string, loc:string}) list
@@ -2728,9 +2728,9 @@ Sys.planEx "0";
 > val it =
 >   {_|
 > val it =
->   project [#dname $0] : string list
->     filter [(let val d = $0 in op elem (d, #depts scott) end)
->         andalso #deptno $0 = 20] : t$0
+>   project d [#dname d] : string list
+>     filter d_1 [(let val d = d_1 in op elem (d, #depts scott) end)
+>         andalso #deptno d_1 = 20] : t$0
 >       extent "{deptno:int, dname:string, loc:string}" : t$0
 >
 > t$0 {deptno:int, dname:string, loc:string} list
@@ -2739,11 +2739,11 @@ Sys.planEx "999";
 > val it =
 >   {_|
 > val it =
->   project [#dname $0] : string list
->     filter [#deptno $0 = 20] : t$0
->       sort [$0] : t$0
->         project [#d $0] : t$0
->           group [d = $0] : t$1
+>   project d [#dname d] : string list
+>     filter r [#deptno r = 20] : t$0
+>       sort r [r] : t$0
+>         project r [#d r] : t$0
+>           group d [d = d] : t$1
 >             #toList Bag (#depts scott) : t$0
 >
 > t$0 {deptno:int, dname:string, loc:string} list
@@ -2777,11 +2777,11 @@ Sys.planEx "0";
 >   end
 >
 > r$0[isDept, isEmp] =
->   project [#dname (#1 $0)] : string list
->     filter [isDept (#1 $0) andalso isEmp (#2 $0)
->         andalso #deptno (#1 $0) = #deptno (#2 $0)
->         andalso #deptno (#1 $0) = 20] : t$0
->       join : t$0
+>   project r [#dname (#1 r)] : string list
+>     filter r [isDept (#1 r) andalso isEmp (#2 r)
+>         andalso #deptno (#1 r) = #deptno (#2 r)
+>         andalso #deptno (#1 r) = 20] : t$0
+>       join d e : t$0
 >         extent "{deptno:int, dname:string, loc:string}" : t$1
 >         extent "{comm:real, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int, sal:real}" : t$2
 >
@@ -2793,17 +2793,17 @@ Sys.planEx "999";
 > val it =
 >   {_|
 > val it =
->   project [#dname (#1 $0)] : string list
->     filter [#deptno (#1 $0) = #deptno (#2 $0)
->         andalso #deptno (#1 $0) = 20] : t$0
->       join : t$0
->         sort [$0] : t$1
->           project [#d $0] : t$1
->             group [d = $0] : t$2
+>   project r [#dname (#1 r)] : string list
+>     filter r [#deptno (#1 r) = #deptno (#2 r)
+>         andalso #deptno (#1 r) = 20] : t$0
+>       join d e : t$0
+>         sort r [r] : t$1
+>           project r [#d r] : t$1
+>             group d [d = d] : t$2
 >               #toList Bag (#depts scott) : t$1
->         sort [$0] : t$3
->           project [#e $0] : t$3
->             group [e = $0] : t$4
+>         sort r [r] : t$3
+>           project r [#e r] : t$3
+>             group e [e = e] : t$4
 >               #toList Bag (#emps scott) : t$3
 >
 > t$0 ({deptno:int, dname:string, loc:string} * {comm:real, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int, sal:real}) list
@@ -2837,16 +2837,16 @@ Sys.planEx "0";
 >   end
 >
 > r$0[f] =
->   filter [f $0] : int list
+>   filter x [f x] : int list
 >     extent "int" : int list
 > |_} : string
 Sys.planEx "999";
 > val it =
 >   {_|
 > val it =
->   sort [$0] : int list
->     project [#x $0] : int list
->       group [x = $0] : {x:int} list
+>   sort r [r] : int list
+>     project r [#x r] : int list
+>       group x [x = x] : {x:int} list
 >         [1, 2, 3] : int list
 > |_} : string
 
@@ -2871,17 +2871,17 @@ Sys.planEx "0";
 >   end
 >
 > r$0[f] =
->   filter [f $0 andalso $0 > 1] : int list
+>   filter x [f x andalso x > 1] : int list
 >     extent "int" : int list
 > |_} : string
 Sys.planEx "999";
 > val it =
 >   {_|
 > val it =
->   filter [$0 > 1] : int list
->     sort [$0] : int list
->       project [#x $0] : int list
->         group [x = $0] : {x:int} list
+>   filter r [r > 1] : int list
+>     sort r [r] : int list
+>       project r [#x r] : int list
+>         group x [x = x] : {x:int} list
 >           [1, 2, 3] : int list
 > |_} : string
 

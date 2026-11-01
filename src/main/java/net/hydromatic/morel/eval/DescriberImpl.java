@@ -25,11 +25,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import net.hydromatic.morel.ast.Core;
+import org.jspecify.annotations.Nullable;
 
 /** Implementation of {@link net.hydromatic.morel.eval.Describer}. */
 class DescriberImpl implements Describer {
   final StringBuilder buf = new StringBuilder();
   final Map<String, List<Integer>> nameIds = new HashMap<>();
+  final Map<String, String> names = new HashMap<>();
+  final Map<String, Integer> prefixCounts = new HashMap<>();
 
   @Override
   public String toString() {
@@ -55,6 +59,24 @@ class DescriberImpl implements Describer {
       list.add(i);
     }
     return j;
+  }
+
+  @Override
+  public String rename(String name) {
+    final @Nullable String idName = Core.NamedPat.idName(name);
+    if (idName != null) {
+      return idName;
+    }
+    if (!Core.NamedPat.isGenerated(name)) {
+      return name;
+    }
+    return names.computeIfAbsent(
+        name,
+        n -> {
+          final String prefix = n.substring(0, n.indexOf('$') + 1);
+          final int k = prefixCounts.merge(prefix, 1, Integer::sum) - 1;
+          return prefix + k;
+        });
   }
 
   /** Implementation of {@link Detail}. */

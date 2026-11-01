@@ -710,7 +710,7 @@ public abstract class Codes {
 
     @Override
     public Describer describe(Describer describer) {
-      return describer.start("get", d -> d.arg("name", name));
+      return describer.start("get", d -> d.arg("name", describer.rename(name)));
     }
 
     @Override
@@ -790,7 +790,8 @@ public abstract class Codes {
     @Override
     public Describer describe(Describer describer) {
       return describer.start(
-          "stack", d -> d.arg("offset", offset).arg("name", name));
+          "stack",
+          d -> d.arg("offset", offset).arg("name", describer.rename(name)));
     }
 
     @Override
@@ -983,7 +984,7 @@ public abstract class Codes {
       return describer.start(
           "stackLetPat",
           d ->
-              d.arg("pat", pat.toString())
+              d.arg("pat", pat.describe(describer))
                   .arg("expCode", expCode)
                   .arg("resultCode", resultCode));
     }

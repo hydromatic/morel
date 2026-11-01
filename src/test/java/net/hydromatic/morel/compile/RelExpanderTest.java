@@ -211,10 +211,11 @@ public class RelExpanderTest {
     assertThat(
         expanded("from x where x elem [1, 2, 3]"),
         is(
-            "sort [$0]\n" //
-                + "  project [#`g$0` $0]\n"
-                + "    group [g$0 = $0]\n"
-                + "      [1, 2, 3]\n"));
+            "sort r [r]\n" //
+                + "  project r [#`g$0` r]\n"
+                + "    group g$0 [g$0 = g$0]\n"
+                + "      [1, 2, 3]\n"
+                + ""));
   }
 
   /** Tests that a condition a generator does not subsume is kept. */
@@ -223,11 +224,12 @@ public class RelExpanderTest {
     assertThat(
         expanded("from x where x elem [1, 2, 3] andalso x > 1"),
         is(
-            "filter [$0 > 1]\n" //
-                + "  sort [$0]\n"
-                + "    project [#`g$0` $0]\n"
-                + "      group [g$0 = $0]\n"
-                + "        [1, 2, 3]\n"));
+            "filter r [r > 1]\n" //
+                + "  sort r [r]\n"
+                + "    project r [#`g$0` r]\n"
+                + "      group g$0 [g$0 = g$0]\n"
+                + "        [1, 2, 3]\n"
+                + ""));
   }
 
   /**
@@ -239,10 +241,10 @@ public class RelExpanderTest {
     assertThat(
         expanded("from x in [1, 2], y where y elem [x, x + 1]"),
         is(
-            "project [{x = #1 $0, y = #2 $0}]\n" //
-                + "  join [v$0]\n"
+            "project r [{x = #1 r, y = #2 r}]\n" //
+                + "  join r r_1\n"
                 + "    [1, 2]\n"
-                + "    [v$0, v$0 + 1]\n"));
+                + "    [r, r + 1]\n"));
   }
 
   /**
@@ -255,9 +257,9 @@ public class RelExpanderTest {
     assertThat(
         expanded("from z in [1, 2, 3], x where x + 1 = z"),
         is(
-            "project [{x = #2 $0, z = #1 $0}]\n" //
-                + "  filter [#2 $0 + 1 = #1 $0]\n"
-                + "    join\n"
+            "project r [{x = #2 r, z = #1 r}]\n" //
+                + "  filter r [#2 r + 1 = #1 r]\n"
+                + "    join z x\n"
                 + "      [1, 2, 3]\n"
                 + "      #flatten Range ([CLOSED (0, 2)])\n"));
   }
@@ -273,11 +275,12 @@ public class RelExpanderTest {
         expanded(
             "from x, y in [x * 2] where x > 0 andalso x < 10 andalso x < y"),
         is(
-            "project [{x = #1 $0, y = #2 $0}]\n" //
-                + "  filter [#1 $0 < #2 $0]\n"
-                + "    join [v$0]\n"
+            "project r [{x = #1 r, y = #2 r}]\n" //
+                + "  filter r [#1 r < #2 r]\n"
+                + "    join x y\n"
                 + "      #flatten Range ([OPEN (0, 10)])\n"
-                + "      [#`*` Int (v$0, 2)]\n"));
+                + "      [#`*` Int (x, 2)]\n"
+                + ""));
   }
 
   /**
@@ -309,10 +312,10 @@ public class RelExpanderTest {
             "from i : int join j : string "
                 + "where (i, j) elem [(1, \"a\"), (2, \"b\")]"),
         is(
-            "project [{i = #1 $0, j = #2 $0}]\n" //
-                + "  project [(#`g$0` $0, #`g$1` $0)]\n"
-                + "    sort [$0]\n"
-                + "      group [g$0 = #1 $0, g$1 = #2 $0]\n"
+            "project r [{i = #1 r, j = #2 r}]\n" //
+                + "  project r [(#`g$0` r, #`g$1` r)]\n"
+                + "    sort r [r]\n"
+                + "      group r [g$0 = #1 r, g$1 = #2 r]\n"
                 + "        [(1, \"a\"), (2, \"b\")]\n"));
   }
 
@@ -361,21 +364,22 @@ public class RelExpanderTest {
             "from i : int join j : int where i elem [1, 2] "
                 + "join k : int where j elem [3, 4] andalso k elem [5, 6]"),
         is(
-            "project [{i = #1 $0, j = #2 $0, k = #3 $0}]\n" //
-                + "  join\n"
-                + "    join\n"
-                + "      sort [$0]\n"
-                + "        project [#`g$0` $0]\n"
-                + "          group [g$0 = $0]\n"
+            "project r [{i = #1 r, j = #2 r, k = #3 r}]\n" //
+                + "  join r k\n"
+                + "    join i j\n"
+                + "      sort r [r]\n"
+                + "        project r [#`g$0` r]\n"
+                + "          group g$0 [g$0 = g$0]\n"
                 + "            [1, 2]\n"
-                + "      sort [$0]\n"
-                + "        project [#`g$1` $0]\n"
-                + "          group [g$1 = $0]\n"
+                + "      sort r [r]\n"
+                + "        project r [#`g$1` r]\n"
+                + "          group g$1 [g$1 = g$1]\n"
                 + "            [3, 4]\n"
-                + "    sort [$0]\n"
-                + "      project [#`g$2` $0]\n"
-                + "        group [g$2 = $0]\n"
-                + "          [5, 6]\n"));
+                + "    sort r_1 [r_1]\n"
+                + "      project r_1 [#`g$2` r_1]\n"
+                + "        group g$2 [g$2 = g$2]\n"
+                + "          [5, 6]\n"
+                + ""));
   }
 
   /**
@@ -392,12 +396,12 @@ public class RelExpanderTest {
             "from x in [1, 2] join y where y elem [x] "
                 + "join z where z elem [y, y + 1]"),
         is(
-            "project [{x = #1 $0, y = #2 $0, z = #3 $0}]\n" //
-                + "  join [v$0]\n"
-                + "    join [v$1]\n"
+            "project r [{x = #1 r, y = #2 r, z = #3 r}]\n" //
+                + "  join r r_1\n"
+                + "    join r r_1\n"
                 + "      [1, 2]\n"
-                + "      [v$1]\n"
-                + "    [#2 v$0, #2 v$0 + 1]\n"));
+                + "      [r]\n"
+                + "    [#2 r, #2 r + 1]\n"));
   }
 
   /**
@@ -414,17 +418,18 @@ public class RelExpanderTest {
             "from dno : int join v : int list "
                 + "where v elem [[1], [2]] andalso dno elem v"),
         is(
-            "project [{dno = #1 $0, v = #2 $0}]\n" //
-                + "  project [(#2 $0, #1 $0)]\n"
-                + "    join [v$0]\n"
-                + "      sort [$0]\n"
-                + "        project [#`g$0` $0]\n"
-                + "          group [g$0 = $0]\n"
+            "project r [{dno = #1 r, v = #2 r}]\n" //
+                + "  project r [(#2 r, #1 r)]\n"
+                + "    join r r_1\n"
+                + "      sort r [r]\n"
+                + "        project r [#`g$0` r]\n"
+                + "          group g$0 [g$0 = g$0]\n"
                 + "            [[1], [2]]\n"
-                + "      sort [$0]\n"
-                + "        project [#`g$1` $0]\n"
-                + "          group [g$1 = $0]\n"
-                + "            v$0\n"));
+                + "      sort r_1 [r_1]\n"
+                + "        project r_1 [#`g$1` r_1]\n"
+                + "          group g$1 [g$1 = g$1]\n"
+                + "            r\n"
+                + ""));
   }
 
   /** Tests that a query that cannot be bounded is an error. */

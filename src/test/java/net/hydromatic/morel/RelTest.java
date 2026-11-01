@@ -170,8 +170,8 @@ public class RelTest {
     assertThat(
         project.describe(f.typeSystem),
         is(
-            "project [{a = $0, b = 0}]\n" //
-                + "  filter [$0 > 1]\n"
+            "project r [{a = r, b = 0}]\n" //
+                + "  filter r [r > 1]\n"
                 + "    [1, 2]\n"));
   }
 
@@ -187,7 +187,7 @@ public class RelTest {
     assertThat(
         filter.describe(f.typeSystem, AstWriter.DEFAULT_WIDTH, true),
         is(
-            "filter [$0 > 1] : int list\n" //
+            "filter r [r > 1] : int list\n" //
                 + "  [1, 2] : int list\n"));
   }
 
@@ -210,7 +210,7 @@ public class RelTest {
     assertThat(
         join.describe(f.typeSystem),
         is(
-            "join [$0 = $1]\n" //
+            "join r r_1 [r = r_1]\n" //
                 + "  [1, 2]\n"
                 + "  [3, 4]\n"));
 
@@ -228,7 +228,7 @@ public class RelTest {
     assertThat(
         join2.describe(f.typeSystem),
         is(
-            "join\n" //
+            "join r r_1\n" //
                 + "  [1, 2]\n"
                 + "  #fromList Bag ([5, 6])\n"));
 
@@ -242,7 +242,7 @@ public class RelTest {
     assertThat(
         join3.describe(f.typeSystem),
         is(
-            "join [left]\n" //
+            "join r r_1 [left]\n" //
                 + "  [1, 2]\n"
                 + "  [3, 4]\n"));
   }
@@ -278,9 +278,9 @@ public class RelTest {
     assertThat(
         join.describe(f.typeSystem),
         is(
-            "join [v$0]\n" //
+            "join r r_1\n" //
                 + "  [1, 2]\n"
-                + "  [v$0, 4]\n"));
+                + "  [r, 4]\n"));
 
     // A bag on either side makes the output a bag, as a dependent scan over a
     // bag does today.
@@ -300,7 +300,7 @@ public class RelTest {
     assertThat(
         join2.describe(f.typeSystem),
         is(
-            "join\n" //
+            "join r r_1\n" //
                 + "  [1, 2]\n"
                 + "  #fromList Bag ([5, 6])\n"));
   }
@@ -328,7 +328,7 @@ public class RelTest {
     assertThat(
         group1.describe(f.typeSystem),
         is(
-            "group [j = $0]\n" //
+            "group r [j = r]\n" //
                 + "  [1, 2]\n"));
 
     final Core.IdPat id2 = f.elementPat(f.list12);
@@ -401,7 +401,7 @@ public class RelTest {
     assertThat(
         filter.describe(f.typeSystem),
         is(
-            "filter [$ordinal > 0]\n" //
+            "filter r $ordinal [$ordinal > 0]\n" //
                 + "  [1, 2]\n"));
     assertThat(f.violations(filter), empty());
 

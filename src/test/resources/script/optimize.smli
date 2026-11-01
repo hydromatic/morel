@@ -435,8 +435,8 @@ Sys.planEx "1";
 > val it =
 >   {_|
 > val it =
->   filter [$0 >= #"a" andalso $0 <= #"e"
->       orelse $0 >= #"x" andalso $0 <= #"z"] : char list
+>   filter c [c >= #"a" andalso c <= #"e"
+>       orelse c >= #"x" andalso c <= #"z"] : char list
 >     extent "char" : char list
 > |_} : string
 
@@ -453,7 +453,7 @@ Sys.planEx "3";
 > val it =
 >   {_|
 > val it =
->   filter [#abs Int $0 < 5] : int list
+>   filter r [#abs Int r < 5] : int list
 >     #flatten Range ([OPEN (~5, 5)]) : int list
 > |_} : string
 from x where abs x <= 3;
@@ -480,9 +480,9 @@ Sys.planEx "3";
 >   {|val it = #length List (r$0)
 >
 > r$0 =
->   project [{x = #1 $0, y = #2 $0}] : {x:int, y:int} list
->     filter [#`*` Int (#1 $0, #2 $0 + 3) < 30] : (int * int) list
->       join : (int * int) list
+>   project r [{x = #1 r, y = #2 r}] : {x:int, y:int} list
+>     filter r [#`*` Int (#1 r, #2 r + 3) < 30] : (int * int) list
+>       join x y : (int * int) list
 >         #flatten Range ([CLOSED (1, 7)]) : int list
 >         #flatten Range ([CLOSED_OPEN (1, 27)]) : int list
 > |} : string
@@ -501,9 +501,9 @@ Sys.planEx "3";
 >   {|val it = #length List (r$0)
 >
 > r$0 =
->   project [{x = #1 $0, y = #2 $0}] : {x:int, y:int} list
->     filter [#`*` Int (#1 $0, #2 $0 + 3) < 30] : (int * int) list
->       join : (int * int) list
+>   project r [{x = #1 r, y = #2 r}] : {x:int, y:int} list
+>     filter r [#`*` Int (#1 r, #2 r + 3) < 30] : (int * int) list
+>       join x y : (int * int) list
 >         #flatten Range ([CLOSED (1, 7)]) : int list
 >         #flatten Range ([CLOSED_OPEN (1, 27)]) : int list
 > |} : string
@@ -530,9 +530,9 @@ Sys.planEx "3";
 >   {|val it = #length List (r$0)
 >
 > r$0 =
->   project [{x = #1 $0, y = #2 $0}] : {x:int, y:int} list
->     filter [#1 $0 < #2 $0] : (int * int) list
->       join : (int * int) list
+>   project r [{x = #1 r, y = #2 r}] : {x:int, y:int} list
+>     filter r [#1 r < #2 r] : (int * int) list
+>       join x y : (int * int) list
 >         #flatten Range ([OPEN (0, 10)]) : int list
 >         #flatten Range ([OPEN (0, 10)]) : int list
 > |} : string
@@ -630,8 +630,8 @@ Sys.planEx "~1";
 > val it =
 >   {_|
 > val it =
->   project [$0 + 1] : int list
->     filter [$0 > 1] : int list
+>   project x [x + 1] : int list
+>     filter x [x > 1] : int list
 >       [1, 2, 3] : int list
 > |_} : string
 from x in [1, 2] join y in [3, 4] where x < y;
@@ -640,9 +640,9 @@ Sys.planEx "~1";
 > val it =
 >   {_|
 > val it =
->   project [{x = #1 $0, y = #2 $0}] : {x:int, y:int} list
->     filter [#1 $0 < #2 $0] : (int * int) list
->       join : (int * int) list
+>   project r [{x = #1 r, y = #2 r}] : {x:int, y:int} list
+>     filter r [#1 r < #2 r] : (int * int) list
+>       join x y : (int * int) list
 >         [1, 2] : int list
 >         [3, 4] : int list
 > |_} : string
@@ -652,8 +652,8 @@ Sys.planEx "~1";
 > val it =
 >   {_|
 > val it =
->   project [#x $0] : int list
->     group [x = $0] : {x:int} list
+>   project r [#x r] : int list
+>     group x [x = x] : {x:int} list
 >       [3, 1, 2] : int list
 > |_} : string
 from x in [1, 2, 3] order x skip 1 take 1;
@@ -664,7 +664,7 @@ Sys.planEx "~1";
 > val it =
 >   take [1] : int list
 >     skip [1] : int list
->       sort [$0] : int list
+>       sort x [x] : int list
 >         [1, 2, 3] : int list
 > |_} : string
 from (x, y) in [(1, 2)] yield x + y;
@@ -673,7 +673,7 @@ Sys.planEx "~1";
 > val it =
 >   {_|
 > val it =
->   project [#1 $0 + #2 $0] : int list
+>   project r [#1 r + #2 r] : int list
 >     [(1, 2)] : (int * int) list
 > |_} : string
 from {a, b} in [{a = 1, b = 2}] yield a + b;
@@ -682,7 +682,7 @@ Sys.planEx "~1";
 > val it =
 >   {_|
 > val it =
->   project [#a $0 + #b $0] : int list
+>   project r [#a r + #b r] : int list
 >     [{a = 1, b = 2}] : {a:int, b:int} list
 > |_} : string
 
@@ -696,7 +696,7 @@ Sys.planEx "~1";
 > val it =
 >   {_|
 > val it =
->   filter [#a $0 > 0] : {a:int, b:int} list
+>   filter r [#a r > 0] : {a:int, b:int} list
 >     rs : {a:int, b:int} list
 > |_} : string
 val ps = [(1, 2)];
@@ -707,7 +707,7 @@ Sys.planEx "~1";
 > val it =
 >   {_|
 > val it =
->   filter [#1 $0 > 0] : (int * int) list
+>   filter p [#1 p > 0] : (int * int) list
 >     ps : (int * int) list
 > |_} : string
 val xs = [1, 2, 3];

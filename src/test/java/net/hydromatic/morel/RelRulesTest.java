@@ -160,13 +160,13 @@ public class RelRulesTest {
     assertThat(
         tree,
         hasToString(
-            "filter [$0 < 3]\n" //
-                + "  filter [$0 > 0]\n"
+            "filter r [r < 3]\n" //
+                + "  filter r [r > 0]\n"
                 + "    [3, 1, 2]\n"));
     assertThat(
         f.rewrite(tree),
         hasToString(
-            "filter [$0 > 0 andalso $0 < 3]\n" //
+            "filter r [r > 0 andalso r < 3]\n" //
                 + "  [3, 1, 2]\n"));
 
     b.push(tree);
@@ -174,7 +174,7 @@ public class RelRulesTest {
     assertThat(
         f.rewrite(b.build()),
         hasToString(
-            "filter [$0 > 0 andalso $0 < 3 andalso $0 <> 1]\n" //
+            "filter r [r > 0 andalso r < 3 andalso r <> 1]\n" //
                 + "  [3, 1, 2]\n"));
   }
 
@@ -190,8 +190,8 @@ public class RelRulesTest {
     assertThat(
         tree,
         hasToString(
-            "filter [$ordinal > 0]\n" //
-                + "  filter [$0 > 0]\n"
+            "filter r $ordinal [$ordinal > 0]\n" //
+                + "  filter r [r > 0]\n"
                 + "    [3, 1, 2]\n"));
     assertThat(f.rewrite(tree), sameInstance(tree));
   }
@@ -207,7 +207,7 @@ public class RelRulesTest {
     assertThat(
         tree,
         hasToString(
-            "project [$0]\n" //
+            "project r [r]\n" //
                 + "  [3, 1, 2]\n"));
     assertThat(f.rewrite(tree), hasToString("[3, 1, 2]"));
   }
@@ -227,13 +227,13 @@ public class RelRulesTest {
     assertThat(
         tree,
         hasToString(
-            "project [$0 <> true]\n" //
-                + "  project [$0 > 1]\n"
+            "project r [r <> true]\n" //
+                + "  project r [r > 1]\n"
                 + "    [3, 1, 2]\n"));
     assertThat(
         f.rewrite(tree),
         hasToString(
-            "project [$0 > 1 <> true]\n" //
+            "project r [r > 1 <> true]\n" //
                 + "  [3, 1, 2]\n"));
 
     final RelBuilder b2 = f.builder();
@@ -244,7 +244,7 @@ public class RelRulesTest {
     assertThat(
         f.rewrite(b2.build()).toString().replaceAll("v\\$[0-9]+", "v\\$"),
         is(
-            "project [let val v$ = $0 > 1 in v$ andalso v$ end]\n" //
+            "project r [let val v$ = r > 1 in v$ andalso v$ end]\n" //
                 + "  [3, 1, 2]\n"));
   }
 

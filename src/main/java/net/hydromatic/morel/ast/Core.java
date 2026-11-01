@@ -140,14 +140,43 @@ public class Core {
           new AstWriter() {
             @Override
             public AstWriter id(String name, int i) {
+              final String generated = generated(name, i);
+              if (generated != null) {
+                return super.id(generated, 0);
+              }
               int j = describer.register(name, i);
               return super.id(name, j);
             }
 
             @Override
             public AstWriter idQuoted(String name, int i) {
+              final String generated = generated(name, i);
+              if (generated != null) {
+                return super.id(generated, 0);
+              }
               int j = describer.register(name, i);
               return super.idQuoted(name, j);
+            }
+
+            /**
+             * Returns the name under which a generated pattern prints, or null
+             * if the pattern is not generated.
+             *
+             * <p>A node's pattern that no binder names ({@code $0}, {@code $1},
+             * {@code $ordinal}) prints as {@code v$}-ordinal; its ordinal comes
+             * from the counter that numbers generated binders, so it names no
+             * binder. (An id named after a binder, {@code $e}, prints as {@code
+             * e}, and does not reach here.) A generated binder such as {@code
+             * t$12} keeps its prefix. Either is renumbered by first occurrence.
+             */
+            private @Nullable String generated(String name, int i) {
+              if (name.startsWith("$")) {
+                return describer.rename("v$" + i);
+              }
+              if (i == 0 && NamedPat.isGenerated(name)) {
+                return describer.rename(name);
+              }
+              return null;
             }
           };
       return unparse(w);
@@ -210,6 +239,25 @@ public class Core {
      */
     public static boolean isGenerated(String name) {
       return GENERATED.matcher(name).matches();
+    }
+
+    /**
+     * Returns the name under which a node's id prints, if the id is named after
+     * the binder whose collection the node reads, or null.
+     *
+     * <p>Such an id is called {@code $e} for {@code from e in emps}, and prints
+     * as {@code e}. The {@code $} keeps it a node's pattern -- {@code $0},
+     * {@code $1} and {@code $ordinal} are the others -- which is what tells a
+     * pass that an expression reads a node's input, and keeps the id from
+     * shadowing the binder it is named after.
+     */
+    public static @Nullable String idName(String name) {
+      return name.length() > 1
+              && name.charAt(0) == '$'
+              && !Character.isDigit(name.charAt(1))
+              && !name.equals("$ordinal")
+          ? name.substring(1)
+          : null;
     }
 
     NamedPat(Op op, Type type, String name, int i) {
@@ -279,7 +327,8 @@ public class Core {
 
     @Override
     AstWriter unparse(AstWriter w, int left, int right) {
-      return w.idQuoted(name, i);
+      final @Nullable String idName = idName(name);
+      return w.idQuoted(idName != null ? idName : name, i);
     }
 
     @Override
@@ -863,9 +912,8 @@ public class Core {
     @Override
     AstWriter unparse(AstWriter w, int left, int right) {
       if (idPat.name.charAt(0) == '$') {
-        // A node's pattern: `$0`, `$1` or `$ordinal`. The writer decides
-        // whether to print the name or, outside the node that binds it, a
-        // generated one.
+        // A node's pattern: an id, such as `$e` or `$0`, or `$ordinal`. It
+        // prints under the name its node gave it.
         return w.idRef((IdPat) idPat);
       }
       return w.idQuoted(idPat.name, idPat.i);
@@ -2076,11 +2124,6 @@ public class Core {
     protected void describeArgs(AstWriter w) {
       if (joinType != JoinType.INNER) {
         w.arg(joinType.opName());
-      }
-      if (isDependent()) {
-        // Raw, because the name is renumbered already, and the writer
-        // renumbers what it is asked to append.
-        w.append(" [").appendRaw(w.generatedName(leftId)).append("]");
       }
       if (!condition.isBoolLiteral(true)) {
         w.arg(condition);

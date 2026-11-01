@@ -123,7 +123,7 @@ public class RelBuilderTest {
     assertThat(
         f.plan(rel),
         is(
-            "filter [$0 > 1]\n" //
+            "filter r [r > 1]\n" //
                 + "  [1, 2]\n"));
   }
 
@@ -145,8 +145,9 @@ public class RelBuilderTest {
     assertThat(
         f.plan(rel),
         is(
-            "filter [#deptno $0 = 10]\n"
-                + "  [{deptno = 10}, {deptno = 20}]\n"));
+            "filter e [#deptno e = 10]\n" //
+                + "  [{deptno = 10}, {deptno = 20}]\n"
+                + ""));
   }
 
   /**
@@ -162,7 +163,7 @@ public class RelBuilderTest {
     assertThat(
         f.plan(rel),
         is(
-            "project [#deptno $0]\n" //
+            "project r [#deptno r]\n" //
                 + "  [{deptno = 10}, {deptno = 20}]\n"));
   }
 
@@ -179,12 +180,12 @@ public class RelBuilderTest {
     nameExps.add("i", b.name(0, "i"));
     nameExps.add("j", b.name(1, "j"));
     // Before the join, each name reads its own input's id.
-    assertThat(nameExps, hasToString("[<i, $0>, <j, $1>]"));
+    assertThat(nameExps, hasToString("[<i, i>, <j, j>]"));
     final Core.Exp rel = b.join(JoinType.INNER, core.boolLiteral(true)).build();
     assertThat(
         f.plan(rel),
         is(
-            "join\n" //
+            "join i j\n" //
                 + "  [1, 2]\n"
                 + "  [1, 2]\n"));
   }
@@ -208,9 +209,10 @@ public class RelBuilderTest {
     assertThat(
         f.plan(rel),
         is(
-            "join [v$0]\n" //
+            "join e r\n" //
                 + "  [{deptno = 10}, {deptno = 20}]\n"
-                + "  [#deptno v$0]\n"));
+                + "  [#deptno e]\n"
+                + ""));
   }
 
   /**
@@ -224,15 +226,17 @@ public class RelBuilderTest {
     assertThat(
         f.plan(offeredBinder(f)),
         is(
-            "join [$0 = $1]\n" //
+            "join i r [i = r]\n" //
                 + "  [1, 2]\n"
-                + "  [1, 2]\n"));
+                + "  [1, 2]\n"
+                + ""));
     assertThat(
         f.plan(offeredBinder(f, Simplification.values())),
         is(
-            "join [$0 = $1]\n" //
+            "join i r [i = r]\n" //
                 + "  [1, 2]\n"
-                + "  [1, 2]\n"));
+                + "  [1, 2]\n"
+                + ""));
   }
 
   private static Core.Exp offeredBinder(Fixture f, Simplification... simps) {
@@ -272,9 +276,10 @@ public class RelBuilderTest {
     assertThat(
         f.plan(rel),
         is(
-            "join [v$0] [#deptno $0 = 10]\n" //
+            "join e r [#deptno e = 10]\n" //
                 + "  [{deptno = 10}, {deptno = 20}]\n"
-                + "  [#deptno v$0]\n"));
+                + "  [#deptno e]\n"
+                + ""));
   }
 
   /**
@@ -299,13 +304,13 @@ public class RelBuilderTest {
     assertThat(
         b.peek().type.moniker(),
         is("({deptno:int} * {deptno:int} * {deptno:int}) list"));
-    assertThat(b.name("e"), hasToString("#1 $0"));
-    assertThat(b.name("d"), hasToString("#2 $0"));
-    assertThat(b.name("g"), hasToString("#3 $0"));
+    assertThat(b.name("e"), hasToString("#1 r"));
+    assertThat(b.name("d"), hasToString("#2 r"));
+    assertThat(b.name("g"), hasToString("#3 r"));
 
     // And a field of a name is the field of that component, which is the
     // two-step path a three-way join's condition is made of.
-    assertThat(b.field(b.name("e"), "deptno"), hasToString("#deptno (#1 $0)"));
+    assertThat(b.field(b.name("e"), "deptno"), hasToString("#deptno (#1 r)"));
   }
 
   /**
@@ -325,7 +330,7 @@ public class RelBuilderTest {
     // 'g' is the third. Each component of the absent side is option-wrapped
     // on its own, which is what Morel binds: 'e' and 'd' are options here,
     // not one option over the pair.
-    assertThat(b.name("g"), hasToString("#3 $0"));
+    assertThat(b.name("g"), hasToString("#3 r"));
     // The left join leaves its right side absent, so 'd' is an option and
     // 'e' is not -- one option per component, and not one over the pair.
     assertThat(b.name("e").type, hasToString("{deptno:int}"));
@@ -356,7 +361,7 @@ public class RelBuilderTest {
         f.plan(
             f.builder().push(f.list12).filter(core.boolLiteral(true)).build()),
         is(
-            "filter [true]\n" //
+            "filter r [true]\n" //
                 + "  [1, 2]\n"));
     assertThat(
         f.plan(
@@ -374,13 +379,13 @@ public class RelBuilderTest {
     assertThat(
         f.plan(twoFilters(f)),
         is(
-            "filter [$0 < 2]\n" //
-                + "  filter [$0 > 0]\n"
+            "filter r [r < 2]\n" //
+                + "  filter r [r > 0]\n"
                 + "    [1, 2]\n"));
     assertThat(
         f.plan(twoFilters(f, Simplification.values())),
         is(
-            "filter [$0 > 0 andalso $0 < 2]\n" //
+            "filter r [r > 0 andalso r < 2]\n" //
                 + "  [1, 2]\n"));
   }
 
@@ -400,7 +405,7 @@ public class RelBuilderTest {
     assertThat(
         f.plan(b0.push(f.list12).project(b0.input(0)).build()),
         is(
-            "project [$0]\n" //
+            "project r [r]\n" //
                 + "  [1, 2]\n"));
     final RelBuilder b1 = f.builder(Simplification.values());
     assertThat(
@@ -419,13 +424,13 @@ public class RelBuilderTest {
     assertThat(
         f.plan(twoProjects(f)),
         is(
-            "project [$0 > 1]\n" //
-                + "  project [#deptno $0]\n"
+            "project r [r > 1]\n" //
+                + "  project r [#deptno r]\n"
                 + "    [{deptno = 10}, {deptno = 20}]\n"));
     assertThat(
         f.plan(twoProjects(f, Simplification.values())),
         is(
-            "project [#deptno $0 > 1]\n" //
+            "project r [#deptno r > 1]\n" //
                 + "  [{deptno = 10}, {deptno = 20}]\n"));
   }
 
@@ -527,7 +532,7 @@ public class RelBuilderTest {
     assertThat(
         f.plan(rel),
         is(
-            "filter [#2 $0 > #1 $0]\n" //
+            "filter r [#2 r > #1 r]\n" //
                 + "  [(1, 2)]\n"));
   }
 
@@ -559,7 +564,7 @@ public class RelBuilderTest {
     assertThat(
         b.build(),
         hasToString(
-            "filter [$0 = 1]\n" //
+            "filter r [r = 1]\n" //
                 + "  [1, 2]\n"));
   }
 
@@ -584,8 +589,36 @@ public class RelBuilderTest {
         RelBuilder.rebuild(
             f.typeSystem, tree, EnumSet.of(Simplification.FILTER_MERGE)),
         hasToString(
-            "filter [$0 > 0 andalso $0 < 3]\n" //
+            "filter i [i > 0 andalso i < 3]\n" //
                 + "  [1, 2]\n"));
+  }
+
+  /**
+   * Tests rebuilding a projection whose element is of a different type than its
+   * input's, under a node that is not a {@code RowRel}. The rebuild once handed
+   * the projection's id, an {@code int}, to the {@code skip} above, whose
+   * element is a {@code bool}.
+   */
+  @Test
+  void testRebuildProjectUnderSkip() {
+    final Fixture f = new Fixture();
+    final RelBuilder b = f.builder();
+    b.push("i", f.list12);
+    b.project(core.greaterThan(f.typeSystem, b.name("i"), f.intLiteral(0)));
+    b.skip(f.intLiteral(1));
+    b.filter(b.input(0));
+    final Core.Exp tree = b.build();
+    final String text = tree.toString();
+    assertThat(
+        text,
+        is(
+            "filter r [r]\n" //
+                + "  skip [1]\n"
+                + "    project i [i > 0]\n"
+                + "      [1, 2]\n"));
+    assertThat(
+        RelBuilder.rebuild(f.typeSystem, tree, Simplification.none()),
+        hasToString(text));
   }
 
   /** {@code checkValid} throws with the violations, and is silent without. */
@@ -630,7 +663,7 @@ public class RelBuilderTest {
     b.group(ImmutableSortedMap.of("j", b.input(0)), ImmutableSortedMap.of());
     // A record, though there is one key, so 'j' is a field of it.
     assertThat(b.peek().type.moniker(), is("{j:int} list"));
-    assertThat(b.name("j"), hasToString("#j $0"));
+    assertThat(b.name("j"), hasToString("#j r"));
 
     final RelBuilder b2 = f.builder();
     b2.push(f.list12);
@@ -638,8 +671,8 @@ public class RelBuilderTest {
         ImmutableSortedMap.of("j", b2.input(0), "k", b2.input(0)),
         ImmutableSortedMap.of());
     // Two keys, so the element is a record and each label is a field.
-    assertThat(b2.name("j"), hasToString("#j $0"));
-    assertThat(b2.name("k"), hasToString("#k $0"));
+    assertThat(b2.name("j"), hasToString("#j r"));
+    assertThat(b2.name("k"), hasToString("#k r"));
   }
 
   /**
@@ -653,7 +686,7 @@ public class RelBuilderTest {
     b.push("e", f.emps);
     b.project("d", b.field("deptno"));
     assertThat(b.peek().type.moniker(), is("int list"));
-    assertThat(b.name("d"), hasToString("$0"));
+    assertThat(b.name("d"), hasToString("r"));
   }
 
   /** Tests {@code group}, whose element is a record of keys and aggregates. */
@@ -668,7 +701,7 @@ public class RelBuilderTest {
     assertThat(
         f.plan(rel),
         is(
-            "group [k = $0]\n" //
+            "group r [k = r]\n" //
                 + "  [1, 2]\n"));
   }
 }

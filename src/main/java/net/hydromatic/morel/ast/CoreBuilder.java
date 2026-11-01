@@ -610,7 +610,26 @@ public enum CoreBuilder {
   }
 
   /**
-   * Creates the pattern that names a join's right input element, {@code $1}.
+   * Creates the id by which a node refers to the current element of its input,
+   * named after the binder whose collection it is, {@code $e} for {@code from e
+   * in emps}; see {@link Core.NamedPat#idName}.
+   *
+   * <p>The ordinal comes from the counter for the binder's name, so the id and
+   * a variable of that name never print alike. A binder called {@code ordinal}
+   * would make the id indistinguishable from an ordinal id, so its id is {@code
+   * $0}.
+   */
+  public Core.IdPat elementPat(
+      Type elementType, String name, ToIntFunction<String> gen) {
+    if (name.equals("ordinal")) {
+      return elementPat(elementType, gen);
+    }
+    return idPat(elementType, "$" + name, gen.applyAsInt(name));
+  }
+
+  /**
+   * Creates the id by which a join refers to the current element of its right
+   * input, {@code $1}.
    */
   public Core.IdPat rightElementPat(
       Type elementType, ToIntFunction<String> gen) {
