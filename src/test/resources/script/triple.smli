@@ -1,0 +1,401 @@
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *
+ * Queries that must give the same answer whether they are evaluated
+ * locally, pushed down to Apache Calcite, or pushed down to Apache
+ * Spark. Morel-Java's suite runs this script three times: locally;
+ * in Calcite "hybrid" mode with a tracer that fails if a query is
+ * not pushed down (ScriptTest.testScriptTripleCalcite); and with
+ * every query wrapped in Spark.remote, run on the container that
+ * start-spark.sh starts (ScriptTest.testScriptTripleSpark).
+ *
+ * The queries name the data set, as the other two modes need them to,
+ * and a data set is not a table of the server, so its rows cross to
+ * Spark and the query runs over them there. All three modes therefore
+ * answer from the same rows -- these answers do not depend on the
+ * container holding a copy of the data set -- and what the Spark mode
+ * tests is the translator and Spark's own evaluation. Reading the
+ * server's tables is spark-exec.smli's job, where a query says
+ * "spark.catalog.scott.emps" and means it.
+ *
+ * So every query here must be one that all three can answer, and
+ * answer alike. dual.smli holds queries that only the first two can
+ * do; what keeps a query out of this file is recorded in plan.md,
+ * under M11. In particular, no query yields unit, which Spark has no
+ * column for.
+ *
+ * Do not call Sys.plan, whose output differs between modes.
+ *)
+Sys.set ("printLength", 64);
+> val it = () : unit
+Sys.set ("stringDepth", NONE);
+> val it = () : unit
+Sys.set ("output", "tabular");
+> val it = () : unit
+
+(*) A scan, whose plan is just a read.
+from d in scott.depts;
+> deptno dname      loc
+> ------ ---------- --------
+>     10 ACCOUNTING NEW YORK
+>     20 RESEARCH   DALLAS
+>     30 SALES      CHICAGO
+>     40 OPERATIONS BOSTON
+>
+> val it : {deptno:int, dname:string, loc:string} bag
+
+(*) Filter and project.
+from e in scott.emps
+  where e.deptno = 10
+  yield {e.empno, e.ename};
+> empno ename
+> ----- ------
+>  7782 CLARK
+>  7839 KING
+>  7934 MILLER
+>
+> val it : {empno:int, ename:string} bag
+
+(*) Join.
+from e in scott.emps
+  join d in scott.depts on e.deptno = d.deptno
+  yield {e.ename, d.dname}
+  order ename;
+> dname      ename
+> ---------- ------
+> RESEARCH   ADAMS
+> SALES      ALLEN
+> SALES      BLAKE
+> ACCOUNTING CLARK
+> RESEARCH   FORD
+> SALES      JAMES
+> RESEARCH   JONES
+> ACCOUNTING KING
+> SALES      MARTIN
+> ACCOUNTING MILLER
+> RESEARCH   SCOTT
+> RESEARCH   SMITH
+> SALES      TURNER
+> SALES      WARD
+>
+> val it : {dname:string, ename:string} list
+
+(*) Group with aggregates.
+from e in scott.emps
+  group e.deptno
+    compute {c = count over (), total = sum over e.sal, top = max over e.sal}
+  order deptno;
+> c deptno top  total
+> - ------ ---- -----
+> 3     10 5000  8750
+> 5     20 3000 10875
+> 6     30 2850  9400
+>
+> val it : {c:int, deptno:int, top:decimal, total:decimal} list
+
+(*) Group by two keys, then sort.
+from e in scott.emps
+  group {e.deptno, e.job}
+    compute {n = count over (), s = sum over e.sal}
+  order (deptno, job);
+> deptno job       n s
+> ------ --------- - ----
+>     10 CLERK     1 1300
+>     10 MANAGER   1 2450
+>     10 PRESIDENT 1 5000
+>     20 ANALYST   2 6000
+>     20 CLERK     2 1900
+>     20 MANAGER   1 2975
+>     30 CLERK     1  950
+>     30 MANAGER   1 2850
+>     30 SALESMAN  4 5600
+>
+> val it : {deptno:int, job:string, n:int, s:decimal} list
+
+(*) Sort and take.
+from e in scott.emps
+  yield {e.ename, e.sal}
+  order (DESC sal, ename)
+  take 3;
+> ename sal
+> ----- ----
+> KING  5000
+> FORD  3000
+> SCOTT 3000
+>
+> val it : {ename:string, sal:decimal} list
+
+(*) Order, skip, take, then project.
+from e in scott.emps
+  order e.empno
+  skip 2
+  take 3
+  yield {e.empno, e.ename};
+> empno ename
+> ----- ------
+>  7521 WARD
+>  7566 JONES
+>  7654 MARTIN
+>
+> val it : {empno:int, ename:string} list
+
+(* Distinct, which is a group with no aggregates. The key is a record, so
+ * that the result can be ordered: ordering a collection of scalars means
+ * sorting by the element itself, which the Spark translator cannot name
+ * (plan.md says more). *)
+from e in scott.emps group {e.job} order job;
+> job
+> ---------
+> ANALYST
+> CLERK
+> MANAGER
+> PRESIDENT
+> SALESMAN
+>
+> val it : {job:string} list
+
+(*) A correlated exists subquery.
+from d in scott.depts
+  where (exists e in scott.emps
+    where e.deptno = d.deptno andalso e.job = "CLERK")
+  order d.dname
+  yield d.dname;
+> val it = ["ACCOUNTING","RESEARCH","SALES"] : string list
+
+(*) "elem", which Spark has to do as an exists.
+from e in scott.emps
+  where e.deptno elem (from d in scott.depts
+      where d.loc = "CHICAGO"
+      yield d.deptno)
+  order e.ename
+  yield e.ename;
+> val it = ["ALLEN","BLAKE","JAMES","MARTIN","TURNER","WARD"] : string list
+
+(*) A correlated scalar subquery.
+from d in scott.depts
+  yield {d.dname,
+         n = (from e in scott.emps where e.deptno = d.deptno
+              compute count over ())};
+> dname      n
+> ---------- -
+> ACCOUNTING 3
+> RESEARCH   5
+> SALES      6
+> OPERATIONS 0
+>
+> val it : {dname:string, n:int} bag
+
+(*) A result that is not a collection.
+from e in scott.emps compute count over ();
+> val it = 14 : int
+
+(*) Union, of bags, so every row counts.
+from e in scott.emps where e.deptno = 10 yield {n = e.empno}
+  union (from d in scott.depts yield {n = d.deptno})
+  order n;
+> n
+> ----
+>   10
+>   20
+>   30
+>   40
+> 7782
+> 7839
+> 7934
+>
+> val it : {n:int} list
+
+(*) Except and intersect, also of bags.
+from e in scott.emps yield {n = e.deptno}
+  except (from d in scott.depts where d.deptno > 20 yield {n = d.deptno})
+  order n;
+> n
+> --
+> 10
+> 10
+> 10
+> 20
+> 20
+> 20
+> 20
+> 20
+> 30
+> 30
+> 30
+> 30
+> 30
+>
+> val it : {n:int} list
+from e in scott.emps yield {n = e.deptno}
+  intersect (from d in scott.depts where d.deptno > 20 yield {n = d.deptno})
+  order n;
+> n
+> --
+> 30
+>
+> val it : {n:int} list
+
+(*) String functions.
+from e in scott.emps
+  where String.isPrefix "S" e.ename
+  yield {e.ename, n = size e.ename, s = String.substring (e.ename, 0, 2),
+         t = e.ename ^ "!"};
+> ename n s  t
+> ----- - -- ------
+> SMITH 5 SM SMITH!
+> SCOTT 5 SC SCOTT!
+>
+> val it : {ename:string, n:int, s:string, t:string} bag
+
+(* Addition. Negation is not here: Morel does not push "~" down to Calcite,
+ * though it pushes "+", "div" and "mod". *)
+from e in scott.emps where e.deptno = 10 yield {n = e.empno + 1};
+> n
+> ----
+> 7783
+> 7840
+> 7935
+>
+> val it : {n:int} bag
+
+(* Integer division and remainder, which Spark does with a template because
+ * its own operators round the other way. Decimal arithmetic is not here:
+ * Calcite does not push it down, so "e.sal * decimal 2" lives in
+ * spark-exec.smli, where only two of the three have to agree. *)
+from e in scott.emps
+  where e.deptno = 10
+  yield {y = e.empno div 7, z = e.empno mod 7};
+> y    z
+> ---- -
+> 1111 5
+> 1119 6
+> 1133 3
+>
+> val it : {y:int, z:int} bag
+
+(* The rest of the function table, one query per group of operators, so that
+ * a function the table claims all three can do is one all three have done.
+ * What is missing from here is missing because one of the three cannot do
+ * it; plan.md says which. *)
+
+(*) Comparison, and negation of a condition.
+from e in scott.emps
+  where e.sal >= decimal "3000" andalso e.deptno <> 10
+  yield e.ename;
+> val it = ["SCOTT","FORD"] : string bag
+from e in scott.emps where not (e.job = "CLERK") yield e.ename;
+> val it =
+>   ["ALLEN","WARD","JONES","MARTIN","BLAKE","CLARK","SCOTT","KING","TURNER",
+>    "FORD"] : string bag
+from e in scott.emps where e.deptno = 10 orelse e.deptno = 20 yield e.ename;
+> val it = ["SMITH","JONES","CLARK","SCOTT","KING","ADAMS","FORD","MILLER"]
+>   : string bag
+
+(*) Absolute value, least and greatest.
+from e in scott.emps
+  where e.deptno = 10
+  yield {a = abs (e.empno - 7900), lo = Int.min (e.empno, 7900),
+         hi = Int.max (e.empno, 7900)};
+> a   hi   lo
+> --- ---- ----
+> 118 7900 7782
+>  61 7900 7839
+>  34 7934 7900
+>
+> val it : {a:int, hi:int, lo:int} bag
+
+(*) The rest of the string functions.
+from e in scott.emps where String.isSuffix "S" e.ename yield e.ename;
+> val it = ["JONES","ADAMS","JAMES"] : string bag
+from e in scott.emps where String.isSubstring "AR" e.ename yield e.ename;
+> val it = ["WARD","MARTIN","CLARK"] : string bag
+(* "String.sub" is not here: it yields a char, and a char that comes back
+ * from Calcite fails to convert (plan.md says more). *)
+from e in scott.emps
+  where e.deptno = 10
+  yield {s = Int.toString e.empno};
+> s
+> ----
+> 7782
+> 7839
+> 7934
+>
+> val it : {s:string} bag
+
+(* The rest of the aggregate functions. Only "sum" is here: Calcite pushes
+ * "min" and "max" over a decimal, which the group above does, but fails over
+ * an int or a string (plan.md says more). *)
+from e in scott.emps group e.deptno compute {s = sum over e.empno} order deptno;
+> deptno s
+> ------ -----
+>     10 23555
+>     20 38501
+>     30 46116
+>
+> val it : {deptno:int, s:int} list
+
+(* The rest of the subquery functions. "only" is not here; Calcite pushes it
+ * down and then fails. *)
+from e in scott.emps
+  where e.deptno notelem (from d in scott.depts
+      where d.loc = "CHICAGO"
+      yield d.deptno)
+  order e.ename
+  yield e.ename;
+> val it = ["ADAMS","CLARK","FORD","JONES","KING","MILLER","SCOTT","SMITH"]
+>   : string list
+from d in scott.depts
+  where empty (from e in scott.emps where e.deptno = d.deptno)
+  order d.dname
+  yield d.dname;
+> val it = ["OPERATIONS"] : string list
+from d in scott.depts
+  where nonEmpty (from e in scott.emps where e.deptno = d.deptno)
+  order d.dname
+  yield d.dname;
+> val it = ["ACCOUNTING","RESEARCH","SALES"] : string list
+
+(* A real function, and the conversion into one. The conversions back --
+ * "Real.floor" and "Real.trunc" -- are not here; Calcite fails on them. *)
+from e in scott.emps
+  where e.deptno = 10
+  yield {r = Math.sqrt (Real.fromInt e.empno)};
+> r
+> ---------
+> 88.215645
+> 88.538124
+> 89.073006
+>
+> val it : {r:real} bag
+
+(* A column the data set has nulls in. The rows cross as the type the
+ * program was typed against, which knows the column is optional, so a
+ * commission that is not there is NONE on the way out and NONE on the way
+ * back, wherever the query ran. *)
+from e in scott.emps
+  where e.deptno = 10
+  yield {e.ename, e.comm};
+> comm ename
+> ---- ------
+>      CLARK
+>      KING
+>      MILLER
+>
+> val it : {comm:decimal option, ename:string} bag
+
+(*) End triple.smli

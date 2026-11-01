@@ -25,6 +25,7 @@ import static net.hydromatic.morel.TestUtils.toCamelCase;
 import static net.hydromatic.morel.TestUtils.urlToFile;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import com.google.common.collect.ImmutableMap;
 import java.io.File;
@@ -35,7 +36,11 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.compile.BuiltIn;
@@ -44,6 +49,7 @@ import net.hydromatic.morel.compile.Tracers;
 import net.hydromatic.morel.eval.Code;
 import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.eval.Prop;
+import net.hydromatic.morel.foreign.SparkBackend;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -81,6 +87,15 @@ public class ScriptTest {
   @MethodSource("data")
   @Timeout(60)
   void test(String path) throws Exception {
+    final Set<String> conditions = checkRequires(path);
+    if (conditions.contains("spark")) {
+      // The script assumes that "spark" is bound to a live connection, as
+      // Spark.connect would return it; bind it, and close it afterwards.
+      try (SparkConnectionValue spark = new SparkConnectionValue(sparkUri())) {
+        Script.create(path).withValues(ImmutableMap.of("spark", spark)).run();
+      }
+      return;
+    }
     Method method = findMethod(path);
     if (method != null) {
       try {
@@ -97,6 +112,85 @@ public class ScriptTest {
       }
     } else {
       checkRun(path);
+    }
+  }
+
+  /**
+   * Skips the test if the script's header has a directive {@code (*) requires:
+   * <condition>} whose condition does not hold. The conditions:
+   *
+   * <ul>
+   *   <li>{@code spark-adapter}: the Spark adapter is on the class path (it
+   *       needs JDK 17 or later);
+   *   <li>{@code no-spark-adapter}: it is not;
+   *   <li>{@code spark}: a live Spark Connect server: system property {@code
+   *       morel.spark} is set, and {@code SPARK_REMOTE} names the server. The
+   *       harness binds {@code spark} to a connection to it, as {@code
+   *       Spark.connect} would return, and closes it after the script;
+   *   <li>{@code spark-prepare}: the Spark translator exists, that is, the
+   *       {@code Spark} structure has {@code prepare}.
+   * </ul>
+   */
+  private static Set<String> checkRequires(String path) throws IOException {
+    final Set<String> conditions = new LinkedHashSet<>();
+    final URL url =
+        requireNonNull(
+            ScriptTest.class
+                .getClassLoader()
+                .getResource(path.replace(File.separatorChar, '/')),
+            path);
+    final Pattern pattern = Pattern.compile("^\\(\\*\\) requires: (.*)");
+    try (Stream<String> lines =
+        Files.lines(requireNonNull(urlToFile(url)).toPath())) {
+      lines
+          .limit(40)
+          .forEach(
+              line -> {
+                final Matcher m = pattern.matcher(line);
+                if (m.find()) {
+                  // Several conditions, separated by spaces, must all hold.
+                  for (String condition : m.group(1).trim().split("\\s+")) {
+                    assumeTrue(
+                        holds(condition), path + " requires " + condition);
+                    conditions.add(condition);
+                  }
+                }
+              });
+    }
+    return conditions;
+  }
+
+  /**
+   * Returns the URI of the Spark server.
+   *
+   * <p>Nothing is added to it: each table of the container says which of its
+   * columns hold nulls, in its own {@code morel.nullable} property, because
+   * Spark reports every column of a stored table as nullable whatever the
+   * schema said. The scott tables' properties are generated from the data set
+   * (ScottInit), so a script reads the same types here as it does from the data
+   * set itself.
+   */
+  private static String sparkUri() {
+    return requireNonNull(System.getenv("SPARK_REMOTE"));
+  }
+
+  /** Returns whether a {@code requires:} condition holds. */
+  private static boolean holds(String condition) {
+    switch (condition) {
+      case "spark-adapter":
+        return SparkBackend.isAvailable();
+      case "no-spark-adapter":
+        return !SparkBackend.isAvailable();
+      case "spark":
+        return System.getProperty("morel.spark") != null
+            && System.getenv("SPARK_REMOTE") != null;
+      case "spark-prepare":
+        // The translator: true once the Spark structure has "prepare".
+        final BuiltIn.Structure spark = BuiltIn.BY_STRUCTURE.get("Spark");
+        return spark != null && spark.memberMap.containsKey("prepare");
+      default:
+        throw new IllegalArgumentException(
+            "unknown condition '" + condition + "' in requires directive");
     }
   }
 
@@ -192,6 +286,42 @@ public class ScriptTest {
             ImmutableMap.of(Prop.HYBRID, true),
             requireCalciteTracer())
         .run();
+  }
+
+  /**
+   * Runs {@code triple.smli} a second time, in Calcite ("hybrid") mode,
+   * asserting that each query is pushed down, as {@link #testScriptDual} does
+   * for the dual script.
+   */
+  @Test
+  void testScriptTripleCalcite() throws Exception {
+    Script.create(
+            "script/triple.smli",
+            null,
+            false,
+            ImmutableMap.of(Prop.HYBRID, true),
+            requireCalciteTracer())
+        .run();
+  }
+
+  /**
+   * Runs {@code triple.smli} a third time, with every query pushed down to
+   * Spark.
+   *
+   * <p>The same queries, the same expected answers, and a third way of
+   * computing them. A query that Spark cannot do, or answers differently, fails
+   * here.
+   */
+  @Test
+  void testScriptTripleSpark() throws Exception {
+    assumeTrue(holds("spark"), "requires spark");
+    assumeTrue(holds("spark-prepare"), "requires spark-prepare");
+    try (SparkConnectionValue spark = new SparkConnectionValue(sparkUri())) {
+      Script.create("script/triple.smli")
+          .withValues(ImmutableMap.of("spark", spark))
+          .withSparkPushDown()
+          .run();
+    }
   }
 
   /**

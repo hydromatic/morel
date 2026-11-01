@@ -60,6 +60,7 @@ public class Script {
   private final boolean echo;
   private final boolean idempotent;
   private final boolean loadDictionary;
+  private final Map<String, ForeignValue> extraValues;
 
   /** Property overrides applied before running (e.g. {@code hybrid=true}). */
   private final Map<Prop, Object> propOverrides;
@@ -75,6 +76,7 @@ public class Script {
       boolean echo,
       boolean idempotent,
       boolean loadDictionary,
+      Map<String, ForeignValue> extraValues,
       Map<Prop, Object> propOverrides,
       Tracer tracer) {
     this.inFile = requireNonNull(inFile, "inFile");
@@ -83,8 +85,41 @@ public class Script {
     this.echo = echo;
     this.idempotent = idempotent;
     this.loadDictionary = loadDictionary;
+    this.extraValues = ImmutableMap.copyOf(extraValues);
     this.propOverrides = ImmutableMap.copyOf(propOverrides);
     this.tracer = requireNonNull(tracer, "tracer");
+  }
+
+  /**
+   * Returns a copy of this script that runs every query on Spark.
+   *
+   * <p>It sets the {@code sparkPushDown} property, which is what a session sets
+   * to the same end, so that each query is wrapped in {@code Spark.remote} and
+   * answers as it does locally, or fails. The connection comes from the value
+   * bound as {@code spark}, so a script run this way needs {@link #withValues}
+   * too -- and the connection the suite binds is the one carrying the data
+   * set's nullability declaration, which is why the property is set here rather
+   * than letting Morel open its own.
+   */
+  public Script withSparkPushDown() {
+    final Map<Prop, Object> map = new LinkedHashMap<>(propOverrides);
+    Prop.SPARK_PUSH_DOWN.set(map, true);
+    // A query that stops being pushed down is a regression, so it fails here
+    // rather than answering locally with a warning, which is what a session
+    // would rather have.
+    Prop.SPARK_FALLBACK.set(map, false);
+    return new Script(
+        inFile,
+        // A mode of its own writes a file of its own: the suite runs the modes
+        // of a script in parallel, and two that wrote one file would race.
+        suffixed(outFile, "spark"),
+        noInput,
+        echo,
+        idempotent,
+        loadDictionary,
+        extraValues,
+        map,
+        tracer);
   }
 
   /**
@@ -94,6 +129,30 @@ public class Script {
    */
   public static Script create(String path) throws IOException {
     return create(path, null, false, ImmutableMap.of(), Tracers.empty());
+  }
+
+  /**
+   * Returns a file beside {@code file} whose name carries a suffix, so that a
+   * second way of running one script does not write the first way's output.
+   */
+  private static File suffixed(File file, String suffix) {
+    return new File(file.getParentFile(), suffix + "-" + file.getName());
+  }
+
+  /** Returns a copy of this script with more foreign values bound. */
+  public Script withValues(Map<String, ForeignValue> values) {
+    final Map<String, ForeignValue> map = new LinkedHashMap<>(extraValues);
+    map.putAll(values);
+    return new Script(
+        inFile,
+        outFile,
+        noInput,
+        echo,
+        idempotent,
+        loadDictionary,
+        map,
+        propOverrides,
+        tracer);
   }
 
   /** Creates a Script. */
@@ -128,9 +187,12 @@ public class Script {
       inFile = urlToFile(inUrl);
       checkArgument(inFile != null, "file '%s' not found", inUrl);
       String outPath = idempotent ? path : path + ".out";
-      outFile =
+      final File out =
           new File(
               inFile.getAbsoluteFile().getParent(), u2n("surefire/") + outPath);
+      // As for Spark: a run in Calcite mode writes beside the local run's
+      // output rather than over it, because the suite runs them in parallel.
+      outFile = propOverrides.isEmpty() ? out : suffixed(out, "hybrid");
     }
 
     final boolean loadDictionary =
@@ -139,7 +201,9 @@ public class Script {
                 .getPath()
                 .matches(
                     ".*/(blog|dual|dummy|dummy2|foreign|hybrid|logic|pretty"
-                        + "|such-that)\\.(sml|smli)");
+                        + "|spark|spark-disabled|spark-divergence"
+                        + "|spark-error|spark-exec|spark-live|spark-plan"
+                        + "|spark-plan-generated|such-that|triple)\\.(sml|smli)");
 
     return new Script(
         inFile,
@@ -148,6 +212,7 @@ public class Script {
         echo,
         idempotent,
         loadDictionary,
+        ImmutableMap.of(),
         propOverrides,
         tracer);
   }
@@ -222,10 +287,12 @@ public class Script {
       Prop.DIRECTORY.set(propMap, directory);
     }
     propMap.putAll(propOverrides);
-    final Map<String, ForeignValue> dictionary =
-        loadDictionary
-            ? Calcite.withDataSets(BuiltInDataSet.DICTIONARY).foreignValues()
-            : ImmutableMap.of();
+    final Map<String, ForeignValue> dictionary = new LinkedHashMap<>();
+    if (loadDictionary) {
+      dictionary.putAll(
+          Calcite.withDataSets(BuiltInDataSet.DICTIONARY).foreignValues());
+    }
+    dictionary.putAll(extraValues);
 
     try (Reader reader =
             noInput

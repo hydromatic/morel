@@ -328,6 +328,45 @@ public enum Prop {
           + "contains the script."),
 
   /**
+   * Boolean property "sparkFallback" controls what happens to a query that
+   * {@link #SPARK_PUSH_DOWN} sends to Spark and Spark cannot do: whether it is
+   * evaluated here instead, with a warning, or the statement fails. Default is
+   * true, so that a session answers where it can.
+   *
+   * <p>It governs refusals only -- a construct or function the translator
+   * cannot express -- and never a failure on the server: a query that reached
+   * Spark and failed there has an answer Morel must not invent, and a
+   * connection that is not there is not a question about this query.
+   *
+   * <p>Set it false where a query must run on the server or not at all. A query
+   * evaluated here reads whatever it reads through the connection, so a refusal
+   * that falls back silently can turn a query over a large table into a
+   * download of it; the warning is there to be read.
+   */
+  SPARK_FALLBACK(
+      "sparkFallback",
+      Kind.BOOL,
+      true,
+      "Whether a query that Spark cannot do is evaluated locally, with a "
+          + "warning, rather than failing."),
+
+  /**
+   * Boolean property "sparkPushDown" controls whether each query is translated
+   * for Apache Spark and run there, on the connection that the session has
+   * bound as {@code spark}. Default is false.
+   *
+   * <p>It is the Spark counterpart of {@link #HYBRID}, with one difference that
+   * follows from Spark being another server rather than a library: a query
+   * Spark cannot do is refused where its plan is made, because a plan is all
+   * Spark or it is an error.
+   */
+  SPARK_PUSH_DOWN(
+      "sparkPushDown",
+      Kind.BOOL,
+      false,
+      "Whether to translate each query for Apache Spark and run it there."),
+
+  /**
    * Integer option property "stringDepth" is the length of strings at which
    * ellipsis begins.
    *

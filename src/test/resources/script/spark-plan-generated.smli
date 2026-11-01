@@ -1,0 +1,1847 @@
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *
+ * The corpus of spark.smli, each query prepared on the offline
+ * connection and its Spark plan printed, and nothing else: the
+ * PySpark client writes this file too, so that the plans can be
+ * compared with the ones Spark itself builds. Do not edit by hand;
+ * see the header of spark/capture.py, spark-plan.smli for what else
+ * prepare does, and docs/script-format.md.
+ *)
+(*) requires: spark-adapter spark-prepare
+
+(*) A plan is a long string, and is printed whole.
+Sys.set ("stringDepth", NONE);
+> val it = () : unit
+
+val spark = Spark.connect "mock:";
+> val spark = {catalog={},connection=<connection mock:>}
+>   : {catalog:{...}, connection:connection, ...}
+
+(*) Query 1: filter and project over an inline relation.
+(spark.connection.prepare (fn () =>
+  from r in [{i = 1, s = "one", b = true, x = 1.5},
+             {i = 2, s = "two", b = false, x = 2.5},
+             {i = 3, s = "three", b = true, x = 3.5}]
+    where r.b andalso r.i > 1
+    yield {r.s, y = r.x * 2.0}
+)).toString ();
+> val it =
+>   {_|
+> root {
+>   common {
+>     plan_id: 0
+>   }
+>   project {
+>     input {
+>       common {
+>         plan_id: 1
+>       }
+>       filter {
+>         input {
+>           common {
+>             plan_id: 2
+>           }
+>           subquery_alias {
+>             input {
+>               common {
+>                 plan_id: 3
+>               }
+>               local_relation {
+>                 data: [3 rows]
+>                 schema: "{\"fields\":[{\"metadata\":{},\"name\":\"b\",\"nullable\":false,\"type\":\"boolean\"},{\"metadata\":{},\"name\":\"i\",\"nullable\":false,\"type\":\"integer\"},{\"metadata\":{},\"name\":\"s\",\"nullable\":false,\"type\":\"string\"},{\"metadata\":{},\"name\":\"x\",\"nullable\":false,\"type\":\"double\"}],\"type\":\"struct\"}"
+>               }
+>             }
+>             alias: "r"
+>           }
+>         }
+>         condition {
+>           unresolved_function {
+>             function_name: "and"
+>             arguments {
+>               unresolved_attribute {
+>                 unparsed_identifier: "r.b"
+>                 is_metadata_column: false
+>               }
+>             }
+>             arguments {
+>               unresolved_function {
+>                 function_name: ">"
+>                 arguments {
+>                   unresolved_attribute {
+>                     unparsed_identifier: "r.i"
+>                     is_metadata_column: false
+>                   }
+>                 }
+>                 arguments {
+>                   literal {
+>                     integer: 1
+>                   }
+>                 }
+>               }
+>             }
+>           }
+>         }
+>       }
+>     }
+>     expressions {
+>       unresolved_attribute {
+>         unparsed_identifier: "r.s"
+>         is_metadata_column: false
+>       }
+>     }
+>     expressions {
+>       alias {
+>         expr {
+>           unresolved_function {
+>             function_name: "*"
+>             arguments {
+>               unresolved_attribute {
+>                 unparsed_identifier: "r.x"
+>                 is_metadata_column: false
+>               }
+>             }
+>             arguments {
+>               literal {
+>                 double: 2.0
+>               }
+>             }
+>           }
+>         }
+>         name: "y"
+>       }
+>     }
+>   }
+> }|_} : string
+
+(*) Query 2: equijoin.
+(spark.connection.prepare (fn () =>
+  from e in spark.catalog.scott.emps
+    join d in spark.catalog.scott.depts on e.deptno = d.deptno
+    yield {e.ename, d.dname}
+)).toString ();
+> val it =
+>   {_|
+> root {
+>   common {
+>     plan_id: 0
+>   }
+>   project {
+>     input {
+>       common {
+>         plan_id: 1
+>       }
+>       join {
+>         left {
+>           common {
+>             plan_id: 2
+>           }
+>           subquery_alias {
+>             input {
+>               common {
+>                 plan_id: 3
+>               }
+>               read {
+>                 named_table {
+>                   unparsed_identifier: "scott.emps"
+>                 }
+>               }
+>             }
+>             alias: "e"
+>           }
+>         }
+>         right {
+>           common {
+>             plan_id: 4
+>           }
+>           subquery_alias {
+>             input {
+>               common {
+>                 plan_id: 5
+>               }
+>               read {
+>                 named_table {
+>                   unparsed_identifier: "scott.depts"
+>                 }
+>               }
+>             }
+>             alias: "d"
+>           }
+>         }
+>         join_condition {
+>           unresolved_function {
+>             function_name: "=="
+>             arguments {
+>               unresolved_attribute {
+>                 unparsed_identifier: "e.deptno"
+>                 is_metadata_column: false
+>               }
+>             }
+>             arguments {
+>               unresolved_attribute {
+>                 unparsed_identifier: "d.deptno"
+>                 is_metadata_column: false
+>               }
+>             }
+>           }
+>         }
+>         join_type: JOIN_TYPE_INNER
+>       }
+>     }
+>     expressions {
+>       unresolved_attribute {
+>         unparsed_identifier: "d.dname"
+>         is_metadata_column: false
+>       }
+>     }
+>     expressions {
+>       unresolved_attribute {
+>         unparsed_identifier: "e.ename"
+>         is_metadata_column: false
+>       }
+>     }
+>   }
+> }|_} : string
+
+(*) Query 3: group by with aggregates.
+(spark.connection.prepare (fn () =>
+  from e in spark.catalog.scott.emps
+    group e.deptno
+      compute {c = count over (), total = sum over e.sal, top = max over e.sal}
+)).toString ();
+> val it =
+>   {_|
+> root {
+>   common {
+>     plan_id: 0
+>   }
+>   aggregate {
+>     input {
+>       common {
+>         plan_id: 1
+>       }
+>       subquery_alias {
+>         input {
+>           common {
+>             plan_id: 2
+>           }
+>           read {
+>             named_table {
+>               unparsed_identifier: "scott.emps"
+>             }
+>           }
+>         }
+>         alias: "e"
+>       }
+>     }
+>     group_type: GROUP_TYPE_GROUPBY
+>     grouping_expressions {
+>       unresolved_attribute {
+>         unparsed_identifier: "e.deptno"
+>         is_metadata_column: false
+>       }
+>     }
+>     aggregate_expressions {
+>       alias {
+>         expr {
+>           unresolved_function {
+>             function_name: "count"
+>             arguments {
+>               literal {
+>                 integer: 1
+>               }
+>             }
+>           }
+>         }
+>         name: "c"
+>       }
+>     }
+>     aggregate_expressions {
+>       alias {
+>         expr {
+>           unresolved_function {
+>             function_name: "max"
+>             arguments {
+>               unresolved_attribute {
+>                 unparsed_identifier: "e.sal"
+>                 is_metadata_column: false
+>               }
+>             }
+>           }
+>         }
+>         name: "top"
+>       }
+>     }
+>     aggregate_expressions {
+>       alias {
+>         expr {
+>           unresolved_function {
+>             function_name: "sum"
+>             arguments {
+>               unresolved_attribute {
+>                 unparsed_identifier: "e.sal"
+>                 is_metadata_column: false
+>               }
+>             }
+>           }
+>         }
+>         name: "total"
+>       }
+>     }
+>   }
+> }|_} : string
+
+(*) Query 4: sort and limit.
+(spark.connection.prepare (fn () =>
+  from e in spark.catalog.scott.emps
+    yield {e.ename, e.sal}
+    order (DESC sal, ename)
+    take 3
+)).toString ();
+> val it =
+>   {_|
+> root {
+>   common {
+>     plan_id: 0
+>   }
+>   limit {
+>     input {
+>       common {
+>         plan_id: 1
+>       }
+>       sort {
+>         input {
+>           common {
+>             plan_id: 2
+>           }
+>           project {
+>             input {
+>               common {
+>                 plan_id: 3
+>               }
+>               subquery_alias {
+>                 input {
+>                   common {
+>                     plan_id: 4
+>                   }
+>                   read {
+>                     named_table {
+>                       unparsed_identifier: "scott.emps"
+>                     }
+>                   }
+>                 }
+>                 alias: "e"
+>               }
+>             }
+>             expressions {
+>               unresolved_attribute {
+>                 unparsed_identifier: "e.ename"
+>                 is_metadata_column: false
+>               }
+>             }
+>             expressions {
+>               unresolved_attribute {
+>                 unparsed_identifier: "e.sal"
+>                 is_metadata_column: false
+>               }
+>             }
+>           }
+>         }
+>         order {
+>           child {
+>             unresolved_attribute {
+>               unparsed_identifier: "sal"
+>               is_metadata_column: false
+>             }
+>           }
+>           direction: SORT_DIRECTION_DESCENDING
+>           null_ordering: SORT_NULLS_LAST
+>         }
+>         order {
+>           child {
+>             unresolved_attribute {
+>               unparsed_identifier: "ename"
+>               is_metadata_column: false
+>             }
+>           }
+>           direction: SORT_DIRECTION_ASCENDING
+>           null_ordering: SORT_NULLS_FIRST
+>         }
+>         is_global: true
+>       }
+>     }
+>     limit: 3
+>   }
+> }|_} : string
+
+(*) Query 5: correlated exists subquery.
+(spark.connection.prepare (fn () =>
+  from d in spark.catalog.scott.depts
+    where (exists e in spark.catalog.scott.emps
+           where e.deptno = d.deptno andalso e.job = "CLERK")
+    yield d.dname
+)).toString ();
+> val it =
+>   {_|
+> root {
+>   common {
+>     plan_id: 0
+>   }
+>   project {
+>     input {
+>       common {
+>         plan_id: 1
+>       }
+>       with_relations {
+>         root {
+>           common {
+>             plan_id: 2
+>           }
+>           filter {
+>             input {
+>               common {
+>                 plan_id: 3
+>               }
+>               subquery_alias {
+>                 input {
+>                   common {
+>                     plan_id: 4
+>                   }
+>                   read {
+>                     named_table {
+>                       unparsed_identifier: "scott.depts"
+>                     }
+>                   }
+>                 }
+>                 alias: "d"
+>               }
+>             }
+>             condition {
+>               subquery_expression {
+>                 plan_id: 5
+>                 subquery_type: SUBQUERY_TYPE_EXISTS
+>               }
+>             }
+>           }
+>         }
+>         references {
+>           common {
+>             plan_id: 5
+>           }
+>           filter {
+>             input {
+>               common {
+>                 plan_id: 6
+>               }
+>               subquery_alias {
+>                 input {
+>                   common {
+>                     plan_id: 7
+>                   }
+>                   read {
+>                     named_table {
+>                       unparsed_identifier: "scott.emps"
+>                     }
+>                   }
+>                 }
+>                 alias: "e"
+>               }
+>             }
+>             condition {
+>               unresolved_function {
+>                 function_name: "and"
+>                 arguments {
+>                   unresolved_function {
+>                     function_name: "=="
+>                     arguments {
+>                       unresolved_attribute {
+>                         unparsed_identifier: "e.deptno"
+>                         is_metadata_column: false
+>                       }
+>                     }
+>                     arguments {
+>                       unresolved_attribute {
+>                         unparsed_identifier: "d.deptno"
+>                         is_metadata_column: false
+>                       }
+>                     }
+>                   }
+>                 }
+>                 arguments {
+>                   unresolved_function {
+>                     function_name: "=="
+>                     arguments {
+>                       unresolved_attribute {
+>                         unparsed_identifier: "e.job"
+>                         is_metadata_column: false
+>                       }
+>                     }
+>                     arguments {
+>                       literal {
+>                         string: "CLERK"
+>                       }
+>                     }
+>                   }
+>                 }
+>               }
+>             }
+>           }
+>         }
+>       }
+>     }
+>     expressions {
+>       unresolved_attribute {
+>         unparsed_identifier: "d.dname"
+>         is_metadata_column: false
+>       }
+>     }
+>   }
+> }|_} : string
+
+(*) Query 6: order, skip, take, then project.
+(spark.connection.prepare (fn () =>
+  from e in spark.catalog.scott.emps
+    order e.empno
+    skip 2
+    take 3
+    yield {e.empno, e.ename}
+)).toString ();
+> val it =
+>   {_|
+> root {
+>   common {
+>     plan_id: 0
+>   }
+>   project {
+>     input {
+>       common {
+>         plan_id: 1
+>       }
+>       limit {
+>         input {
+>           common {
+>             plan_id: 2
+>           }
+>           offset {
+>             input {
+>               common {
+>                 plan_id: 3
+>               }
+>               sort {
+>                 input {
+>                   common {
+>                     plan_id: 4
+>                   }
+>                   subquery_alias {
+>                     input {
+>                       common {
+>                         plan_id: 5
+>                       }
+>                       read {
+>                         named_table {
+>                           unparsed_identifier: "scott.emps"
+>                         }
+>                       }
+>                     }
+>                     alias: "e"
+>                   }
+>                 }
+>                 order {
+>                   child {
+>                     unresolved_attribute {
+>                       unparsed_identifier: "e.empno"
+>                       is_metadata_column: false
+>                     }
+>                   }
+>                   direction: SORT_DIRECTION_ASCENDING
+>                   null_ordering: SORT_NULLS_FIRST
+>                 }
+>                 is_global: true
+>               }
+>             }
+>             offset: 2
+>           }
+>         }
+>         limit: 3
+>       }
+>     }
+>     expressions {
+>       unresolved_attribute {
+>         unparsed_identifier: "e.empno"
+>         is_metadata_column: false
+>       }
+>     }
+>     expressions {
+>       unresolved_attribute {
+>         unparsed_identifier: "e.ename"
+>         is_metadata_column: false
+>       }
+>     }
+>   }
+> }|_} : string
+
+(*) Query 7: distinct, a group with no aggregates.
+(spark.connection.prepare (fn () =>
+  from e in spark.catalog.scott.emps group e.job
+)).toString ();
+> val it =
+>   {_|
+> root {
+>   common {
+>     plan_id: 0
+>   }
+>   deduplicate {
+>     input {
+>       common {
+>         plan_id: 1
+>       }
+>       project {
+>         input {
+>           common {
+>             plan_id: 2
+>           }
+>           subquery_alias {
+>             input {
+>               common {
+>                 plan_id: 3
+>               }
+>               read {
+>                 named_table {
+>                   unparsed_identifier: "scott.emps"
+>                 }
+>               }
+>             }
+>             alias: "e"
+>           }
+>         }
+>         expressions {
+>           unresolved_attribute {
+>             unparsed_identifier: "e.job"
+>             is_metadata_column: false
+>           }
+>         }
+>       }
+>     }
+>     all_columns_as_keys: true
+>     within_watermark: false
+>   }
+> }|_} : string
+
+(*) Query 8: left join.
+(spark.connection.prepare (fn () =>
+  from d in spark.catalog.scott.depts
+    left join e in spark.catalog.scott.emps on d.deptno = e.deptno
+    where d.deptno >= 30
+    yield {d.dname, e}
+)).toString ();
+> val it =
+>   {_|
+> root {
+>   common {
+>     plan_id: 0
+>   }
+>   project {
+>     input {
+>       common {
+>         plan_id: 1
+>       }
+>       filter {
+>         input {
+>           common {
+>             plan_id: 2
+>           }
+>           join {
+>             left {
+>               common {
+>                 plan_id: 3
+>               }
+>               subquery_alias {
+>                 input {
+>                   common {
+>                     plan_id: 4
+>                   }
+>                   read {
+>                     named_table {
+>                       unparsed_identifier: "scott.depts"
+>                     }
+>                   }
+>                 }
+>                 alias: "d"
+>               }
+>             }
+>             right {
+>               common {
+>                 plan_id: 5
+>               }
+>               subquery_alias {
+>                 input {
+>                   common {
+>                     plan_id: 6
+>                   }
+>                   read {
+>                     named_table {
+>                       unparsed_identifier: "scott.emps"
+>                     }
+>                   }
+>                 }
+>                 alias: "e"
+>               }
+>             }
+>             join_condition {
+>               unresolved_function {
+>                 function_name: "=="
+>                 arguments {
+>                   unresolved_attribute {
+>                     unparsed_identifier: "d.deptno"
+>                     is_metadata_column: false
+>                   }
+>                 }
+>                 arguments {
+>                   unresolved_attribute {
+>                     unparsed_identifier: "e.deptno"
+>                     is_metadata_column: false
+>                   }
+>                 }
+>               }
+>             }
+>             join_type: JOIN_TYPE_LEFT_OUTER
+>           }
+>         }
+>         condition {
+>           unresolved_function {
+>             function_name: ">="
+>             arguments {
+>               unresolved_attribute {
+>                 unparsed_identifier: "d.deptno"
+>                 is_metadata_column: false
+>               }
+>             }
+>             arguments {
+>               literal {
+>                 integer: 30
+>               }
+>             }
+>           }
+>         }
+>       }
+>     }
+>     expressions {
+>       unresolved_attribute {
+>         unparsed_identifier: "d.dname"
+>         is_metadata_column: false
+>       }
+>     }
+>     expressions {
+>       alias {
+>         expr {
+>           unresolved_function {
+>             function_name: "when"
+>             arguments {
+>               unresolved_function {
+>                 function_name: "isNull"
+>                 arguments {
+>                   unresolved_attribute {
+>                     unparsed_identifier: "e.deptno"
+>                     is_metadata_column: false
+>                   }
+>                 }
+>               }
+>             }
+>             arguments {
+>               literal {
+>                 null {
+>                   null {
+>                   }
+>                 }
+>               }
+>             }
+>             arguments {
+>               unresolved_function {
+>                 function_name: "struct"
+>                 arguments {
+>                   alias {
+>                     expr {
+>                       unresolved_attribute {
+>                         unparsed_identifier: "e.comm"
+>                         is_metadata_column: false
+>                       }
+>                     }
+>                     name: "comm"
+>                   }
+>                 }
+>                 arguments {
+>                   alias {
+>                     expr {
+>                       unresolved_attribute {
+>                         unparsed_identifier: "e.deptno"
+>                         is_metadata_column: false
+>                       }
+>                     }
+>                     name: "deptno"
+>                   }
+>                 }
+>                 arguments {
+>                   alias {
+>                     expr {
+>                       unresolved_attribute {
+>                         unparsed_identifier: "e.empno"
+>                         is_metadata_column: false
+>                       }
+>                     }
+>                     name: "empno"
+>                   }
+>                 }
+>                 arguments {
+>                   alias {
+>                     expr {
+>                       unresolved_attribute {
+>                         unparsed_identifier: "e.ename"
+>                         is_metadata_column: false
+>                       }
+>                     }
+>                     name: "ename"
+>                   }
+>                 }
+>                 arguments {
+>                   alias {
+>                     expr {
+>                       unresolved_attribute {
+>                         unparsed_identifier: "e.hiredate"
+>                         is_metadata_column: false
+>                       }
+>                     }
+>                     name: "hiredate"
+>                   }
+>                 }
+>                 arguments {
+>                   alias {
+>                     expr {
+>                       unresolved_attribute {
+>                         unparsed_identifier: "e.job"
+>                         is_metadata_column: false
+>                       }
+>                     }
+>                     name: "job"
+>                   }
+>                 }
+>                 arguments {
+>                   alias {
+>                     expr {
+>                       unresolved_attribute {
+>                         unparsed_identifier: "e.mgr"
+>                         is_metadata_column: false
+>                       }
+>                     }
+>                     name: "mgr"
+>                   }
+>                 }
+>                 arguments {
+>                   alias {
+>                     expr {
+>                       unresolved_attribute {
+>                         unparsed_identifier: "e.sal"
+>                         is_metadata_column: false
+>                       }
+>                     }
+>                     name: "sal"
+>                   }
+>                 }
+>               }
+>             }
+>           }
+>         }
+>         name: "e"
+>       }
+>     }
+>   }
+> }|_} : string
+
+(*) Query 9: union, of bags, so every row is kept.
+(spark.connection.prepare (fn () =>
+  from e in spark.catalog.scott.emps where e.deptno = 10 yield {n = e.empno}
+    union (from d in spark.catalog.scott.depts yield {n = d.deptno})
+)).toString ();
+> val it =
+>   {_|
+> root {
+>   common {
+>     plan_id: 0
+>   }
+>   set_op {
+>     left_input {
+>       common {
+>         plan_id: 1
+>       }
+>       project {
+>         input {
+>           common {
+>             plan_id: 2
+>           }
+>           filter {
+>             input {
+>               common {
+>                 plan_id: 3
+>               }
+>               subquery_alias {
+>                 input {
+>                   common {
+>                     plan_id: 4
+>                   }
+>                   read {
+>                     named_table {
+>                       unparsed_identifier: "scott.emps"
+>                     }
+>                   }
+>                 }
+>                 alias: "e"
+>               }
+>             }
+>             condition {
+>               unresolved_function {
+>                 function_name: "=="
+>                 arguments {
+>                   unresolved_attribute {
+>                     unparsed_identifier: "e.deptno"
+>                     is_metadata_column: false
+>                   }
+>                 }
+>                 arguments {
+>                   literal {
+>                     integer: 10
+>                   }
+>                 }
+>               }
+>             }
+>           }
+>         }
+>         expressions {
+>           alias {
+>             expr {
+>               unresolved_attribute {
+>                 unparsed_identifier: "e.empno"
+>                 is_metadata_column: false
+>               }
+>             }
+>             name: "n"
+>           }
+>         }
+>       }
+>     }
+>     right_input {
+>       common {
+>         plan_id: 5
+>       }
+>       project {
+>         input {
+>           common {
+>             plan_id: 6
+>           }
+>           subquery_alias {
+>             input {
+>               common {
+>                 plan_id: 7
+>               }
+>               read {
+>                 named_table {
+>                   unparsed_identifier: "scott.depts"
+>                 }
+>               }
+>             }
+>             alias: "d"
+>           }
+>         }
+>         expressions {
+>           alias {
+>             expr {
+>               unresolved_attribute {
+>                 unparsed_identifier: "d.deptno"
+>                 is_metadata_column: false
+>               }
+>             }
+>             name: "n"
+>           }
+>         }
+>       }
+>     }
+>     set_op_type: SET_OP_TYPE_UNION
+>     is_all: true
+>     by_name: false
+>     allow_missing_columns: false
+>   }
+> }|_} : string
+
+(*) Query 10: arithmetic, including div and mod.
+(spark.connection.prepare (fn () =>
+  from e in spark.catalog.scott.emps
+    where e.deptno = 10
+    yield {e.empno, w = ~e.empno, x = e.sal * decimal "2", y = e.empno div 7,
+           z = e.empno mod 7}
+)).toString ();
+> val it =
+>   {_|
+> root {
+>   common {
+>     plan_id: 0
+>   }
+>   project {
+>     input {
+>       common {
+>         plan_id: 1
+>       }
+>       filter {
+>         input {
+>           common {
+>             plan_id: 2
+>           }
+>           subquery_alias {
+>             input {
+>               common {
+>                 plan_id: 3
+>               }
+>               read {
+>                 named_table {
+>                   unparsed_identifier: "scott.emps"
+>                 }
+>               }
+>             }
+>             alias: "e"
+>           }
+>         }
+>         condition {
+>           unresolved_function {
+>             function_name: "=="
+>             arguments {
+>               unresolved_attribute {
+>                 unparsed_identifier: "e.deptno"
+>                 is_metadata_column: false
+>               }
+>             }
+>             arguments {
+>               literal {
+>                 integer: 10
+>               }
+>             }
+>           }
+>         }
+>       }
+>     }
+>     expressions {
+>       unresolved_attribute {
+>         unparsed_identifier: "e.empno"
+>         is_metadata_column: false
+>       }
+>     }
+>     expressions {
+>       alias {
+>         expr {
+>           unresolved_function {
+>             function_name: "negative"
+>             arguments {
+>               unresolved_attribute {
+>                 unparsed_identifier: "e.empno"
+>                 is_metadata_column: false
+>               }
+>             }
+>           }
+>         }
+>         name: "w"
+>       }
+>     }
+>     expressions {
+>       alias {
+>         expr {
+>           unresolved_function {
+>             function_name: "*"
+>             arguments {
+>               unresolved_attribute {
+>                 unparsed_identifier: "e.sal"
+>                 is_metadata_column: false
+>               }
+>             }
+>             arguments {
+>               literal {
+>                 decimal {
+>                   value: "2"
+>                   precision: 1
+>                   scale: 0
+>                 }
+>               }
+>             }
+>           }
+>         }
+>         name: "x"
+>       }
+>     }
+>     expressions {
+>       alias {
+>         expr {
+>           expression_string {
+>             expression: "cast(floor(e.empno / 7) as int)"
+>           }
+>         }
+>         name: "y"
+>       }
+>     }
+>     expressions {
+>       alias {
+>         expr {
+>           expression_string {
+>             expression: "((e.empno % 7 + 7) % 7)"
+>           }
+>         }
+>         name: "z"
+>       }
+>     }
+>   }
+> }|_} : string
+
+(*) Query 11: string functions.
+(spark.connection.prepare (fn () =>
+  from e in spark.catalog.scott.emps
+    where String.isPrefix "S" e.ename
+    yield {e.ename, n = String.size e.ename,
+           s = String.substring (e.ename, 0, 2), t = e.ename ^ "!"}
+)).toString ();
+> val it =
+>   {_|
+> root {
+>   common {
+>     plan_id: 0
+>   }
+>   project {
+>     input {
+>       common {
+>         plan_id: 1
+>       }
+>       filter {
+>         input {
+>           common {
+>             plan_id: 2
+>           }
+>           subquery_alias {
+>             input {
+>               common {
+>                 plan_id: 3
+>               }
+>               read {
+>                 named_table {
+>                   unparsed_identifier: "scott.emps"
+>                 }
+>               }
+>             }
+>             alias: "e"
+>           }
+>         }
+>         condition {
+>           expression_string {
+>             expression: "startswith(e.ename, \'S\')"
+>           }
+>         }
+>       }
+>     }
+>     expressions {
+>       unresolved_attribute {
+>         unparsed_identifier: "e.ename"
+>         is_metadata_column: false
+>       }
+>     }
+>     expressions {
+>       alias {
+>         expr {
+>           unresolved_function {
+>             function_name: "length"
+>             arguments {
+>               unresolved_attribute {
+>                 unparsed_identifier: "e.ename"
+>                 is_metadata_column: false
+>               }
+>             }
+>           }
+>         }
+>         name: "n"
+>       }
+>     }
+>     expressions {
+>       alias {
+>         expr {
+>           expression_string {
+>             expression: "substring(e.ename, 0 + 1, 2)"
+>           }
+>         }
+>         name: "s"
+>       }
+>     }
+>     expressions {
+>       alias {
+>         expr {
+>           unresolved_function {
+>             function_name: "concat"
+>             arguments {
+>               unresolved_attribute {
+>                 unparsed_identifier: "e.ename"
+>                 is_metadata_column: false
+>               }
+>             }
+>             arguments {
+>               literal {
+>                 string: "!"
+>               }
+>             }
+>           }
+>         }
+>         name: "t"
+>       }
+>     }
+>   }
+> }|_} : string
+
+(*) Query 12: elem, an IN subquery.
+(spark.connection.prepare (fn () =>
+  from e in spark.catalog.scott.emps
+    where e.deptno elem
+      (from d in spark.catalog.scott.depts
+       where d.loc = "CHICAGO" yield d.deptno)
+    yield e.ename
+)).toString ();
+> val it =
+>   {_|
+> root {
+>   common {
+>     plan_id: 0
+>   }
+>   project {
+>     input {
+>       common {
+>         plan_id: 1
+>       }
+>       with_relations {
+>         root {
+>           common {
+>             plan_id: 2
+>           }
+>           filter {
+>             input {
+>               common {
+>                 plan_id: 3
+>               }
+>               subquery_alias {
+>                 input {
+>                   common {
+>                     plan_id: 4
+>                   }
+>                   read {
+>                     named_table {
+>                       unparsed_identifier: "scott.emps"
+>                     }
+>                   }
+>                 }
+>                 alias: "e"
+>               }
+>             }
+>             condition {
+>               subquery_expression {
+>                 plan_id: 5
+>                 subquery_type: SUBQUERY_TYPE_EXISTS
+>               }
+>             }
+>           }
+>         }
+>         references {
+>           common {
+>             plan_id: 5
+>           }
+>           filter {
+>             input {
+>               common {
+>                 plan_id: 6
+>               }
+>               subquery_alias {
+>                 input {
+>                   common {
+>                     plan_id: 7
+>                   }
+>                   read {
+>                     named_table {
+>                       unparsed_identifier: "scott.depts"
+>                     }
+>                   }
+>                 }
+>                 alias: "d"
+>               }
+>             }
+>             condition {
+>               unresolved_function {
+>                 function_name: "and"
+>                 arguments {
+>                   unresolved_function {
+>                     function_name: "=="
+>                     arguments {
+>                       unresolved_attribute {
+>                         unparsed_identifier: "d.loc"
+>                         is_metadata_column: false
+>                       }
+>                     }
+>                     arguments {
+>                       literal {
+>                         string: "CHICAGO"
+>                       }
+>                     }
+>                   }
+>                 }
+>                 arguments {
+>                   unresolved_function {
+>                     function_name: "=="
+>                     arguments {
+>                       unresolved_attribute {
+>                         unparsed_identifier: "d.deptno"
+>                         is_metadata_column: false
+>                       }
+>                     }
+>                     arguments {
+>                       unresolved_attribute {
+>                         unparsed_identifier: "e.deptno"
+>                         is_metadata_column: false
+>                       }
+>                     }
+>                   }
+>                 }
+>               }
+>             }
+>           }
+>         }
+>       }
+>     }
+>     expressions {
+>       unresolved_attribute {
+>         unparsed_identifier: "e.ename"
+>         is_metadata_column: false
+>       }
+>     }
+>   }
+> }|_} : string
+
+(*) Query 13: a correlated scalar subquery.
+(spark.connection.prepare (fn () =>
+  from d in spark.catalog.scott.depts
+    yield {d.dname,
+           n = (from e in spark.catalog.scott.emps where e.deptno = d.deptno
+                compute count over ())}
+)).toString ();
+> val it =
+>   {_|
+> root {
+>   common {
+>     plan_id: 0
+>   }
+>   with_relations {
+>     root {
+>       common {
+>         plan_id: 1
+>       }
+>       project {
+>         input {
+>           common {
+>             plan_id: 2
+>           }
+>           subquery_alias {
+>             input {
+>               common {
+>                 plan_id: 3
+>               }
+>               read {
+>                 named_table {
+>                   unparsed_identifier: "scott.depts"
+>                 }
+>               }
+>             }
+>             alias: "d"
+>           }
+>         }
+>         expressions {
+>           unresolved_attribute {
+>             unparsed_identifier: "d.dname"
+>             is_metadata_column: false
+>           }
+>         }
+>         expressions {
+>           alias {
+>             expr {
+>               subquery_expression {
+>                 plan_id: 4
+>                 subquery_type: SUBQUERY_TYPE_SCALAR
+>               }
+>             }
+>             name: "n"
+>           }
+>         }
+>       }
+>     }
+>     references {
+>       common {
+>         plan_id: 4
+>       }
+>       aggregate {
+>         input {
+>           common {
+>             plan_id: 5
+>           }
+>           filter {
+>             input {
+>               common {
+>                 plan_id: 6
+>               }
+>               subquery_alias {
+>                 input {
+>                   common {
+>                     plan_id: 7
+>                   }
+>                   read {
+>                     named_table {
+>                       unparsed_identifier: "scott.emps"
+>                     }
+>                   }
+>                 }
+>                 alias: "e"
+>               }
+>             }
+>             condition {
+>               unresolved_function {
+>                 function_name: "=="
+>                 arguments {
+>                   unresolved_attribute {
+>                     unparsed_identifier: "e.deptno"
+>                     is_metadata_column: false
+>                   }
+>                 }
+>                 arguments {
+>                   unresolved_attribute {
+>                     unparsed_identifier: "d.deptno"
+>                     is_metadata_column: false
+>                   }
+>                 }
+>               }
+>             }
+>           }
+>         }
+>         group_type: GROUP_TYPE_GROUPBY
+>         aggregate_expressions {
+>           alias {
+>             expr {
+>               unresolved_function {
+>                 function_name: "count"
+>                 arguments {
+>                   literal {
+>                     integer: 1
+>                   }
+>                 }
+>               }
+>             }
+>             name: "count"
+>           }
+>         }
+>       }
+>     }
+>   }
+> }|_} : string
+
+(*) Query 14: a result that is not a collection.
+(spark.connection.prepare (fn () =>
+  from e in spark.catalog.scott.emps compute count over ()
+)).toString ();
+> val it =
+>   {_|
+> root {
+>   common {
+>     plan_id: 0
+>   }
+>   aggregate {
+>     input {
+>       common {
+>         plan_id: 1
+>       }
+>       subquery_alias {
+>         input {
+>           common {
+>             plan_id: 2
+>           }
+>           read {
+>             named_table {
+>               unparsed_identifier: "scott.emps"
+>             }
+>           }
+>         }
+>         alias: "e"
+>       }
+>     }
+>     group_type: GROUP_TYPE_GROUPBY
+>     aggregate_expressions {
+>       alias {
+>         expr {
+>           unresolved_function {
+>             function_name: "count"
+>             arguments {
+>               literal {
+>                 integer: 1
+>               }
+>             }
+>           }
+>         }
+>         name: "count"
+>       }
+>     }
+>   }
+> }|_} : string
+
+(*) Query 15: except and intersect, of bags.
+(spark.connection.prepare (fn () =>
+  from e in spark.catalog.scott.emps yield {n = e.deptno}
+    except (from d in spark.catalog.scott.depts
+            where d.deptno > 20 yield {n = d.deptno})
+)).toString ();
+> val it =
+>   {_|
+> root {
+>   common {
+>     plan_id: 0
+>   }
+>   set_op {
+>     left_input {
+>       common {
+>         plan_id: 1
+>       }
+>       project {
+>         input {
+>           common {
+>             plan_id: 2
+>           }
+>           subquery_alias {
+>             input {
+>               common {
+>                 plan_id: 3
+>               }
+>               read {
+>                 named_table {
+>                   unparsed_identifier: "scott.emps"
+>                 }
+>               }
+>             }
+>             alias: "e"
+>           }
+>         }
+>         expressions {
+>           alias {
+>             expr {
+>               unresolved_attribute {
+>                 unparsed_identifier: "e.deptno"
+>                 is_metadata_column: false
+>               }
+>             }
+>             name: "n"
+>           }
+>         }
+>       }
+>     }
+>     right_input {
+>       common {
+>         plan_id: 4
+>       }
+>       project {
+>         input {
+>           common {
+>             plan_id: 5
+>           }
+>           filter {
+>             input {
+>               common {
+>                 plan_id: 6
+>               }
+>               subquery_alias {
+>                 input {
+>                   common {
+>                     plan_id: 7
+>                   }
+>                   read {
+>                     named_table {
+>                       unparsed_identifier: "scott.depts"
+>                     }
+>                   }
+>                 }
+>                 alias: "d"
+>               }
+>             }
+>             condition {
+>               unresolved_function {
+>                 function_name: ">"
+>                 arguments {
+>                   unresolved_attribute {
+>                     unparsed_identifier: "d.deptno"
+>                     is_metadata_column: false
+>                   }
+>                 }
+>                 arguments {
+>                   literal {
+>                     integer: 20
+>                   }
+>                 }
+>               }
+>             }
+>           }
+>         }
+>         expressions {
+>           alias {
+>             expr {
+>               unresolved_attribute {
+>                 unparsed_identifier: "d.deptno"
+>                 is_metadata_column: false
+>               }
+>             }
+>             name: "n"
+>           }
+>         }
+>       }
+>     }
+>     set_op_type: SET_OP_TYPE_EXCEPT
+>     is_all: true
+>     by_name: false
+>     allow_missing_columns: false
+>   }
+> }|_} : string
+
+(*) Query 15: except and intersect, of bags.
+(spark.connection.prepare (fn () =>
+  from e in spark.catalog.scott.emps yield {n = e.deptno}
+    intersect (from d in spark.catalog.scott.depts
+               where d.deptno > 20 yield {n = d.deptno})
+)).toString ();
+> val it =
+>   {_|
+> root {
+>   common {
+>     plan_id: 0
+>   }
+>   set_op {
+>     left_input {
+>       common {
+>         plan_id: 1
+>       }
+>       project {
+>         input {
+>           common {
+>             plan_id: 2
+>           }
+>           subquery_alias {
+>             input {
+>               common {
+>                 plan_id: 3
+>               }
+>               read {
+>                 named_table {
+>                   unparsed_identifier: "scott.emps"
+>                 }
+>               }
+>             }
+>             alias: "e"
+>           }
+>         }
+>         expressions {
+>           alias {
+>             expr {
+>               unresolved_attribute {
+>                 unparsed_identifier: "e.deptno"
+>                 is_metadata_column: false
+>               }
+>             }
+>             name: "n"
+>           }
+>         }
+>       }
+>     }
+>     right_input {
+>       common {
+>         plan_id: 4
+>       }
+>       project {
+>         input {
+>           common {
+>             plan_id: 5
+>           }
+>           filter {
+>             input {
+>               common {
+>                 plan_id: 6
+>               }
+>               subquery_alias {
+>                 input {
+>                   common {
+>                     plan_id: 7
+>                   }
+>                   read {
+>                     named_table {
+>                       unparsed_identifier: "scott.depts"
+>                     }
+>                   }
+>                 }
+>                 alias: "d"
+>               }
+>             }
+>             condition {
+>               unresolved_function {
+>                 function_name: ">"
+>                 arguments {
+>                   unresolved_attribute {
+>                     unparsed_identifier: "d.deptno"
+>                     is_metadata_column: false
+>                   }
+>                 }
+>                 arguments {
+>                   literal {
+>                     integer: 20
+>                   }
+>                 }
+>               }
+>             }
+>           }
+>         }
+>         expressions {
+>           alias {
+>             expr {
+>               unresolved_attribute {
+>                 unparsed_identifier: "d.deptno"
+>                 is_metadata_column: false
+>               }
+>             }
+>             name: "n"
+>           }
+>         }
+>       }
+>     }
+>     set_op_type: SET_OP_TYPE_INTERSECT
+>     is_all: true
+>     by_name: false
+>     allow_missing_columns: false
+>   }
+> }|_} : string
+
+(*) Query 16: group by two keys with two aggregates, then sort.
+(spark.connection.prepare (fn () =>
+  from e in spark.catalog.scott.emps
+    group {e.deptno, e.job}
+      compute {n = count over (), s = sum over e.sal}
+    order (deptno, job)
+)).toString ();
+> val it =
+>   {_|
+> root {
+>   common {
+>     plan_id: 0
+>   }
+>   sort {
+>     input {
+>       common {
+>         plan_id: 1
+>       }
+>       aggregate {
+>         input {
+>           common {
+>             plan_id: 2
+>           }
+>           subquery_alias {
+>             input {
+>               common {
+>                 plan_id: 3
+>               }
+>               read {
+>                 named_table {
+>                   unparsed_identifier: "scott.emps"
+>                 }
+>               }
+>             }
+>             alias: "e"
+>           }
+>         }
+>         group_type: GROUP_TYPE_GROUPBY
+>         grouping_expressions {
+>           unresolved_attribute {
+>             unparsed_identifier: "e.deptno"
+>             is_metadata_column: false
+>           }
+>         }
+>         grouping_expressions {
+>           unresolved_attribute {
+>             unparsed_identifier: "e.job"
+>             is_metadata_column: false
+>           }
+>         }
+>         aggregate_expressions {
+>           alias {
+>             expr {
+>               unresolved_function {
+>                 function_name: "count"
+>                 arguments {
+>                   literal {
+>                     integer: 1
+>                   }
+>                 }
+>               }
+>             }
+>             name: "n"
+>           }
+>         }
+>         aggregate_expressions {
+>           alias {
+>             expr {
+>               unresolved_function {
+>                 function_name: "sum"
+>                 arguments {
+>                   unresolved_attribute {
+>                     unparsed_identifier: "e.sal"
+>                     is_metadata_column: false
+>                   }
+>                 }
+>               }
+>             }
+>             name: "s"
+>           }
+>         }
+>       }
+>     }
+>     order {
+>       child {
+>         unresolved_attribute {
+>           unparsed_identifier: "deptno"
+>           is_metadata_column: false
+>         }
+>       }
+>       direction: SORT_DIRECTION_ASCENDING
+>       null_ordering: SORT_NULLS_FIRST
+>     }
+>     order {
+>       child {
+>         unresolved_attribute {
+>           unparsed_identifier: "job"
+>           is_metadata_column: false
+>         }
+>       }
+>       direction: SORT_DIRECTION_ASCENDING
+>       null_ordering: SORT_NULLS_FIRST
+>     }
+>     is_global: true
+>   }
+> }|_} : string
+
+(*) End spark-plan-generated.smli

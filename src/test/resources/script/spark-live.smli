@@ -1,0 +1,98 @@
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *
+ * The Spark structure against a live Spark Connect server, the one
+ * that SPARK_REMOTE names; the test container (start-spark.sh) holds
+ * the tables this script expects. The harness binds "spark" to the
+ * connection and closes it afterwards. Runs only when the server is
+ * available; see docs/script-format.md.
+ *)
+(*) requires: spark
+
+(*) The scott database matches Morel's scott data set.
+spark.catalog.scott;
+> val it =
+>   {bonuses=<relation>,depts=<relation>,emps=<relation>,salgrades=<relation>}
+>   : {bonuses:{...} bag, depts:{...} bag, emps:{...} bag, salgrades:{...} bag,
+>       ...}
+spark.catalog.scott.depts;
+> val it =
+>   [{deptno=10,dname="ACCOUNTING",loc="NEW YORK"},
+>    {deptno=40,dname="OPERATIONS",loc="BOSTON"},
+>    {deptno=20,dname="RESEARCH",loc="DALLAS"},
+>    {deptno=30,dname="SALES",loc="CHICAGO"}]
+>   : {deptno:int, dname:string, loc:string} bag
+(* Reading the whole table works, commission and all, because the harness
+ * told the connection which columns may be null. Spark could not: it reports
+ * every column of a stored table as nullable whatever the DDL said, so the
+ * flag carries nothing, and the table is where the truth is. A
+ * connection told nothing keeps the plain types and raises
+ * on a null, which spark-error.smli shows. *)
+from e in spark.catalog.scott.emps
+  where e.sal > decimal "2500"
+  yield {e.ename, e.sal};
+> val it =
+>   [{ename="BLAKE",sal=2850},{ename="JONES",sal=2975},{ename="KING",sal=5000},
+>    {ename="SCOTT",sal=3000},{ename="FORD",sal=3000}]
+>   : {ename:string, sal:decimal} bag
+from d in spark.catalog.scott.depts
+  join e in spark.catalog.scott.emps on d.deptno = e.deptno
+  group d.dname compute {c = count over ()}
+  order dname;
+> val it = [{c=3,dname="ACCOUNTING"},{c=5,dname="RESEARCH"},{c=6,dname="SALES"}]
+>   : {c:int, dname:string} list
+
+(*) The same questions, answered by Spark rather than here.
+
+(spark.connection.remote (fn () =>
+  from e in spark.catalog.scott.emps
+    where e.sal > decimal "2500"
+    yield {e.ename, e.sal})) ();
+> val it =
+>   [{ename="BLAKE",sal=2850},{ename="JONES",sal=2975},{ename="KING",sal=5000},
+>    {ename="SCOTT",sal=3000},{ename="FORD",sal=3000}]
+>   : {ename:string, sal:decimal} bag
+(spark.connection.remote (fn () =>
+  from d in spark.catalog.scott.depts
+    join e in spark.catalog.scott.emps on d.deptno = e.deptno
+    group d.dname compute {c = count over ()}
+    order dname)) ();
+> val it = [{c=3,dname="ACCOUNTING"},{c=5,dname="RESEARCH"},{c=6,dname="SALES"}]
+>   : {c:int, dname:string} list
+
+(*) The zoo table has a map column, which has no Morel type.
+spark.catalog.default.zoo;
+> uncaught exception Spark [Spark: UNSUPPORTED_TYPE: Spark type map<string,integer> has no Morel equivalent]
+>   raised at: 0.0-0.0
+
+(*) "using" opens the default connection for one call, and closes it.
+Spark.using (fn (c, x) => x + 1) 4;
+> val it = 5 : int
+
+(* Each table says which of its columns hold nulls, in its own
+ * "morel.nullable" property, so a connection needs no declaration: the
+ * commission and the manager are options here because the table says they
+ * are, and the rest are plain because it says they are not. *)
+from e in spark.catalog.scott.emps
+  where e.empno = 7839
+  yield {e.ename, e.comm, e.mgr, e.deptno};
+> val it = [{comm=NONE,deptno=10,ename="KING",mgr=NONE}]
+>   : {comm:decimal option, deptno:int, ename:string, mgr:int option} bag
+
+
+(*) End spark-live.smli

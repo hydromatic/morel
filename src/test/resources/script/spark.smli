@@ -1,0 +1,273 @@
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *
+ * Seed queries for the Spark backend.
+ *
+ * Each query pins one translation decision, and its expected Spark
+ * plan is in script/spark-plan-generated.smli. The queries currently
+ * run locally; when the Spark structure exists, each will also be
+ * prepared, its plan printed, and its result executed remotely.
+ *
+ * The queries read the scott data set, which the Spark test container
+ * holds as a database of the same name with the same rows, so a query
+ * gives the same answer whether it runs here or there.
+ *)
+Sys.set ("printLength", 64);
+> val it = () : unit
+Sys.set ("output", "tabular");
+> val it = () : unit
+
+(* Query 1: filter and project over an inline relation. Pins the
+ * LocalRelation encoding (one column each of int, string, bool, real),
+ * a conjunctive filter, and a projection that renames and computes. *)
+from r in [{i = 1, s = "one", b = true, x = 1.5},
+           {i = 2, s = "two", b = false, x = 2.5},
+           {i = 3, s = "three", b = true, x = 3.5}]
+  where r.b andalso r.i > 1
+  yield {r.s, y = r.x * 2.0};
+> s     y
+> ----- -
+> three 7
+>
+> val it : {s:string, y:real} list
+
+(* Query 2: equijoin. Pins the join relation, the qualification of
+ * a column name that both inputs have, and projection over the
+ * concatenated row. *)
+from e in scott.emps
+  join d in scott.depts on e.deptno = d.deptno
+  yield {e.ename, d.dname};
+> dname      ename
+> ---------- ------
+> RESEARCH   SMITH
+> SALES      ALLEN
+> SALES      WARD
+> RESEARCH   JONES
+> SALES      MARTIN
+> SALES      BLAKE
+> ACCOUNTING CLARK
+> RESEARCH   SCOTT
+> ACCOUNTING KING
+> SALES      TURNER
+> RESEARCH   ADAMS
+> SALES      JAMES
+> RESEARCH   FORD
+> ACCOUNTING MILLER
+>
+> val it : {dname:string, ename:string} bag
+
+(* Query 3: group by with aggregates. Pins the aggregate relation, the
+ * grouping key, and count, sum and max. *)
+from e in scott.emps
+  group e.deptno
+    compute {c = count over (), total = sum over e.sal, top = max over e.sal};
+> c deptno top  total
+> - ------ ---- -----
+> 5     20 3000 10875
+> 6     30 2850  9400
+> 3     10 5000  8750
+>
+> val it : {c:int, deptno:int, top:decimal, total:decimal} bag
+
+(* Query 4: sort and limit. Pins the sort relation with mixed
+ * directions, a limit, and that the result is an ordered list. *)
+from e in scott.emps
+  yield {e.ename, e.sal}
+  order (DESC sal, ename)
+  take 3;
+> ename sal
+> ----- ----
+> KING  5000
+> FORD  3000
+> SCOTT 3000
+>
+> val it : {ename:string, sal:decimal} list
+
+(* Query 5: correlated exists subquery. Pins the subquery expression
+ * whose inner plan refers to the outer row. *)
+from d in scott.depts
+  where (exists e in scott.emps where e.deptno = d.deptno andalso e.job = "CLERK")
+  yield d.dname;
+> val it = ["ACCOUNTING","RESEARCH","SALES"] : string bag
+
+
+(* The remaining queries extend the corpus: each has an expected Spark
+ * plan in spark-plan-generated.smli and, when the translator exists, is
+ * prepared and executed by spark-plan-generated.smli and
+ * spark-exec.smli. Here they run locally, which gives the expected
+ * results. *)
+
+(*) Query 6: order, skip, take, then project.
+from e in scott.emps
+  order e.empno
+  skip 2
+  take 3
+  yield {e.empno, e.ename};
+> empno ename
+> ----- ------
+>  7521 WARD
+>  7566 JONES
+>  7654 MARTIN
+>
+> val it : {empno:int, ename:string} list
+
+(*) Query 7: distinct, a group with no aggregates.
+from e in scott.emps group e.job;
+> val it = ["CLERK","SALESMAN","MANAGER","ANALYST","PRESIDENT"] : string bag
+
+(*) Query 8: left join. The absent side is an option of the record.
+from d in scott.depts
+  left join e in scott.emps on d.deptno = e.deptno
+  where d.deptno >= 30
+  yield {d.dname, e};
+> dname      e
+>            comm deptno empno ename  hiredate   job      mgr  sal
+> ---------- ---- ------ ----- ------ ---------- -------- ---- ----
+> SALES       300     30  7499 ALLEN  1981-02-20 SALESMAN 7698 1600
+> SALES       500     30  7521 WARD   1981-02-22 SALESMAN 7698 1250
+> SALES      1400     30  7654 MARTIN 1981-09-28 SALESMAN 7698 1250
+> SALES               30  7698 BLAKE  1981-01-05 MANAGER  7839 2850
+> SALES         0     30  7844 TURNER 1981-09-08 SALESMAN 7698 1500
+> SALES               30  7900 JAMES  1981-12-03 CLERK    7698  950
+> OPERATIONS
+>
+> val it : {dname:string, e:{comm:decimal option, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int option, sal:decimal} option} bag
+
+(*) Query 9: union, of bags, so every row is kept.
+from e in scott.emps where e.deptno = 10 yield {n = e.empno}
+  union (from d in scott.depts yield {n = d.deptno});
+> n
+> ----
+> 7782
+> 7839
+> 7934
+>   10
+>   20
+>   30
+>   40
+>
+> val it : {n:int} bag
+
+(*) Query 10: arithmetic, including div and mod.
+from e in scott.emps
+  where e.deptno = 10
+  yield {e.empno, w = ~e.empno, x = e.sal * decimal "2", y = e.empno div 7,
+         z = e.empno mod 7};
+> empno w     x     y    z
+> ----- ----- ----- ---- -
+>  7782 -7782  4900 1111 5
+>  7839 -7839 10000 1119 6
+>  7934 -7934  2600 1133 3
+>
+> val it : {empno:int, w:int, x:decimal, y:int, z:int} bag
+
+(*) Query 11: string functions.
+from e in scott.emps
+  where String.isPrefix "S" e.ename
+  yield {e.ename, n = String.size e.ename,
+         s = String.substring (e.ename, 0, 2), t = e.ename ^ "!"};
+> ename n s  t
+> ----- - -- ------
+> SMITH 5 SM SMITH!
+> SCOTT 5 SC SCOTT!
+>
+> val it : {ename:string, n:int, s:string, t:string} bag
+
+(*) Query 12: elem, an IN subquery.
+from e in scott.emps
+  where e.deptno elem
+    (from d in scott.depts where d.loc = "CHICAGO" yield d.deptno)
+  yield e.ename;
+> val it = ["ALLEN","WARD","MARTIN","BLAKE","TURNER","JAMES"] : string bag
+
+(*) Query 13: a correlated scalar subquery.
+from d in scott.depts
+  yield {d.dname,
+         n = (from e in scott.emps where e.deptno = d.deptno
+              compute count over ())};
+> dname      n
+> ---------- -
+> ACCOUNTING 3
+> RESEARCH   5
+> SALES      6
+> OPERATIONS 0
+>
+> val it : {dname:string, n:int} bag
+
+(*) Query 14: a result that is not a collection.
+from e in scott.emps compute count over ();
+> val it = 14 : int
+
+(*) Query 15: except and intersect, of bags.
+from e in scott.emps yield {n = e.deptno}
+  except (from d in scott.depts where d.deptno > 20 yield {n = d.deptno});
+> n
+> --
+> 20
+> 30
+> 20
+> 30
+> 30
+> 10
+> 20
+> 10
+> 30
+> 20
+> 30
+> 20
+> 10
+>
+> val it : {n:int} bag
+from e in scott.emps yield {n = e.deptno}
+  intersect (from d in scott.depts where d.deptno > 20 yield {n = d.deptno});
+> n
+> --
+> 30
+>
+> val it : {n:int} bag
+
+(*) Query 16: group by two keys with two aggregates, then sort.
+from e in scott.emps
+  group {e.deptno, e.job}
+    compute {n = count over (), s = sum over e.sal}
+  order (deptno, job);
+> deptno job       n s
+> ------ --------- - ----
+>     10 CLERK     1 1300
+>     10 MANAGER   1 2450
+>     10 PRESIDENT 1 5000
+>     20 ANALYST   2 6000
+>     20 CLERK     2 1900
+>     20 MANAGER   1 2975
+>     30 CLERK     1  950
+>     30 MANAGER   1 2850
+>     30 SALESMAN  4 5600
+>
+> val it : {deptno:int, job:string, n:int, s:decimal} list
+
+(* The "sparkPushDown" property sends each query to the connection bound as
+ * "spark"; with none bound, saying so is better than the "unbound variable
+ * spark" that the rewrite would otherwise raise. *)
+Sys.set ("sparkPushDown", true);
+> val it = () : unit
+from i in [1, 2] where i > 1;
+> val it = [2] : int list
+Sys.set ("sparkPushDown", false);
+> val it = () : unit
+
+(*) End spark.smli

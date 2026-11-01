@@ -1,0 +1,297 @@
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *
+ * What "Spark.prepare" does besides fix the shape of a plan: which
+ * collections cross as rows and which as a scan, what it refuses and
+ * how it says so, and what "sparkPushDown" and "sparkFallback" do.
+ * The plans of the corpus are in spark-plan-generated.smli; see
+ * docs/script-format.md.
+ *)
+(*) requires: spark-adapter spark-prepare
+
+(*) A plan is a long string, and is printed whole.
+Sys.set ("stringDepth", NONE);
+> val it = () : unit
+
+val spark = Spark.connect "mock:";
+> val spark = {catalog={},connection=<connection mock:>}
+>   : {catalog:{...}, connection:connection, ...}
+
+(* A collection the query reaches through a name crosses as its rows, the
+ * same local relation that an inline collection becomes; query 1 of
+ * spark-plan-generated.smli fixes the encoding. *)
+val xs = [{i = 1, s = "one"}, {i = 2, s = "two"}];
+> val xs = [{i=1,s="one"},{i=2,s="two"}] : {i:int, s:string} list
+(spark.connection.prepare (fn () => from x in xs where x.i > 1)).toString ();
+> val it =
+>   {_|
+> root {
+>   common {
+>     plan_id: 0
+>   }
+>   filter {
+>     input {
+>       common {
+>         plan_id: 1
+>       }
+>       subquery_alias {
+>         input {
+>           common {
+>             plan_id: 2
+>           }
+>           local_relation {
+>             data: [2 rows]
+>             schema: "{\"fields\":[{\"metadata\":{},\"name\":\"i\",\"nullable\":false,\"type\":\"integer\"},{\"metadata\":{},\"name\":\"s\",\"nullable\":false,\"type\":\"string\"}],\"type\":\"struct\"}"
+>           }
+>         }
+>         alias: "x"
+>       }
+>     }
+>     condition {
+>       unresolved_function {
+>         function_name: ">"
+>         arguments {
+>           unresolved_attribute {
+>             unparsed_identifier: "x.i"
+>             is_metadata_column: false
+>           }
+>         }
+>         arguments {
+>           literal {
+>             integer: 1
+>           }
+>         }
+>       }
+>     }
+>   }
+> }|_} : string
+
+(* A table of the connection's catalog is a scan, however it is reached: the
+ * table says what Spark calls it, so binding it to a name does not turn it
+ * into rows to be sent. *)
+(*) Its rows are to hand as well, but only two of them need be seen here.
+Sys.set ("printLength", 2);
+> val it = () : unit
+val emps = spark.catalog.scott.emps;
+> val emps =
+>   [{comm=NONE,deptno=20,empno=7369,ename="SMITH",hiredate="1980-12-17",
+>     job="CLERK",mgr=SOME 7902,sal=800},
+>    {comm=SOME 300,deptno=30,empno=7499,ename="ALLEN",hiredate="1981-02-20",
+>     job="SALESMAN",mgr=SOME 7698,sal=1600},...]
+>   : {comm:decimal option, deptno:int, empno:int, ename:string,
+>       hiredate:string, job:string, mgr:int option, sal:decimal} bag
+(spark.connection.prepare (fn () =>
+  from e in emps
+    where e.deptno = 10
+    yield e.ename
+)).toString ();
+> val it =
+>   {_|
+> root {
+>   common {
+>     plan_id: 0
+>   }
+>   project {
+>     input {
+>       common {
+>         plan_id: 1
+>       }
+>       filter {
+>         input {
+>           common {
+>             plan_id: 2
+>           }
+>           subquery_alias {
+>             input {
+>               common {
+>                 plan_id: 3
+>               }
+>               read {
+>                 named_table {
+>                   unparsed_identifier: "scott.emps"
+>                 }
+>               }
+>             }
+>             alias: "e"
+>           }
+>         }
+>         condition {
+>           unresolved_function {
+>             function_name: "=="
+>             arguments {
+>               unresolved_attribute {
+>                 unparsed_identifier: "e.deptno"
+>                 is_metadata_column: false
+>               }
+>             }
+>             arguments {
+>               literal {
+>                 integer: 10
+>               }
+>             }
+>           }
+>         }
+>       }
+>     }
+>     expressions {
+>       unresolved_attribute {
+>         unparsed_identifier: "e.ename"
+>         is_metadata_column: false
+>       }
+>     }
+>   }
+> }|_} : string
+
+(* What the function table calls unsupported, it refuses, naming the function
+ * rather than the shape of the tree it met. A plan is all Spark or it is an
+ * error, so a query that uses one of these has no plan at all. *)
+(spark.connection.prepare (fn () =>
+  from e in spark.catalog.scott.emps
+    yield {s = Real.toString (Real.fromInt e.empno)}
+)).toString ();
+> Spark {errorClass = "UNSUPPORTED", message = "Spark cannot do Real.toString, which the table calls unsupported"}
+(spark.connection.prepare (fn () =>
+  from e in spark.catalog.scott.emps yield {cs = String.explode e.ename}
+)).toString ();
+> Spark {errorClass = "UNSUPPORTED", message = "Spark cannot do String.explode, which the table calls unsupported"}
+(spark.connection.prepare (fn () =>
+  from e in spark.catalog.scott.emps
+    where String.compare (e.ename, "KING") = LESS
+    yield e.ename
+)).toString ();
+> Spark {errorClass = "UNSUPPORTED", message = "Spark cannot do String.compare, which the table calls unsupported"}
+
+(* Phase 1 prepares a query and nothing else, and a plan is all Spark or it
+ * is an error. A function whose body is not a query has no plan; nor has one
+ * that reads a name the plan cannot carry, such as the function's own
+ * parameter, which crosses only at "execute". Either is refused where the
+ * plan is prepared, and the refusal says what it could not do. *)
+(spark.connection.prepare (fn () => 1 + 2)).toString ();
+> Spark {errorClass = "UNSUPPORTED", message = "Spark cannot do a function that is not a query"}
+(spark.connection.prepare (fn d =>
+  from e in spark.catalog.scott.emps
+    where e.deptno = d
+    yield e.ename
+)).toString ();
+> Spark {errorClass = "UNSUPPORTED", message = "A plan with a parameter has no text until it is given one; execute it instead"}
+
+(* The offline connection translates a query but cannot run one, and says
+ * so rather than pretending to have no rows. *)
+(spark.connection.prepare (fn () =>
+  from e in spark.catalog.scott.emps where e.deptno = 10 yield e.ename
+)).execute ();
+> uncaught exception Spark [Spark: MOCK: The offline connection cannot execute a plan; connect to a server]
+>   raised at: stdIn:3.13
+
+(* A name says nothing about where a collection lives, so the value decides.
+ * A record of a session's own, whose field holds a collection, reads like a
+ * database and a table -- "db.t" -- and is neither: its rows cross as a
+ * local relation, as any collection but a catalog's table does. *)
+val db = {t = [{i = 1}, {i = 2}]};
+> val db = {t=[{i=1},{i=2}]} : {t:{i:int} list}
+(spark.connection.prepare (fn () => from r in db.t where r.i > 1)).toString ();
+> val it =
+>   {_|
+> root {
+>   common {
+>     plan_id: 0
+>   }
+>   filter {
+>     input {
+>       common {
+>         plan_id: 1
+>       }
+>       subquery_alias {
+>         input {
+>           common {
+>             plan_id: 2
+>           }
+>           local_relation {
+>             data: [2 rows]
+>             schema: "{\"fields\":[{\"metadata\":{},\"name\":\"i\",\"nullable\":false,\"type\":\"integer\"}],\"type\":\"struct\"}"
+>           }
+>         }
+>         alias: "r"
+>       }
+>     }
+>     condition {
+>       unresolved_function {
+>         function_name: ">"
+>         arguments {
+>           unresolved_attribute {
+>             unparsed_identifier: "r.i"
+>             is_metadata_column: false
+>           }
+>         }
+>         arguments {
+>           literal {
+>             integer: 1
+>           }
+>         }
+>       }
+>     }
+>   }
+> }|_} : string
+(* A decimal crosses at the width Spark gives a column it infers from a
+ * BigDecimal, because Morel's decimal has no width of its own. *)
+(spark.connection.prepare (fn () =>
+  from r in [{d = decimal "1.5"}]
+)).toString ();
+> val it =
+>   {_|
+> root {
+>   common {
+>     plan_id: 0
+>   }
+>   local_relation {
+>     data: [1 row]
+>     schema: "{\"fields\":[{\"metadata\":{},\"name\":\"d\",\"nullable\":false,\"type\":\"decimal(38,18)\"}],\"type\":\"struct\"}"
+>   }
+> }|_} : string
+
+(* With "sparkPushDown", each query is sent to the connection bound as
+ * "spark". A query Spark cannot do is refused where its plan is made, and
+ * "sparkFallback" says what happens then: by default it is evaluated here,
+ * and says so. *)
+Sys.set ("sparkPushDown", true);
+> val it = () : unit
+from e in scott.emps where e.deptno = 10 yield {e.ename, u = ()};
+> val it = [{ename="CLARK",u=()},{ename="KING",u=()},...]
+>   : {ename:string, u:unit} bag
+
+(* With the fallback off, the refusal is the answer. A query must then run on
+ * the server or not at all, which is what a test wants, and what a session
+ * wants when the alternative is reading a large table through the
+ * connection. *)
+Sys.set ("sparkFallback", false);
+> val it = () : unit
+from e in scott.emps where e.deptno = 10 yield {e.ename, u = ()};
+> val it = [{ename="CLARK",u=()},{ename="KING",u=()},...]
+>   : {ename:string, u:unit} bag
+
+(* A failure on the server is not a refusal, so the fallback does not catch
+ * it: this query is one the translator can do, and the offline connection
+ * cannot execute a plan. Answering it here would be inventing an answer. *)
+Sys.set ("sparkFallback", true);
+> val it = () : unit
+from e in scott.emps where e.deptno = 10 yield e.ename;
+> val it = ["CLARK","KING",...] : string bag
+Sys.set ("sparkPushDown", false);
+> val it = () : unit
+
+(*) End spark-plan.smli

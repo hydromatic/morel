@@ -37,31 +37,46 @@ val spark = Spark.connect "mock:";
 > val spark = {catalog={},connection=<connection mock:>}
 >   : {catalog:{...}, connection:connection, ...}
 spark.catalog;
-> val it = {} : {...}
+> val it = {foodmart={},scott={}} : {foodmart:{...}, scott:{...}, ...}
 
 (*) Browsing the catalog discovers a database's tables, then a table's type.
 spark.catalog.scott;
-> uncaught exception Spark [Spark: SCHEMA_NOT_FOUND: Database scott not found]
->   raised at: 0.0-0.0
+> val it =
+>   {bonuses=<relation>,depts=<relation>,emps=<relation>,salgrades=<relation>}
+>   : {bonuses:{...} bag, depts:{...} bag, emps:{...} bag, salgrades:{...} bag,
+>       ...}
 spark.catalog.scott.depts;
-> uncaught exception Spark [Spark: SCHEMA_NOT_FOUND: Database scott not found]
->   raised at: 0.0-0.0
+> val it =
+>   [{deptno=10,dname="ACCOUNTING",loc="NEW YORK"},
+>    {deptno=20,dname="RESEARCH",loc="DALLAS"},
+>    {deptno=30,dname="SALES",loc="CHICAGO"},
+>    {deptno=40,dname="OPERATIONS",loc="BOSTON"}]
+>   : {deptno:int, dname:string, loc:string} bag
 spark;
-> val it = {catalog={},connection=<connection mock:>}
->   : {catalog:{...}, connection:connection, ...}
+> val it =
+>   {catalog={foodmart={},
+>             scott={bonuses=<relation>,depts=<relation>,emps=<relation>,
+>                    salgrades=<relation>}},connection=<connection mock:>}
+>   : {catalog:{foodmart:{...},
+>                scott:{bonuses:{...} bag,
+>                        depts:{deptno:int, dname:string, loc:string} bag,
+>                        emps:{...} bag, salgrades:{...} bag, ...}, ...},
+>       connection:connection, ...}
 
 (*) A table is a bag of records, and can be queried.
 from e in spark.catalog.scott.emps
   where e.sal > decimal "2500"
   yield {e.ename, e.sal};
-> uncaught exception Spark [Spark: SCHEMA_NOT_FOUND: Database scott not found]
->   raised at: 0.0-0.0
+> val it =
+>   [{ename="JONES",sal=2975},{ename="BLAKE",sal=2850},{ename="SCOTT",sal=3000},
+>    {ename="KING",sal=5000},{ename="FORD",sal=3000}]
+>   : {ename:string, sal:decimal} bag
 from d in spark.catalog.scott.depts
   join e in spark.catalog.scott.emps on d.deptno = e.deptno
   group d.dname compute {c = count over ()}
   order dname;
-> uncaught exception Spark [Spark: SCHEMA_NOT_FOUND: Database scott not found]
->   raised at: 0.0-0.0
+> val it = [{c=3,dname="ACCOUNTING"},{c=5,dname="RESEARCH"},{c=6,dname="SALES"}]
+>   : {c:int, dname:string} list
 
 (*) The connection itself, and its catalog bound to a name.
 val c = spark.connection;
@@ -69,8 +84,11 @@ val c = spark.connection;
 val catalog = c.catalog ();
 > val catalog = {} : {...}
 catalog.scott.salgrades;
-> stdIn:1.1-1.14 Error: unresolved flex record (can't tell what fields there are besides #salgrades)
->   raised at: stdIn:1.1-1.14
+> val it =
+>   [{grade=1,hisal=1200,losal=700},{grade=2,hisal=1400,losal=1201},
+>    {grade=3,hisal=2000,losal=1401},{grade=4,hisal=3000,losal=2001},
+>    {grade=5,hisal=9999,losal=3001}]
+>   : {grade:int, hisal:decimal, losal:decimal} bag
 
 (* Closing the connection. A later use raises Spark, even when the use
  * is the discovery of a catalog field during type resolution. *)
@@ -79,7 +97,7 @@ c.close ();
 c.close ();
 > val it = () : unit
 catalog.foodmart.sales_fact_1997;
-> stdIn:1.1-1.17 Error: unresolved flex record (can't tell what fields there are besides #sales_fact_1997)
->   raised at: stdIn:1.1-1.17
+> uncaught exception Spark [Spark: CLOSED: Connection to mock: is closed]
+>   raised at: 0.0-0.0
 
 (*) End spark.smli

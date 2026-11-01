@@ -403,6 +403,8 @@ map
 > rawStrings           SOME 2
 > relationalize        false
 > scriptDirectory      ?
+> sparkFallback        true
+> sparkPushDown        false
 > stringDepth          NONE
 > stringFold           NONE
 > terminalBackground   NONE
@@ -410,9 +412,9 @@ map
 >
 > val it : (string * string) list
 List.length (Sys.showAll ());
-> val it = 24 : int
+> val it = 26 : int
 List.length (showAll ());
-> val it = 24 : int
+> val it = 26 : int
 Sys.plan ();
 > val it =
 >   "apply(fnValue List.length, argCode apply(fnValue Sys.showAll, argCode constant([])))"

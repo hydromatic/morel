@@ -1,0 +1,415 @@
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *
+ * The corpus of spark.smli, each query prepared and executed on a
+ * live Spark Connect server, whose scott database holds Morel's scott
+ * rows (start-spark.sh seeds it); so the results are those of
+ * spark.smli. The harness binds "spark" to the connection, and closes
+ * it afterwards. Runs once the translator exists (Spark.prepare) and
+ * a server is available; see docs/script-format.md.
+ *)
+(*) requires: spark spark-prepare
+
+Sys.set ("printLength", 64);
+> val it = () : unit
+Sys.set ("output", "tabular");
+> val it = () : unit
+
+(*) Query 1: filter and project over an inline relation.
+(spark.connection.prepare (fn () =>
+  from r in [{i = 1, s = "one", b = true, x = 1.5},
+             {i = 2, s = "two", b = false, x = 2.5},
+             {i = 3, s = "three", b = true, x = 3.5}]
+    where r.b andalso r.i > 1
+    yield {r.s, y = r.x * 2.0}
+)).execute ();
+> s     y
+> ----- -
+> three 7
+>
+> val it : {s:string, y:real} list
+
+(*) Query 2: equijoin.
+(spark.connection.prepare (fn () =>
+  from e in spark.catalog.scott.emps
+    join d in spark.catalog.scott.depts on e.deptno = d.deptno
+    yield {e.ename, d.dname}
+    order ename
+)).execute ();
+> dname      ename
+> ---------- ------
+> RESEARCH   ADAMS
+> SALES      ALLEN
+> SALES      BLAKE
+> ACCOUNTING CLARK
+> RESEARCH   FORD
+> SALES      JAMES
+> RESEARCH   JONES
+> ACCOUNTING KING
+> SALES      MARTIN
+> ACCOUNTING MILLER
+> RESEARCH   SCOTT
+> RESEARCH   SMITH
+> SALES      TURNER
+> SALES      WARD
+>
+> val it : {dname:string, ename:string} list
+
+(*) Query 3: group by with aggregates.
+(spark.connection.prepare (fn () =>
+  from e in spark.catalog.scott.emps
+    group e.deptno
+      compute {c = count over (), total = sum over e.sal, top = max over e.sal}
+    order deptno
+)).execute ();
+> c deptno top  total
+> - ------ ---- -----
+> 3     10 5000  8750
+> 5     20 3000 10875
+> 6     30 2850  9400
+>
+> val it : {c:int, deptno:int, top:decimal, total:decimal} list
+
+(*) Query 4: sort and limit.
+(spark.connection.prepare (fn () =>
+  from e in spark.catalog.scott.emps
+    yield {e.ename, e.sal}
+    order (DESC sal, ename)
+    take 3
+)).execute ();
+> ename sal
+> ----- ----
+> KING  5000
+> FORD  3000
+> SCOTT 3000
+>
+> val it : {ename:string, sal:decimal} list
+
+(*) Query 5: correlated exists subquery.
+(spark.connection.prepare (fn () =>
+  from d in spark.catalog.scott.depts
+    where (exists e in spark.catalog.scott.emps
+           where e.deptno = d.deptno andalso e.job = "CLERK")
+    yield d.dname
+)).execute ();
+> val it = ["ACCOUNTING","RESEARCH","SALES"] : string bag
+
+(*) Query 6: order, skip, take, then project.
+(spark.connection.prepare (fn () =>
+  from e in spark.catalog.scott.emps
+    order e.empno
+    skip 2
+    take 3
+    yield {e.empno, e.ename}
+)).execute ();
+> empno ename
+> ----- ------
+>  7521 WARD
+>  7566 JONES
+>  7654 MARTIN
+>
+> val it : {empno:int, ename:string} list
+
+(*) Query 7: distinct, a group with no aggregates.
+(spark.connection.prepare (fn () =>
+  from e in spark.catalog.scott.emps group e.job order job
+)).execute ();
+> Spark {errorClass = "UNSUPPORTED", message = "Spark cannot do the variable $0"}
+
+(* Query 8: left join, which asks for a whole employee row. The right row is
+ * an option because the join may find nothing, and the commission and the
+ * manager are options because the connection was told they may be null --
+ * which Spark cannot say for itself. So the answer here
+ * is the answer spark.smli gets locally, type line and all. *)
+(spark.connection.prepare (fn () =>
+  from d in spark.catalog.scott.depts
+    left join e in spark.catalog.scott.emps on d.deptno = e.deptno
+    where d.deptno >= 30
+    order (d.dname, e)
+    yield {d.dname, e}
+)).execute ();
+> dname      e
+>            comm deptno empno ename  hiredate   job      mgr  sal
+> ---------- ---- ------ ----- ------ ---------- -------- ---- ----
+> OPERATIONS
+> SALES               30  7698 BLAKE  1981-01-05 MANAGER  7839 2850
+> SALES               30  7900 JAMES  1981-12-03 CLERK    7698  950
+> SALES         0     30  7844 TURNER 1981-09-08 SALESMAN 7698 1500
+> SALES       300     30  7499 ALLEN  1981-02-20 SALESMAN 7698 1600
+> SALES       500     30  7521 WARD   1981-02-22 SALESMAN 7698 1250
+> SALES      1400     30  7654 MARTIN 1981-09-28 SALESMAN 7698 1250
+>
+> val it : {dname:string, e:{comm:decimal option, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int option, sal:decimal} option} list
+
+(*) Query 9: union, of bags, so every row is kept.
+(spark.connection.prepare (fn () =>
+  from e in spark.catalog.scott.emps where e.deptno = 10 yield {n = e.empno}
+    union (from d in spark.catalog.scott.depts yield {n = d.deptno})
+    order n
+)).execute ();
+> n
+> ----
+>   10
+>   20
+>   30
+>   40
+> 7782
+> 7839
+> 7934
+>
+> val it : {n:int} list
+
+(*) Query 10: arithmetic, including div and mod.
+(spark.connection.prepare (fn () =>
+  from e in spark.catalog.scott.emps
+    where e.deptno = 10
+    yield {e.empno, w = ~e.empno, x = e.sal * decimal "2", y = e.empno div 7,
+           z = e.empno mod 7}
+)).execute ();
+> empno w     x     y    z
+> ----- ----- ----- ---- -
+>  7782 -7782  4900 1111 5
+>  7839 -7839 10000 1119 6
+>  7934 -7934  2600 1133 3
+>
+> val it : {empno:int, w:int, x:decimal, y:int, z:int} bag
+
+(*) Query 11: string functions.
+(spark.connection.prepare (fn () =>
+  from e in spark.catalog.scott.emps
+    where String.isPrefix "S" e.ename
+    yield {e.ename, n = String.size e.ename,
+           s = String.substring (e.ename, 0, 2), t = e.ename ^ "!"}
+)).execute ();
+> ename n s  t
+> ----- - -- ------
+> SMITH 5 SM SMITH!
+> SCOTT 5 SC SCOTT!
+>
+> val it : {ename:string, n:int, s:string, t:string} bag
+
+(*) Query 12: elem, an IN subquery.
+(spark.connection.prepare (fn () =>
+  from e in spark.catalog.scott.emps
+    where e.deptno elem
+      (from d in spark.catalog.scott.depts
+       where d.loc = "CHICAGO" yield d.deptno)
+    yield e.ename
+)).execute ();
+> val it = ["ALLEN","WARD","MARTIN","BLAKE","TURNER","JAMES"] : string bag
+
+(*) Query 13: a correlated scalar subquery.
+(spark.connection.prepare (fn () =>
+  from d in spark.catalog.scott.depts
+    yield {d.dname,
+           n = (from e in spark.catalog.scott.emps where e.deptno = d.deptno
+                compute count over ())}
+)).execute ();
+> dname      n
+> ---------- -
+> ACCOUNTING 3
+> RESEARCH   5
+> SALES      6
+> OPERATIONS 0
+>
+> val it : {dname:string, n:int} bag
+
+(*) Query 14: a result that is not a collection.
+(spark.connection.prepare (fn () =>
+  from e in spark.catalog.scott.emps compute count over ()
+)).execute ();
+> val it = 14 : int
+
+(*) Query 15: except and intersect, of bags.
+(spark.connection.prepare (fn () =>
+  from e in spark.catalog.scott.emps yield {n = e.deptno}
+    except (from d in spark.catalog.scott.depts
+            where d.deptno > 20 yield {n = d.deptno})
+    order n
+)).execute ();
+> n
+> --
+> 10
+> 10
+> 10
+> 20
+> 20
+> 20
+> 20
+> 20
+> 30
+> 30
+> 30
+> 30
+> 30
+>
+> val it : {n:int} list
+
+(*) Query 15: except and intersect, of bags.
+(spark.connection.prepare (fn () =>
+  from e in spark.catalog.scott.emps yield {n = e.deptno}
+    intersect (from d in spark.catalog.scott.depts
+               where d.deptno > 20 yield {n = d.deptno})
+    order n
+)).execute ();
+> n
+> --
+> 30
+>
+> val it : {n:int} list
+
+(*) Query 16: group by two keys with two aggregates, then sort.
+(spark.connection.prepare (fn () =>
+  from e in spark.catalog.scott.emps
+    group {e.deptno, e.job}
+      compute {n = count over (), s = sum over e.sal}
+    order (deptno, job)
+)).execute ();
+> deptno job       n s
+> ------ --------- - ----
+>     10 CLERK     1 1300
+>     10 MANAGER   1 2450
+>     10 PRESIDENT 1 5000
+>     20 ANALYST   2 6000
+>     20 CLERK     2 1900
+>     20 MANAGER   1 2975
+>     30 CLERK     1  950
+>     30 MANAGER   1 2850
+>     30 SALESMAN  4 5600
+>
+> val it : {deptno:int, job:string, n:int, s:decimal} list
+
+(* A plan with a parameter, executed twice. Spark has nowhere in a plan to
+ * keep a parameter -- its own parameters are for SQL text, not for a tree of
+ * relations -- so a query with one is translated again at each execution,
+ * with the argument in place of the parameter. The plan that goes out is the
+ * plan the same query written with that argument would have produced. *)
+val byDept = spark.connection.prepare (fn d =>
+  from e in spark.catalog.scott.emps where e.deptno = d yield e.ename);
+> val byDept = <plan> : (int,string bag) plan
+byDept.execute 10;
+> val it = ["CLARK","KING","MILLER"] : string bag
+byDept.execute 40;
+> val it = [] : string bag
+
+(* Several parameters are one parameter that is a tuple, which the core
+ * destructures, and the argument's components answer to them one for one. A
+ * postfix call passes a tuple whole where the function's parameter count says
+ * it should: "execute" takes two, so it is given the plan and the pair, where
+ * "substring" takes three and is given its string and both numbers. *)
+val byBoth = spark.connection.prepare (fn (d, j) =>
+  from e in spark.catalog.scott.emps
+    where e.deptno = d andalso e.job = j
+    yield e.ename);
+> val byBoth = <plan> : (int * string,string bag) plan
+byBoth.execute (30, "SALESMAN");
+> val it = ["ALLEN","WARD","TURNER","MARTIN"] : string bag
+byBoth.execute (20, "CLERK");
+> val it = ["ADAMS","SMITH"] : string bag
+
+(*) Until it has an argument, such a plan has no text.
+byDept.toString ();
+> Spark {errorClass = "UNSUPPORTED", message = "A plan with a parameter has no text until it is given one; execute it instead"}
+
+(*) "remote" prepares and executes in one step.
+(spark.connection.remote (fn () =>
+  from e in spark.catalog.scott.emps where e.job = "CLERK" yield e.ename)) ();
+> val it = ["ADAMS","JAMES","MILLER","SMITH"] : string bag
+
+(* A plan description shows the plan a query was pushed down to, as it shows
+ * the plan a query pushed down to Calcite becomes: "spark(plan ...)" where
+ * that reads "calcite(plan ...)". So looking at the plan is how a session
+ * sees where its query ran. *)
+Sys.set ("stringDepth", NONE);
+> val it = () : unit
+(spark.connection.remote (fn () =>
+  from d in spark.catalog.scott.depts where d.deptno = 10 yield d.dname)) ();
+> val it = ["ACCOUNTING"] : string bag
+Sys.plan ();
+> val it =
+>   {_|
+> apply(fnValue spark(plan root {
+>   common {
+>     plan_id: 0
+>   }
+>   project {
+>     input {
+>       common {
+>         plan_id: 1
+>       }
+>       filter {
+>         input {
+>           common {
+>             plan_id: 2
+>           }
+>           subquery_alias {
+>             input {
+>               common {
+>                 plan_id: 3
+>               }
+>               read {
+>                 named_table {
+>                   unparsed_identifier: "scott.depts"
+>                 }
+>               }
+>             }
+>             alias: "d"
+>           }
+>         }
+>         condition {
+>           unresolved_function {
+>             function_name: "=="
+>             arguments {
+>               unresolved_attribute {
+>                 unparsed_identifier: "d.deptno"
+>                 is_metadata_column: false
+>               }
+>             }
+>             arguments {
+>               literal {
+>                 integer: 10
+>               }
+>             }
+>           }
+>         }
+>       }
+>     }
+>     expressions {
+>       unresolved_attribute {
+>         unparsed_identifier: "d.dname"
+>         is_metadata_column: false
+>       }
+>     }
+>   }
+> }), argCode constant([]))|_} : string
+
+(* A plan with a parameter has no text until it is executed -- each
+ * execution translates it afresh with the argument in place -- so what its
+ * description can say is which parameter it is waiting for. *)
+val p = spark.connection.prepare (fn d =>
+  from e in spark.catalog.scott.emps where e.deptno = d yield e.ename);
+> val p = <plan> : (int,string bag) plan
+p.execute 10;
+> val it = ["CLARK","KING","MILLER"] : string bag
+Sys.plan ();
+> val it = "apply2(fnValue Spark.execute, spark(parameters [d]), constant(10))"
+>   : string
+Sys.set ("stringDepth", SOME 70);
+> val it = () : unit
+
+(*) End spark-exec.smli

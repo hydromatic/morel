@@ -1,0 +1,92 @@
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *
+ * How a failure on Spark reaches a Morel program. A
+ * computation that fails raises the exception it
+ * would have raised locally; everything else raises Spark, with
+ * Spark's own error class. After any of them the connection works.
+ *)
+(*) requires: spark spark-prepare
+
+(* A query that divides by zero. Locally it raises Div. *)
+from e in scott.emps where e.deptno div 0 = 1 yield e.ename;
+> uncaught exception Div [divide by zero]
+>   raised at: stdIn:1.28-1.42
+
+(* On Spark it raises Div as well: Spark says DIVIDE_BY_ZERO, and that is
+ * the same failure under another name. *)
+(spark.connection.prepare (fn () =>
+  from e in spark.catalog.scott.emps where e.deptno div 0 = 1 yield e.ename
+)).execute ();
+> uncaught exception Div [divide by zero]
+>   raised at: stdIn:3.13
+
+(*) The connection is usable afterwards.
+(spark.connection.prepare (fn () =>
+  from e in spark.catalog.scott.emps where e.deptno = 10 yield e.ename
+)).execute ();
+> val it = ["CLARK","KING","MILLER"] : string bag
+
+(* An integer that does not fit. The two sides disagree about this, and the
+ * mapping cannot hide it: Morel wraps, so the query below has no rows, while
+ * Spark is in ANSI mode and raises ARITHMETIC_OVERFLOW, which reaches the
+ * program as Overflow -- the exception Morel would raise if it noticed. The
+ * function table records the divergence. *)
+from e in scott.emps where e.empno * 1000000 > 0 yield e.ename;
+> val it = [] : string bag
+(spark.connection.prepare (fn () =>
+  from e in spark.catalog.scott.emps where e.empno * 1000000 > 0 yield e.ename
+)).execute ();
+> uncaught exception Overflow [overflow]
+>   raised at: stdIn:3.13
+
+(* A failure with no local counterpart keeps Spark's error class. Asking the
+ * catalog for a database it has not got is one. *)
+spark.catalog.nonesuch;
+> uncaught exception Spark [Spark: SCHEMA_NOT_FOUND: Database nonesuch not found]
+>   raised at: 0.0-0.0
+
+(*) So is asking a database for a table it has not got.
+spark.catalog.scott.nonesuch;
+> uncaught exception Spark [Spark: TABLE_OR_VIEW_NOT_FOUND: Table scott.nonesuch not found]
+>   raised at: 0.0-0.0
+
+(*) And the connection is still usable after those.
+(spark.connection.prepare (fn () =>
+  from d in spark.catalog.scott.depts where d.deptno = 10 yield d.dname
+)).execute ();
+> val it = ["ACCOUNTING"] : string bag
+
+(* A column nobody declared nullable keeps its plain type, and a null in it
+ * raises, naming the column. The "nulls" table is in the fixture for this:
+ * the URI declares the scott columns that hold nulls, and says nothing
+ * about this one. This is what every column did before the declaration
+ * existed, and what one still does for a table whose nulls nobody has
+ * mentioned. *)
+spark.catalog.default.nulls;
+> uncaught exception Spark [Spark: NULL_VALUE: Null in column n of row 1, whose type int has no room for it]
+>   raised at: 0.0-0.0
+
+(* The row that has no null reads, which is the point: nothing is wrong with
+ * the table, only with what the connection was told about it. *)
+(spark.connection.prepare (fn () =>
+  from r in spark.catalog.default.nulls where r.id = 1 yield r.n
+)).execute ();
+> val it = [1] : int bag
+
+(*) End spark-error.smli

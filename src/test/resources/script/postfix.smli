@@ -360,4 +360,22 @@ val l = [1,2,3];
 (if true then 1 else 2).abs ();
 > val it = 1 : int
 
+(* A tuple argument. "x.f (a, b)" could mean "f (x, a, b)" or "f (x, (a,
+ * b))", and the number of parameters says which: a function of three takes
+ * the receiver and both, and a function of two takes the receiver and the
+ * pair. Nothing else could reach the second parameter of a function of two,
+ * so without this a tuple could not be passed postfix at all. *)
+"abcdef".substring (1, 3);
+> val it = "bcd" : string
+(SOME (1, 2)).getOpt (3, 4);
+> val it = (1,2) : int * int
+(NONE : (int * int) option).getOpt (3, 4);
+> val it = (3,4) : int * int
+
+(*) A single argument reaches the second parameter as it always did.
+(SOME 1).getOpt 2;
+> val it = 1 : int
+(NONE : int option).getOpt 2;
+> val it = 2 : int
+
 (*) End postfix.smli

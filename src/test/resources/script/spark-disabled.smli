@@ -1,0 +1,41 @@
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *
+ * Morel without the Spark adapter, as on JDK 11: connecting to a
+ * server fails with a message that says so, and the offline
+ * connection works.
+ *)
+(*) requires: no-spark-adapter
+
+Spark.connect "sc://localhost:15002";
+> uncaught exception Spark [Spark: CONNECTION: The Spark adapter is not available; it needs JDK 17 or later and the 'spark' Maven profile]
+>   raised at: stdIn:1.1-1.37
+
+(*) The offline connection needs no adapter.
+val spark = Spark.connect "mock:";
+> val spark = {catalog={},connection=<connection mock:>}
+>   : {catalog:{...}, connection:connection, ...}
+spark.catalog.scott.depts;
+> val it =
+>   [{deptno=10,dname="ACCOUNTING",loc="NEW YORK"},
+>    {deptno=20,dname="RESEARCH",loc="DALLAS"},
+>    {deptno=30,dname="SALES",loc="CHICAGO"},
+>    {deptno=40,dname="OPERATIONS",loc="BOSTON"}]
+>   : {deptno:int, dname:string, loc:string} bag
+
+(*) End spark-disabled.smli
