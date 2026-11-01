@@ -77,6 +77,7 @@ License.
 
     <!-- Component and plugin versions, in alphabetical order. -->
     <!-- // lint: sort until '^$' where '##<[a-z]' -->
+    <arrow.version>19.0.0</arrow.version>
     <avatica.version>1.28.0</avatica.version>
     <build-helper-maven-plugin.version>3.6.1</build-helper-maven-plugin.version>
     <calcite.version>1.42.0</calcite.version>
@@ -98,6 +99,7 @@ License.
     <foodmart-data-hsqldb.version>0.5</foodmart-data-hsqldb.version>
     <git-commit-id-plugin.version>4.9.10</git-commit-id-plugin.version>
     <googleformatter-maven-plugin.version>1.7.5</googleformatter-maven-plugin.version>
+    <grpc.version>1.84.0</grpc.version>
     <!-- We support (and test) Guava as low as 23.1-jre. -->
     <guava.version>33.6.0-jre</guava.version>
     <hamcrest.version>3.0</hamcrest.version>
@@ -122,6 +124,10 @@ License.
     <maven-source-plugin.version>3.2.1</maven-source-plugin.version>
     <maven-surefire-plugin.version>3.5.4</maven-surefire-plugin.version>
     <nullaway.version>0.14.0</nullaway.version>
+    <protobuf.version>4.36.1</protobuf.version>
+    <!-- protobuf-maven-plugin 4.x and later require Maven 3.9.6, which
+         is newer than the Maven bundled with IntelliJ. -->
+    <protobuf-maven-plugin.version>3.10.3</protobuf-maven-plugin.version>
     <scott-data-hsqldb.version>0.3</scott-data-hsqldb.version>
     <slf4j.version>2.1.0-alpha1</slf4j.version>
     <versions-maven-plugin.version>2.21.0</versions-maven-plugin.version>
@@ -129,7 +135,8 @@ License.
     <git-commit-id.skip>false</git-commit-id.skip>
     <maven-compiler-plugin.failOnWarning>true</maven-compiler-plugin.failOnWarning>
     <maven-javadoc-plugin.additionalOptions>-html5</maven-javadoc-plugin.additionalOptions>
-    <maven-javadoc-plugin.excludePackageNames>net.hydromatic.morel.parse</maven-javadoc-plugin.excludePackageNames>
+    <!-- The 'spark' profile overrides this to include the Spark adapter. -->
+    <maven-javadoc-plugin.excludePackageNames>net.hydromatic.morel.parse:net.hydromatic.morel.spark:org.apache.spark.connect.proto</maven-javadoc-plugin.excludePackageNames>
     <nullaway.severity>ERROR</nullaway.severity>
   </properties>
 
@@ -347,6 +354,15 @@ License.
           <compilerArgs>
             <arg>-Xlint:-options</arg>
           </compilerArgs>
+          <!-- The Spark adapter needs JDK 17 and libraries that the rest
+               of Morel does not; the 'spark' profile, active on JDK 17
+               and later, includes it. -->
+          <excludes>
+            <exclude>net/hydromatic/morel/spark/**</exclude>
+          </excludes>
+          <testExcludes>
+            <testExclude>net/hydromatic/morel/spark/**</testExclude>
+          </testExcludes>
         </configuration>
       </plugin>
       <plugin>
@@ -369,6 +385,9 @@ License.
               <headerLocation>${top.dir}/src/main/config/checkstyle/header.txt</headerLocation>
               <failOnViolation>true</failOnViolation>
               <includeTestSourceDirectory>true</includeTestSourceDirectory>
+              <sourceDirectories>
+                <sourceDirectory>${project.build.sourceDirectory}</sourceDirectory>
+              </sourceDirectories>
             </configuration>
             <goals>
               <goal>check</goal>
@@ -644,6 +663,107 @@ License.
                   <version>${nullaway.version}</version>
                 </path>
               </annotationProcessorPaths>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <!-- The Spark adapter (package net.hydromatic.morel.spark). It needs
+           JDK 17 and the gRPC, protobuf and Arrow libraries, so on earlier
+           JDKs it is left out of the build, and Morel loads it by name
+           when it is present. -->
+      <id>spark</id>
+      <activation>
+        <jdk>[17,)</jdk>
+      </activation>
+      <properties>
+        <maven-javadoc-plugin.excludePackageNames>net.hydromatic.morel.parse:org.apache.spark.connect.proto</maven-javadoc-plugin.excludePackageNames>
+      </properties>
+      <dependencies>
+        <dependency>
+          <groupId>com.google.protobuf</groupId>
+          <artifactId>protobuf-java</artifactId>
+          <version>${protobuf.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>io.grpc</groupId>
+          <artifactId>grpc-netty-shaded</artifactId>
+          <version>${grpc.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>io.grpc</groupId>
+          <artifactId>grpc-protobuf</artifactId>
+          <version>${grpc.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>io.grpc</groupId>
+          <artifactId>grpc-stub</artifactId>
+          <version>${grpc.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.arrow</groupId>
+          <artifactId>arrow-memory-unsafe</artifactId>
+          <version>${arrow.version}</version>
+          <scope>runtime</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.arrow</groupId>
+          <artifactId>arrow-vector</artifactId>
+          <version>${arrow.version}</version>
+        </dependency>
+        <dependency>
+          <!-- javax.annotation.Generated, used by generated gRPC stubs -->
+          <groupId>org.apache.tomcat</groupId>
+          <artifactId>annotations-api</artifactId>
+          <version>6.0.53</version>
+          <scope>provided</scope>
+        </dependency>
+      </dependencies>
+      <build>
+        <plugins>
+          <plugin>
+            <!-- Generates protobuf messages and gRPC stubs from
+                 src/main/protobuf, Spark's Connect protocol. -->
+            <groupId>io.github.ascopes</groupId>
+            <artifactId>protobuf-maven-plugin</artifactId>
+            <version>${protobuf-maven-plugin.version}</version>
+            <!-- Version 3.x needs only Maven 3.8, which IntelliJ's bundled
+                 Maven satisfies; 4.x and later need 3.9.6. -->
+            <configuration>
+              <protocVersion>${protobuf.version}</protocVersion>
+              <binaryMavenPlugins>
+                <binaryMavenPlugin>
+                  <groupId>io.grpc</groupId>
+                  <artifactId>protoc-gen-grpc-java</artifactId>
+                  <version>${grpc.version}</version>
+                </binaryMavenPlugin>
+              </binaryMavenPlugins>
+            </configuration>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>generate</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <version>${maven-compiler-plugin.version}</version>
+            <configuration>
+              <excludes combine.self="override" />
+              <testExcludes combine.self="override" />
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <version>${maven-surefire-plugin.version}</version>
+            <configuration>
+              <!-- Arrow's memory management needs this on JDK 9+. -->
+              <argLine>--add-opens=java.base/java.nio=ALL-UNNAMED</argLine>
             </configuration>
           </plugin>
         </plugins>

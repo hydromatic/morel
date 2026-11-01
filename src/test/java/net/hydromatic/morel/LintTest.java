@@ -53,6 +53,7 @@ import java.util.Deque;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.TreeSet;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -1803,11 +1804,14 @@ public class LintTest {
   }
 
   /**
-   * Checks all generated sections in all {@code .md} files under {@code docs/}.
+   * Checks every generated section of every file that has one: the {@code .md}
+   * files under {@code docs/}, and {@code spark/init.py}, whose {@code scott}
+   * database comes from Morel's own data set.
    *
-   * <p>Scans every {@code .md} file, finds {@code [//]: # (start:KEY)} markers,
-   * calls {@link Generation#generateSection} with the key, and diffs the result
-   * against the committed file.
+   * <p>Scans the file for start and end markers, calls a generator with the key
+   * the start marker names, and diffs the result against the committed file.
+   * The file is committed so that a reader can see it and a reviewer can argue
+   * with it; this test is what keeps it true.
    */
   @Test
   void testGeneratedSections() throws IOException {
@@ -1821,39 +1825,68 @@ public class LintTest {
     for (File file : mdFiles) {
       final String relPath = docsDir.toURI().relativize(file.toURI()).getPath();
       final File genFile = new File(targetDocsDir, relPath);
-      genFile.getParentFile().mkdirs();
-      try (Reader r = new FileReader(file);
-          BufferedReader br = new BufferedReader(r);
-          Writer w = new FileWriter(genFile);
-          PrintWriter pw = new PrintWriter(w)) {
-        boolean emit = true;
-        for (String line = br.readLine(); line != null; line = br.readLine()) {
-          if (line.startsWith("[//]: # (end:")) {
-            emit = true;
-          }
-          if (emit) {
-            pw.println(line);
-          }
-          if (line.startsWith("[//]: # (start:")) {
-            final String key = line.substring(15, line.length() - 1);
-            emit = false;
-            Generation.generateSection(MODEL, key, pw);
-          }
-        }
-      }
-      final String diff = TestUtils.diff(file, genFile);
-      if (!diff.isEmpty()) {
-        errors.add(
-            "Files differ: "
-                + file
-                + " "
-                + genFile
-                + "\n" //
-                + diff);
-      }
+      regenerate(
+          file,
+          genFile,
+          "[//]: # (start:",
+          "[//]: # (end:",
+          (key, pw) -> Generation.generateSection(MODEL, key, pw),
+          errors);
     }
+    // The scott database of the Spark container's init script.
+    final File initFile = new File(baseDir, "src/test/resources/spark/init.py");
+    regenerate(
+        initFile,
+        new File(baseDir, "target/spark/init.py"),
+        "# (start:",
+        "# (end:",
+        ScottInit::generateSection,
+        errors);
+
     if (!errors.isEmpty()) {
       fail(String.join("\n", errors));
+    }
+  }
+
+  /**
+   * Copies a file, writing each generated section afresh, and adds a message to
+   * {@code errors} if the result differs from the file.
+   *
+   * <p>A start marker names the section; the lines between it and the end
+   * marker are the generated ones, and are not copied.
+   */
+  private static void regenerate(
+      File file,
+      File genFile,
+      String start,
+      String end,
+      BiConsumer<String, PrintWriter> generator,
+      List<String> errors)
+      throws IOException {
+    TestUtils.discard(genFile.getParentFile().mkdirs());
+    try (Reader r = new FileReader(file);
+        BufferedReader br = new BufferedReader(r);
+        Writer w = new FileWriter(genFile);
+        PrintWriter pw = new PrintWriter(w)) {
+      boolean emit = true;
+      for (String line = br.readLine(); line != null; line = br.readLine()) {
+        if (line.startsWith(end)) {
+          emit = true;
+        }
+        if (emit) {
+          pw.println(line);
+        }
+        if (line.startsWith(start)) {
+          final String key =
+              line.substring(start.length(), line.length() - 1).trim();
+          emit = false;
+          generator.accept(key, pw);
+        }
+      }
+    }
+    final String diff = TestUtils.diff(file, genFile);
+    if (!diff.isEmpty()) {
+      errors.add("Files differ: " + file + " " + genFile + "\n" + diff);
     }
   }
 
