@@ -120,6 +120,15 @@ public class SparkSchema {
     b.append('"');
   }
 
+  /**
+   * Returns the name of the Spark type that holds values of a Morel type, as
+   * Spark's parser reads it, such as {@code "integer"} or {@code
+   * "decimal(38,18)"}; throws if there is none.
+   */
+  static String typeString(Type type) {
+    return primitive(type);
+  }
+
   private static String primitive(Type type) {
     if (type.moniker().equals("decimal")) {
       // Morel's decimal has no precision or scale of its own -- it is
