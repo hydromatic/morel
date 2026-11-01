@@ -156,9 +156,9 @@ public class Inliner extends EnvShuttle {
             if (builtIn != null) {
               return core.functionLiteral(id.type, builtIn);
             }
-            // Applicable (including Closure) that does not map to a BuiltIn
-            // is not considered 'constant', mainly because it creates messy
-            // plans.
+            // Applicable (including StackClosure) that does not map to a
+            // BuiltIn is not considered 'constant', mainly because it
+            // creates messy plans.
             break;
 
           default:

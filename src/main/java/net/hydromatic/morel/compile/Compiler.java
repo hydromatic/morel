@@ -1173,8 +1173,9 @@ public class Compiler {
 
   /**
    * Compiles an expression in tail position, emitting {@link Codes#tailApply}
-   * at tail-call sites so that the trampoline in {@code Closure#bindEval} can
-   * execute them in O(1) stack space.
+   * at tail-call sites so that the trampoline in {@link
+   * Closure.StackClosure#apply(Stack, Object)} can execute them in O(1) stack
+   * space.
    */
   protected Code compileTail(Context cx, Core.Exp expression) {
     switch (expression.op) {
@@ -1484,7 +1485,10 @@ public class Compiler {
     }
   }
 
-  /** Code that creates a {@link Closure} for a match expression. */
+  /**
+   * One match of a function, as a (pattern, code) pair. The compiler unwraps
+   * it; nothing evaluates it.
+   */
   private static class MatchCode implements Code {
     private final Core.Pat pat;
     private final Code code;

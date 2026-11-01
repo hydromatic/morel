@@ -23,9 +23,9 @@ package net.hydromatic.morel.eval;
  *
  * <p>Note that this interface is rather similar to {@link Applicable}. The
  * difference is that {@link #apply(Object)} has only one argument whereas
- * {@link Applicable#apply(EvalEnv, Object)} takes an {@link EvalEnv}. Unless
- * the function you are implementing requires an environment, you should use
- * {@link Applicable1} rather than {@link Applicable}.
+ * {@link Applicable#apply(Stack, Object)} also takes a {@link Stack}. Unless
+ * the function you are implementing needs the stack, you should use {@link
+ * Applicable1} rather than {@link Applicable}.
  *
  * <p>The interfaces for functions with multiple arguments, {@link Applicable2},
  * {@link Applicable3}, and {@link Applicable4}, each have a {@code curry}

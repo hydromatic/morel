@@ -18,7 +18,6 @@
  */
 package net.hydromatic.morel.eval;
 
-import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.util.Pair.allMatch;
 import static net.hydromatic.morel.util.Static.skip;
 import static net.hydromatic.morel.util.Static.transformEager;
@@ -28,121 +27,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
 import net.hydromatic.morel.ast.Core;
-import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.type.Type;
-import net.hydromatic.morel.util.ImmutablePairList;
 
 /**
- * Value that is sufficient for a function to bind its argument and evaluate its
- * body.
+ * Holder for what a closure needs: the binder that matches a value to a
+ * pattern, and {@link StackClosure}, the closure itself.
  */
-public class Closure implements Comparable<Closure>, Applicable, Applicable1 {
-  /**
-   * Environment for evaluation. Contains the variables "captured" from the
-   * environment when the closure was created.
-   */
-  private final EvalEnv evalEnv;
-
-  /**
-   * A list of (pattern, code) pairs. During bind, the value being bound is
-   * matched against each pattern. When a match is found, the code for that
-   * pattern is used to evaluate.
-   *
-   * <p>For example, when applying {@code fn x => case x of 0 => "yes" | _ =>
-   * "no"} to the value {@code 1}, the first pattern ({@code 0} fails) but the
-   * second pattern ({@code _}) succeeds, and therefore we evaluate the second
-   * code {@code "no"}.
-   */
-  private final ImmutablePairList<Core.Pat, Code> patCodes;
-
-  private final Pos pos;
-
-  /** Not a public API. */
-  public Closure(
-      EvalEnv evalEnv, ImmutablePairList<Core.Pat, Code> patCodes, Pos pos) {
-    this.evalEnv = requireNonNull(evalEnv).fix();
-    this.patCodes = requireNonNull(patCodes);
-    this.pos = pos;
-  }
-
-  @Override
-  public String toString() {
-    return "Closure(evalEnv = " + evalEnv + ", patCodes = " + patCodes + ")";
-  }
-
-  public int compareTo(Closure o) {
-    return 0;
-  }
-
-  /**
-   * Binds an argument value to create a new environment for a closure.
-   *
-   * <p>When calling a simple function such as {@code (fn x => x + 1) 2}, the
-   * binder sets just contains one variable, {@code x}, and the new environment
-   * contains {@code x = 1}. If the function's parameter is a match, more
-   * variables might be bound. For example, when you invoke {@code (fn (x, y) =>
-   * x + y) (3, 4)}, the binder sets {@code x} to 3 and {@code y} to 4.
-   */
-  EvalEnv bind(Object argValue) {
-    final EvalEnvHolder envRef = new EvalEnvHolder(evalEnv);
-    for (Core.Pat pat : patCodes.leftList()) {
-      if (bindRecurse(pat, argValue, envRef)) {
-        return envRef.env;
-      }
-    }
-    throw new AssertionError("no match");
-  }
-
-  /**
-   * Similar to {@link #bind}, but also evaluates. May return a {@link
-   * Codes.TailCall} sentinel; callers must trampoline if they need a real
-   * value.
-   */
-  private Object bindEvalBody(Object argValue) {
-    final EvalEnvHolder envRef = new EvalEnvHolder(evalEnv);
-    for (Map.Entry<Core.Pat, Code> patCode : patCodes) {
-      final Core.Pat pat = patCode.getKey();
-      if (bindRecurse(pat, argValue, envRef)) {
-        final Code code = patCode.getValue();
-        final Session session =
-            requireNonNull((Session) envRef.env.getOpt(EvalEnv.SESSION));
-        return code.eval(new Stack(session, code.maxSlots()));
-      }
-    }
-    throw new MorelRuntimeException(BuiltInExn.BIND, pos);
-  }
-
-  /**
-   * Similar to {@link #bindEvalBody}, but trampolines {@link Codes.TailCall}
-   * sentinels so that tail-recursive calls execute in O(1) Java stack space.
-   */
-  private Object bindEval(Object argValue) {
-    Object result = bindEvalBody(argValue);
-    while (result instanceof Codes.TailCall) {
-      final Codes.TailCall tc = (Codes.TailCall) result;
-      if (tc.fn instanceof Closure) {
-        result = ((Closure) tc.fn).bindEvalBody(tc.arg);
-      } else {
-        result = tc.fn.apply(evalEnv, tc.arg);
-      }
-    }
-    return result;
-  }
-
-  @Override
-  public Object apply(Stack stack, Object argValue) {
-    return bindEval(argValue);
-  }
-
-  @Override
-  public Object apply(Object argValue) {
-    return bindEval(argValue);
-  }
-
-  @Override
-  public Describer describe(Describer describer) {
-    return describer.start("closure", d -> {});
-  }
+public class Closure {
+  private Closure() {}
 
   /**
    * Attempts to bind a value to a pattern. Returns whether it has succeeded in
@@ -250,24 +142,6 @@ public class Closure implements Comparable<Closure>, Applicable, Applicable1 {
 
       default:
         throw new AssertionError("cannot compile " + pat.op + ": " + pat);
-    }
-  }
-
-  /**
-   * Callback for {@link #bindRecurse(Core.Pat, Object, BiConsumer)} that
-   * modifies an environment.
-   */
-  private static class EvalEnvHolder
-      implements BiConsumer<Core.NamedPat, Object> {
-    EvalEnv env;
-
-    EvalEnvHolder(EvalEnv env) {
-      this.env = env;
-    }
-
-    @Override
-    public void accept(Core.NamedPat namedPat, Object o) {
-      env = env.bind(namedPat.name, o);
     }
   }
 
@@ -402,8 +276,8 @@ public class Closure implements Comparable<Closure>, Applicable, Applicable1 {
      * Applies this closure without a pre-existing {@link Stack}.
      *
      * <p>Implements {@link Applicable1} so that built-in higher-order functions
-     * (e.g. {@code List.map}) can call user-defined functions without needing
-     * to supply an {@link EvalEnv}.
+     * (e.g. {@code List.map}) can call user-defined functions without having a
+     * {@link Stack} to pass them.
      */
     @Override
     public Object apply(Object argValue) {

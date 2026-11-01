@@ -51,16 +51,6 @@ public interface Applicable extends Describable {
   }
 
   /**
-   * Calls this function with an environment and an argument value.
-   *
-   * @deprecated Use {@link #apply(Stack, Object)} instead.
-   */
-  @Deprecated
-  default Object apply(EvalEnv env, Object argValue) {
-    throw new UnsupportedOperationException("use apply(Stack, Object)");
-  }
-
-  /**
    * Converts this Applicable to a Code that has similar effect (but is less
    * efficient).
    */
