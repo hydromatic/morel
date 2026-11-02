@@ -52,8 +52,11 @@ jobs:
           echo "SPARK_REMOTE=$uri" >> "$GITHUB_ENV"
       - name: Check the generated plans against the PySpark client
         run: |
+          # The client's version is the server's (start-spark.sh's
+          # image): a newer client asks the server for settings it
+          # does not have.
           python3 -m venv pyenv
-          pyenv/bin/pip install --quiet pyspark-client
+          pyenv/bin/pip install --quiet "pyspark-client==4.0.0" "pandas<3"
           pyenv/bin/python src/test/resources/spark/capture.py --execute \
             > /tmp/generated.smli
           diff src/test/resources/script/spark-plan-generated.smli \

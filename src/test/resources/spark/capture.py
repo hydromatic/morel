@@ -23,7 +23,8 @@
 # the translator and Spark disagreeing, and this is the only thing that
 # says which of them is right.
 #
-#   python3 -m venv pyenv && pyenv/bin/pip install pyspark-client
+#   python3 -m venv pyenv
+#   pyenv/bin/pip install "pyspark-client==4.0.0" "pandas<3"
 #   g=src/test/resources/script/spark-plan-generated.smli
 #   pyenv/bin/python src/test/resources/spark/capture.py > /tmp/generated
 #   diff $g /tmp/generated
